@@ -11,6 +11,7 @@ import paints from "../../Assets/Projects/paints.jpg";
 import localLLM from "../../Assets/Projects/localLLM.png";
 import H2 from "../../Assets/Projects/02.jpg";
 import FPSO from "../../Assets/Projects/04.jpg";
+import pets from "../../Assets/Projects/pets.png";
 
 function Projects() {
   return (
@@ -98,6 +99,15 @@ function Projects() {
               description="Developed major logistics assessment and scheduling tools for the execution of a FPSO vessel refurbishment project, reducing project delays by over a month."
             />
           </Col>
+          <Col md={4} className="project-card">
+            <ProjectCard
+              imgPath={pets}
+              title="Masterpiece Pets"
+              description="Using stable diffusion algorithms and diverse artistic styles to create bespoke portraits of pets and animals."
+              demoLink="https://www.instagram.com/masterpiecepets/"
+            />
+          </Col>
+
           <Col md={4} className="project-card">
             <ProjectCard
               imgPath={paints}

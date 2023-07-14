@@ -9,6 +9,8 @@ import insider from "../../Assets/Projects/insider-trader.png";
 import cubesat from "../../Assets/Projects/cubesat.png";
 import paints from "../../Assets/Projects/paints.jpg";
 import localLLM from "../../Assets/Projects/localLLM.png";
+import H2 from "../../Assets/Projects/02.jpg";
+import FPSO from "../../Assets/Projects/04.jpg";
 
 function Projects() {
   return (
@@ -27,7 +29,7 @@ function Projects() {
               imgPath={insider}
               type={"Github"}
               title="Insider Trader Watchlist"
-              description="Flask app that tracks stock purchases by high-level insiders by webscraping SEC data. It blends data science with financial insights, making it a valuable tool for investors. Planned back-testing optimization."
+              description="Flask app that tracks stock purchases by high-level insiders by webscraping and compiling SEC data. Blending data science with financial insights and acting as a valuable tool for independent investors."
               ghLink="https://github.com/JoshW-dev/insider-alert"
               demoLink="http://joshwdev.pythonanywhere.com/"
             />
@@ -37,7 +39,7 @@ function Projects() {
               imgPath={localLLM}
               type={"Github"}
               title="Local LLM"
-              description="Lightweight chatbot designed to allow users to run an open-source Large Language Model (LLM) with GPT4All, locally via a Python API. This makes it possible to chat with the LLM directly from the command line without an internet connection or external bias."
+              description="Lightweight chatbot designed to allow users to run an open-source Large Language Models locally via a Python API. This makes it possible to chat with the LLM directly from the command line without an internet connection or external bias."
               ghLink="https://github.com/JoshW-dev/local-LLM"
               demoLink="https://youtu.be/CL8GoBnLB90"
             />
@@ -58,7 +60,7 @@ function Projects() {
             <ProjectCard
               imgPath={investor}
               title="Investor Assistant AI"
-              description="Invest Assistant is a custom-made chatbot designed to guide you in personal investing. Trained on an extensive investment knowledge base, it can answer queries from 'What is a mutual fund?' to 'How does compound interest work?'. Capable of communicating in English, Spanish, French, Chinese, and Russian, Invest Assistant is your multilingual guide to the world of investing."
+              description="Custom-made chatbot designed to guide users in personal investing. Trained on an extensive investment knowledge base, it can answer queries from 'What is a mutual fund?' to 'How does compound interest work?'. Capable of communicating in English, Spanish, French, Chinese, and Russian, Invest Assistant is your multilingual guide to the world of investing."
               demoLink="https://investor-assistant.zapier.app/"              
             />
           </Col>
@@ -82,7 +84,20 @@ function Projects() {
               demoLink="https://qset.ca/satellite/"
            />
           </Col>
-
+          <Col md={4} className="project-card">
+            <ProjectCard
+              imgPath={H2}
+              title="Clean Hydrogen Production Facility"
+              description="Led a team to identify and develop opportunities to optimize scope and reduce capital expenditure for a blue hydrogen production project. Designed to produce more than 300,000 tonnes of clean hydrogen per year, utilizing advanced technology to capture over 90% of the generated emissions."
+            />
+          </Col>
+          <Col md={4} className="project-card">
+            <ProjectCard
+              imgPath={FPSO}
+              title="Floating Production Storage and Offloading (FPSO)"
+              description="Developed major logistics assessment and scheduling tools for the execution of a FPSO vessel refurbishment project, reducing project delays by over a month."
+            />
+          </Col>
           <Col md={4} className="project-card">
             <ProjectCard
               imgPath={paints}

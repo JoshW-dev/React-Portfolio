@@ -740,3 +740,15 @@ button:focus {
 .fork-btn-inner::after {
   display: none !important;
 }
+@keyframes rotate {
+  0% {
+      transform: rotate(0deg);
+  } 
+  100% {
+      transform: rotate(359deg);
+  }
+}
+
+.rotating {
+  animation: rotate infinite 45s;  
+}

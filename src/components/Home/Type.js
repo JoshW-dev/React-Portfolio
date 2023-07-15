@@ -14,7 +14,7 @@ function Type() {
         ],
         autoStart: true,
         loop: true,
-        deleteSpeed: 40,
+        deleteSpeed: 20,
       }}
     />
   );

@@ -100,7 +100,7 @@ function NavBar() {
             </Nav.Item>
             <Nav.Item>
               <Nav.Link
-                href="https://highstyle.ai/"
+                href="https://method-ai.com/"
                 target="_blank"
                 rel="noreferrer"
               >

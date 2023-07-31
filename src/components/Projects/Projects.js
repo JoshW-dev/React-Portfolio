@@ -30,7 +30,7 @@ function Projects() {
               imgPath={insider}
               type={"Github"}
               title="Insider Trader Watchlist"
-              description="Flask app that tracks stock purchases by high-level insiders by webscraping and compiling SEC data. Blending data science with financial insights and acting as a valuable tool for independent investors."
+              description="Web app that tracks stock purchases by high-level company insiders by webscraping and compiling SEC data. Blending data science with financial insights and acting as a valuable tool for independent investors."
               ghLink="https://github.com/JoshW-dev/insider-alert"
               demoLink="http://joshwdev.pythonanywhere.com/"
             />

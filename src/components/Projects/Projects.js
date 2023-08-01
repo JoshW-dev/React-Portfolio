@@ -12,6 +12,7 @@ import localLLM from "../../Assets/Projects/localLLM.png";
 import H2 from "../../Assets/Projects/02.jpg";
 import FPSO from "../../Assets/Projects/04.jpg";
 import pets from "../../Assets/Projects/pets.png";
+import EducationAI from "../../Assets/Projects/EducationAI.png";
 
 function Projects() {
   return (
@@ -25,6 +26,16 @@ function Projects() {
           Here some projects I've worked on recently.
         </p>
         <Row style={{ justifyContent: "center", paddingBottom: "10px" }}>
+        <Col md={4} className="project-card">
+            <ProjectCard
+              imgPath={EducationAI}
+              title="AI Education Assistant"
+              description="
+              AI-powered web app that redefines learning and teaching. It offers advanced translation, writing aids, and interactive learning tools, serving both students and educators. With this platform, enhancing academic success and efficiency becomes effortless and accessible."
+              demoLink="https://highstyletest.bubbleapps.io/"
+            />
+          </Col>
+        
           <Col md={4} className="project-card">
             <ProjectCard
               imgPath={insider}
@@ -69,7 +80,7 @@ function Projects() {
           <Col md={4} className="project-card">
             <ProjectCard
               imgPath={aiChatBot}
-              title="AI Education Assistant Chatbot"
+              title="AI Education Assistant Platform"
               description="Full stack design and development of an AI-assisted academic learning web platform (2019). Created with React.js, Node.js, Kubernetes, Docker, IBM-Watson and python NPL libraries. Created for the Centre for Advanced Computing."
               demoLink="https://cac.queensu.ca/"
             />

@@ -16,16 +16,21 @@ function Home2() {
         <Row>
           <Col md={8} className="home-about-description">
             <h1 style={{ fontSize: "2.6em" }}>
-            Welcome to my  <span className="purple"> Website </span>
+            Welcome to my  <span className="gold"> Website </span>
             </h1>
             <p className="home-about-body">
             I am a software developer, engineer, and artist, passionate about using new technology to build ideas and solve complex problems. 
               <br />
-              <br />I am fluent in multiple languages, focused on
+              <br />I am fluent in multiple languages, focused on 
               <i>
-                <b className="purple"> C++, Javascript and Python.</b>
+                <b className="gold">                  Javascript, Python and C++.</b>
               </i>
 
+
+              <br />Big fan of 
+              <i>
+                <b className="gold">    React and Node JS</b>
+              </i>
               <br />
               <br />
               
@@ -34,12 +39,12 @@ function Home2() {
               <b > developing tools</b> to identify and implement  
               <br />
           
-							<b className="purple"> key opportunities </b> in tech and engineering projects.
+							<b className="gold"> key opportunities </b> in tech and engineering projects.
                
               <br />
               <br />
-              In the dynamic tech landscape, I'm passionate about using <b className="purple">AI</b> to address unique challenges 
-              and explore its <b className="purple"> immense potential for humanity.</b>
+              In the dynamic tech landscape, I'm passionate about using <b className="gold">AI</b> to address unique challenges 
+              and explore its <b className="gold"> immense potential for humanity.</b>
             </p>
           </Col>
           <Col md={4} className="myAvtar">

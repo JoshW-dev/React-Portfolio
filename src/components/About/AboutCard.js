@@ -9,20 +9,20 @@ function AboutCard() {
           <p style={{ textAlign: "justify" }}>
 
             I am a designer, developer and engineer 
-            from <span className="purple"> Toronto, Canada.</span>
+            from <span className="gold"> Toronto, Canada.</span>
             <br /> 
             <br /> 
             
-            My background is in <span className="purple">Applied Mathematics</span>, information theory and machine learning. 						
+            My background is in <span className="gold">Applied Mathematics</span>, information theory and machine learning. 						
             <br /> 
             <br /> 
             
            
-            As a <span className="purple">Software Developer</span>, I've worked in AI research, focused on natural language processing and digital education. 
+            As a <span className="gold">Software Developer</span>, I've worked in AI research, focused on natural language processing and digital education. 
             <br /> 
             <br /> 
             
-            I've also led teams as an <span className="purple">Engineering Consultant</span>, driving significant improvements in large energy and manufacturing projects.
+            I've also led teams as an <span className="gold">Engineering Consultant</span>, driving significant improvements in large energy and manufacturing projects.
             <br /> 
             <br /> 
             

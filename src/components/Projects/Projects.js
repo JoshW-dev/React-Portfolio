@@ -32,7 +32,7 @@ function Projects() {
               title="AI Education Assistant"
               description="
               AI-powered web app that redefines learning and teaching. It offers advanced translation, writing aids, and interactive learning tools, serving both students and educators. With this platform, enhancing academic success and efficiency becomes effortless and accessible."
-              demoLink="https://highstyletest.bubbleapps.io/"
+              demoLink="https://highstyle.ai/"
             />
           </Col>
         

@@ -23,7 +23,7 @@ function Home2() {
               <br />
               <br />I am fluent in multiple languages, focused on 
               <i>
-                <b className="gold">                  Javascript, Python and C++.</b>
+                <b className="gold">                  Javascript, Python and C#.</b>
               </i>
 
 

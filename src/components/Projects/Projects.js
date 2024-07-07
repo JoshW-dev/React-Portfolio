@@ -13,6 +13,7 @@ import H2 from "../../Assets/Projects/02.jpg";
 import FPSO from "../../Assets/Projects/04.jpg";
 import pets from "../../Assets/Projects/pets.png";
 import EducationAI from "../../Assets/Projects/EducationAI.png";
+import FeedbackerAI from "../../Assets/Projects/feedbacker.jpg";
 
 function Projects() {
   return (
@@ -26,6 +27,16 @@ function Projects() {
           Here some projects I've worked on recently.
         </p>
         <Row style={{ justifyContent: "center", paddingBottom: "10px" }}>
+        <Col md={4} className="project-card">
+            <ProjectCard
+              imgPath={FeedbackerAI}
+              title="Feedbacker AI"
+              description="
+              Your personal writing coach, designed to help you communicate like a master. Instant expert guidance and advice for improving emails, and professional writing. "
+              demoLink="https://feedbacker.ca/"
+            />
+          </Col>
+        
         <Col md={4} className="project-card">
             <ProjectCard
               imgPath={EducationAI}

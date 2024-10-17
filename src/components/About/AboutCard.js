@@ -26,7 +26,7 @@ function AboutCard() {
             <br /> 
             <br /> 
             
-            I am always looking for ways to leverage data and technology  to make a difference. 
+            I am always looking for ways to leverage technology to make a difference. 
           </p>
 
         </blockquote>

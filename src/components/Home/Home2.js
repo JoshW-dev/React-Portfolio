@@ -23,7 +23,7 @@ function Home2() {
               <br />
               <br />I am fluent in multiple languages, focused on 
               <i>
-                <b className="gold">                  Javascript, Python and C#.</b>
+                <b className="gold">                 Typescript, Javascript and Python.</b>
               </i>
 
 
@@ -43,7 +43,7 @@ function Home2() {
                
               <br />
               <br />
-              In the dynamic tech landscape, I'm passionate about using <b className="gold">AI</b> to address unique challenges 
+              I'm passionate about using <b className="gold">AI</b> to solve unique challenges 
               and explore its <b className="gold"> immense potential for humanity.</b>
             </p>
           </Col>

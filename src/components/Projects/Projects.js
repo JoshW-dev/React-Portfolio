@@ -5,7 +5,7 @@ import Particle from "../Particle";
 import adam from "../../Assets/Projects/adam.png";
 import aiChatBot from "../../Assets/Projects/aiChatBot.png";
 import investor from "../../Assets/Projects/investorchatbot.png";
-import insider from "../../Assets/Projects/insider-trader.png";
+import insider from "../../Assets/Projects/insider-trader.jpg";
 import cubesat from "../../Assets/Projects/cubesat.png";
 import paints from "../../Assets/Projects/paints.jpg";
 import localLLM from "../../Assets/Projects/localLLM.png";
@@ -29,6 +29,16 @@ function Projects() {
         <Row style={{ justifyContent: "center", paddingBottom: "10px" }}>
         <Col md={4} className="project-card">
             <ProjectCard
+              imgPath={insider}
+              type={"Github"}
+              title="Insider Trader Watchlist"
+              description="Web app that tracks stock purchases by high-level company insiders by webscraping and compiling SEC data. I use this on a regular basis to inform my trading."
+              ghLink="https://github.com/JoshW-dev/insider-alert"
+              demoLink="http://insidetrader.site"
+            />
+          </Col>
+        <Col md={4} className="project-card">
+            <ProjectCard
               imgPath={FeedbackerAI}
               title="Feedbacker AI"
               description="
@@ -47,16 +57,7 @@ function Projects() {
             />
           </Col>
         
-          <Col md={4} className="project-card">
-            <ProjectCard
-              imgPath={insider}
-              type={"Github"}
-              title="Insider Trader Watchlist"
-              description="Web app that tracks stock purchases by high-level company insiders by webscraping and compiling SEC data. Blending data science with financial insights and acting as a valuable tool for independent investors."
-              ghLink="https://github.com/JoshW-dev/insider-alert"
-              demoLink="http://joshwdev.pythonanywhere.com/"
-            />
-          </Col>
+       
           <Col md={4} className="project-card">
             <ProjectCard
               imgPath={localLLM}

@@ -14,6 +14,7 @@ import FPSO from "../../Assets/Projects/04.jpg";
 import pets from "../../Assets/Projects/pets.png";
 import EducationAI from "../../Assets/Projects/EducationAI.png";
 import FeedbackerAI from "../../Assets/Projects/feedbacker.jpg";
+import mymcat from "../../Assets/Projects/mymcat.png";
 
 function Projects() {
   return (
@@ -27,7 +28,15 @@ function Projects() {
           Here some projects I've worked on recently.
         </p>
         <Row style={{ justifyContent: "center", paddingBottom: "10px" }}>
-        <Col md={4} className="project-card">
+          <Col md={4} className="project-card">
+            <ProjectCard
+              imgPath={mymcat}
+              title="MyMCAT.ai"
+              description="MCAT prep platform that gamifies learning through AI-powered personalization and an engaging personal clinic game environment. Features include intelligent tutoring, behavioral insights, and Kalypso, an AI companion cat that enhances student engagement."
+              demoLink="https://mymcat.ai"
+            />
+          </Col>
+          <Col md={4} className="project-card">
             <ProjectCard
               imgPath={insider}
               type={"Github"}
@@ -37,7 +46,7 @@ function Projects() {
               demoLink="http://insidetrader.site"
             />
           </Col>
-        <Col md={4} className="project-card">
+          <Col md={4} className="project-card">
             <ProjectCard
               imgPath={FeedbackerAI}
               title="Feedbacker AI"
@@ -46,8 +55,7 @@ function Projects() {
               demoLink="https://feedbacker.ca/"
             />
           </Col>
-        
-        <Col md={4} className="project-card">
+          <Col md={4} className="project-card">
             <ProjectCard
               imgPath={EducationAI}
               title="AI Education Assistant"
@@ -56,8 +64,6 @@ function Projects() {
               demoLink="https://highstyle.ai/"
             />
           </Col>
-        
-       
           <Col md={4} className="project-card">
             <ProjectCard
               imgPath={localLLM}
@@ -68,7 +74,6 @@ function Projects() {
               demoLink="https://youtu.be/CL8GoBnLB90"
             />
           </Col>
-
           <Col md={4} className="project-card">
             <ProjectCard
               imgPath={adam}
@@ -79,7 +84,6 @@ function Projects() {
               demoLink="https://twitter.com/ai_adam_"
             />
           </Col>
-
           <Col md={4} className="project-card">
             <ProjectCard
               imgPath={investor}
@@ -88,7 +92,6 @@ function Projects() {
               demoLink="https://investor-assistant.zapier.app/"              
             />
           </Col>
-
           <Col md={4} className="project-card">
             <ProjectCard
               imgPath={aiChatBot}
@@ -97,7 +100,6 @@ function Projects() {
               demoLink="https://cac.queensu.ca/"
             />
           </Col>
-
           <Col md={4} className="project-card">
             <ProjectCard
               imgPath={cubesat}
@@ -130,7 +132,6 @@ function Projects() {
               demoLink="https://www.instagram.com/masterpiecepets/"
             />
           </Col>
-
           <Col md={4} className="project-card">
             <ProjectCard
               imgPath={paints}

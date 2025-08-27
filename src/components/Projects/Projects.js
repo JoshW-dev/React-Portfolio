@@ -52,7 +52,7 @@ function Projects() {
               title="Feedbacker AI"
               description="
               Your personal writing coach, designed to help you communicate like a master. Instant expert guidance and advice for improving emails, and professional writing. "
-              demoLink="https://feedbacker.ca/"
+              demoLink="https://www.youtube.com/watch?v=z3b7Iapg6_8"
             />
           </Col>
           <Col md={4} className="project-card">

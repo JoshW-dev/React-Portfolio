@@ -15,6 +15,7 @@ import pets from "../../Assets/Projects/pets.png";
 import EducationAI from "../../Assets/Projects/EducationAI.png";
 import FeedbackerAI from "../../Assets/Projects/feedbacker.jpg";
 import mymcat from "../../Assets/Projects/mymcat.png";
+import founderrise from "../../Assets/Projects/founderrise.png";
 
 function Projects() {
   return (
@@ -30,6 +31,14 @@ function Projects() {
         <Row style={{ justifyContent: "center", paddingBottom: "10px" }}>
           <Col md={4} className="project-card">
             <ProjectCard
+              imgPath={founderrise}
+              title="FounderRise"
+              description="AI-powered startup mentor and roadmap guiding founders from zero to revenue on the path to $100M valuation. Provides step-by-step guidance through each startup stage with tailored assets like Lean Canvases and marketing strategies that help founders validate smarter, build faster, and raise capital."
+              demoLink="https://www.founder-rise.com/"
+            />
+          </Col>
+          <Col md={4} className="project-card">
+            <ProjectCard
               imgPath={mymcat}
               title="MyMCAT.ai"
               description="MCAT prep platform that gamifies learning through AI-powered personalization and an engaging personal clinic game environment. Features include intelligent tutoring, behavioral insights, and Kalypso, an AI companion cat that enhances student engagement."
@@ -43,7 +52,7 @@ function Projects() {
               title="Insider Trader Watchlist"
               description="Web app that tracks stock purchases by high-level company insiders by webscraping and compiling SEC data. I use this on a regular basis to inform my trading."
               ghLink="https://github.com/JoshW-dev/insider-alert"
-              demoLink="http://insidetrader.site"
+              demoLink="https://www.insidersignal.ai/"
             />
           </Col>
           <Col md={4} className="project-card">

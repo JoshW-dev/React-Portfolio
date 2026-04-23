@@ -16,6 +16,8 @@ import EducationAI from "../../Assets/Projects/EducationAI.png";
 import FeedbackerAI from "../../Assets/Projects/feedbacker.jpg";
 import mymcat from "../../Assets/Projects/mymcat.png";
 import founderrise from "../../Assets/Projects/founderrise.png";
+import openaffect from "../../Assets/Projects/openaffect.png";
+import somebodybuiltthis from "../../Assets/Projects/somebodybuiltthis.png";
 
 function Projects() {
   return (
@@ -29,6 +31,22 @@ function Projects() {
           Here some projects I've worked on recently.
         </p>
         <Row style={{ justifyContent: "center", paddingBottom: "10px" }}>
+          <Col md={4} className="project-card">
+            <ProjectCard
+              imgPath={openaffect}
+              title="OpenAffect"
+              description="Predictive AI for virality. Drop in any script, hook, or clip and see exactly how audiences will react, where you lose them, and what to change to make it go viral. Maps every second of content to neural activation to reveal the emotion viewers feel and the action they'll take next."
+              demoLink="https://www.openaffect.ai/"
+            />
+          </Col>
+          <Col md={4} className="project-card">
+            <ProjectCard
+              imgPath={somebodybuiltthis}
+              title="Somebody Built This"
+              description="A searchable index of small, focused indie apps that do one thing well — scheduling, analytics, forms, whiteboards, and the odd corner of the internet. If somebody built it, it's here. If not, go build it."
+              demoLink="https://somebodybuiltthis.vercel.app/"
+            />
+          </Col>
           <Col md={4} className="project-card">
             <ProjectCard
               imgPath={founderrise}

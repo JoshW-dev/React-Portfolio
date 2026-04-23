@@ -104,8 +104,8 @@ function NavBar() {
                 target="_blank"
                 rel="noreferrer"
               >
-                
-                Company
+
+                AI
               </Nav.Link>
             </Nav.Item>
 

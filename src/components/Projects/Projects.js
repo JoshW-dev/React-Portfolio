@@ -18,6 +18,7 @@ import mymcat from "../../Assets/Projects/mymcat.png";
 import founderrise from "../../Assets/Projects/founderrise.png";
 import openaffect from "../../Assets/Projects/openaffect.png";
 import somebodybuiltthis from "../../Assets/Projects/somebodybuiltthis.png";
+import convert2epub from "../../Assets/Projects/convert2epub.png";
 
 function Projects() {
   return (
@@ -31,6 +32,16 @@ function Projects() {
           Here some projects I've worked on recently.
         </p>
         <Row style={{ justifyContent: "center", paddingBottom: "10px" }}>
+          <Col md={4} className="project-card">
+            <ProjectCard
+              imgPath={convert2epub}
+              type={"Github"}
+              title="Convert2EPUB"
+              description="Free, privacy-first ebook converters that run entirely in your browser — no uploads, no servers, no accounts, so your files never leave your device. Turn a fixed-layout PDF into a reflowable EPUB (with OCR for scanned books and automatic chapter detection), or lay an EPUB out into a clean, paginated PDF with selectable text. Built with PDF.js, Tesseract.js, and jsPDF, all running client-side."
+              ghLink="https://github.com/JoshW-dev/pdf-to-epub"
+              demoLink="https://convert2epub.online"
+            />
+          </Col>
           <Col md={4} className="project-card">
             <ProjectCard
               imgPath={openaffect}

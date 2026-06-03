@@ -12,7 +12,7 @@ import localLLM from "../../Assets/Projects/localLLM.png";
 import H2 from "../../Assets/Projects/02.jpg";
 import FPSO from "../../Assets/Projects/04.jpg";
 import pets from "../../Assets/Projects/pets.png";
-import EducationAI from "../../Assets/Projects/EducationAI.png";
+import highstyle from "../../Assets/Projects/highstyle.png";
 import FeedbackerAI from "../../Assets/Projects/feedbacker.jpg";
 import mymcat from "../../Assets/Projects/mymcat.png";
 import founderrise from "../../Assets/Projects/founderrise.png";
@@ -95,10 +95,9 @@ function Projects() {
           </Col>
           <Col md={4} className="project-card">
             <ProjectCard
-              imgPath={EducationAI}
-              title="AI Education Assistant"
-              description="
-              AI-powered web app that redefines learning and teaching. It offers advanced translation, writing aids, and interactive learning tools, serving both students and educators. With this platform, enhancing academic success and efficiency becomes effortless and accessible."
+              imgPath={highstyle}
+              title="Highstyle"
+              description="AI video clipper for content operators. Drop in a long-form podcast, webinar, or interview and Highstyle returns ranked, captioned, on-brand short clips — automatically reframed for 9:16, 1:1, and 16:9 and ready to post to TikTok, Reels, Shorts, and LinkedIn. Built for teams running clipping at real spend, it surfaces the moments that drive watch time and saves, not just the loudest ones."
               demoLink="https://highstyle.ai/"
             />
           </Col>

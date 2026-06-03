@@ -16,7 +16,9 @@ import {
   SiNextdotjs,
   SiHubspot,
   SiPostgresql,
-  SiDocker
+  SiDocker,
+  SiTypescript,
+  SiTailwindcss,
 } from "react-icons/si";
 
 function Techstack() {
@@ -27,6 +29,9 @@ function Techstack() {
       </Col>
       <Col xs={4} md={2} className="tech-icons">
         <DiJavascript1 />
+      </Col>
+      <Col xs={4} md={2} className="tech-icons">
+        <SiTypescript />
       </Col>
       <Col xs={4} md={2} className="tech-icons">
         <DiPython />
@@ -45,6 +50,9 @@ function Techstack() {
       </Col>
       <Col xs={4} md={2} className="tech-icons">
         <SiNextdotjs />
+      </Col>
+      <Col xs={4} md={2} className="tech-icons">
+        <SiTailwindcss />
       </Col>
       <Col xs={4} md={2} className="tech-icons">
         <DiGit />

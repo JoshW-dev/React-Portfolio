@@ -19,6 +19,7 @@ import founderrise from "../../Assets/Projects/founderrise.png";
 import openaffect from "../../Assets/Projects/openaffect.png";
 import somebodybuiltthis from "../../Assets/Projects/somebodybuiltthis.png";
 import convert2epub from "../../Assets/Projects/convert2epub.png";
+import disco from "../../Assets/Projects/disco.png";
 
 function Projects() {
   return (
@@ -34,20 +35,46 @@ function Projects() {
         <Row style={{ justifyContent: "center", paddingBottom: "10px" }}>
           <Col md={4} className="project-card">
             <ProjectCard
+              imgPath={openaffect}
+              title="OpenAffect"
+              description="Predictive AI for virality. Drop in any script, hook, or clip and see exactly how audiences will react, where you lose them, and what to change to make it go viral. Maps every second of content to neural activation to reveal the emotion viewers feel and the action they'll take next."
+              demoLink="https://www.openaffect.ai/"
+            />
+          </Col>
+          <Col md={4} className="project-card">
+            <ProjectCard
+              imgPath={highstyle}
+              title="Highstyle"
+              description="AI video clipper for content operators. Drop in a long-form podcast, webinar, or interview and Highstyle returns ranked, captioned, on-brand short clips — automatically reframed for 9:16, 1:1, and 16:9 and ready to post to TikTok, Reels, Shorts, and LinkedIn. Built for teams running clipping at real spend, it surfaces the moments that drive watch time and saves, not just the loudest ones."
+              demoLink="https://highstyle.ai/"
+            />
+          </Col>
+          <Col md={4} className="project-card">
+            <ProjectCard
+              imgPath={disco}
+              title="Disco"
+              description="AI-powered learning management system (LMS) and social learning platform from Disco, a Canadian ed-tech startup with over 300,000 learners. As part of the team, I help build AI-native tools that let organizations create modern learning academies — bringing courses, community, and AI agents together in one fully branded experience."
+              demoLink="https://www.disco.co/"
+            />
+          </Col>
+          <Col md={4} className="project-card">
+            <ProjectCard
+              imgPath={insider}
+              type={"Github"}
+              title="Insider Trader Watchlist"
+              description="Web app that tracks stock purchases by high-level company insiders by webscraping and compiling SEC data. I use this on a regular basis to inform my trading."
+              ghLink="https://github.com/JoshW-dev/insider-alert"
+              demoLink="https://www.insidersignal.ai/"
+            />
+          </Col>
+          <Col md={4} className="project-card">
+            <ProjectCard
               imgPath={convert2epub}
               type={"Github"}
               title="Convert2EPUB"
               description="Free, privacy-first ebook converters that run entirely in your browser — no uploads, no servers, no accounts, so your files never leave your device. Turn a fixed-layout PDF into a reflowable EPUB (with OCR for scanned books and automatic chapter detection), or lay an EPUB out into a clean, paginated PDF with selectable text. Built with PDF.js, Tesseract.js, and jsPDF, all running client-side."
               ghLink="https://github.com/JoshW-dev/pdf-to-epub"
               demoLink="https://convert2epub.online"
-            />
-          </Col>
-          <Col md={4} className="project-card">
-            <ProjectCard
-              imgPath={openaffect}
-              title="OpenAffect"
-              description="Predictive AI for virality. Drop in any script, hook, or clip and see exactly how audiences will react, where you lose them, and what to change to make it go viral. Maps every second of content to neural activation to reveal the emotion viewers feel and the action they'll take next."
-              demoLink="https://www.openaffect.ai/"
             />
           </Col>
           <Col md={4} className="project-card">
@@ -76,29 +103,11 @@ function Projects() {
           </Col>
           <Col md={4} className="project-card">
             <ProjectCard
-              imgPath={insider}
-              type={"Github"}
-              title="Insider Trader Watchlist"
-              description="Web app that tracks stock purchases by high-level company insiders by webscraping and compiling SEC data. I use this on a regular basis to inform my trading."
-              ghLink="https://github.com/JoshW-dev/insider-alert"
-              demoLink="https://www.insidersignal.ai/"
-            />
-          </Col>
-          <Col md={4} className="project-card">
-            <ProjectCard
               imgPath={FeedbackerAI}
               title="Feedbacker AI"
               description="
               Your personal writing coach, designed to help you communicate like a master. Instant expert guidance and advice for improving emails, and professional writing. "
               demoLink="https://www.youtube.com/watch?v=z3b7Iapg6_8"
-            />
-          </Col>
-          <Col md={4} className="project-card">
-            <ProjectCard
-              imgPath={highstyle}
-              title="Highstyle"
-              description="AI video clipper for content operators. Drop in a long-form podcast, webinar, or interview and Highstyle returns ranked, captioned, on-brand short clips — automatically reframed for 9:16, 1:1, and 16:9 and ready to post to TikTok, Reels, Shorts, and LinkedIn. Built for teams running clipping at real spend, it surfaces the moments that drive watch time and saves, not just the loudest ones."
-              demoLink="https://highstyle.ai/"
             />
           </Col>
           <Col md={4} className="project-card">
@@ -126,7 +135,7 @@ function Projects() {
               imgPath={investor}
               title="Investor Assistant AI"
               description="Custom-made chatbot designed to guide users in personal investing. Trained on an extensive investment knowledge base, it can answer queries from 'What is a mutual fund?' to 'How does compound interest work?'. Capable of communicating in English, Spanish, French, Chinese, and Russian, Invest Assistant is your multilingual guide to the world of investing."
-              demoLink="https://investor-assistant.zapier.app/"              
+              demoLink="https://investor-assistant.zapier.app/"
             />
           </Col>
           <Col md={4} className="project-card">

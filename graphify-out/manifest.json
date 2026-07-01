@@ -1,0 +1,282 @@
+{
+  "/Users/joshua/Desktop/Code/React-Portfolio/package.json": {
+    "mtime": 1759760166.9620092,
+    "ast_hash": "4dafd3cbcb7d9e98adf34f731195360e",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/.claude/settings.local.json": {
+    "mtime": 1780486370.2513673,
+    "ast_hash": "85aec1db10f14a2ad8ca47d5747ff667",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/public/manifest.json": {
+    "mtime": 1759587629.9914894,
+    "ast_hash": "dcfc61e9abe1171325a31c07701635a1",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/src/reportWebVitals.js": {
+    "mtime": 1759587630.0187669,
+    "ast_hash": "240e2381f826a9bb84d178b29b7b9abe",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/src/index.js": {
+    "mtime": 1759587630.0187035,
+    "ast_hash": "abc62dcbd1edc359fcd365be8df3eee5",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/src/App.test.js": {
+    "mtime": 1759587629.991854,
+    "ast_hash": "d18ac434afb00158b91831ac1e36c491",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/src/setupTests.js": {
+    "mtime": 1759587630.018835,
+    "ast_hash": "1a77571e1a8cf36018a41bcedf60db75",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/src/App.js": {
+    "mtime": 1759587629.9917777,
+    "ast_hash": "b43c02b1a5660329c92393932a4781c7",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/src/components/Navbar.js": {
+    "mtime": 1776951027.4897635,
+    "ast_hash": "5959845ef43fb105665e2fb9f13805bb",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/src/components/ScrollToTop.js": {
+    "mtime": 1759587630.0184,
+    "ast_hash": "101911756d24a2da3ee24fbaf64bdd9b",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/src/components/Pre.js": {
+    "mtime": 1759587630.0179365,
+    "ast_hash": "2eebe92f1a6781e209eb4133ce589e2b",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/src/components/Footer.js": {
+    "mtime": 1759587630.0174894,
+    "ast_hash": "0f5a214278db7b3ca4b0004f7926f7c0",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/src/components/Particle.js": {
+    "mtime": 1759587630.0178773,
+    "ast_hash": "01675fa46e5ade2f04cf7adbff9783d5",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/src/components/Home/Type.js": {
+    "mtime": 1759587630.017743,
+    "ast_hash": "315d637e984405fd74092c96a449fcf1",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/src/components/Home/Home2.js": {
+    "mtime": 1759587630.017674,
+    "ast_hash": "8186d70d882d8389de15b0912d4a3892",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/src/components/Home/Home.js": {
+    "mtime": 1759587630.017594,
+    "ast_hash": "5d9acb35c6255c65027f6cfaa956ef6a",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/src/components/Projects/ProjectCards.js": {
+    "mtime": 1759587630.0180433,
+    "ast_hash": "a14819c2a191706b714c463db0bc7399",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/src/components/Projects/Projects.js": {
+    "mtime": 1780500905.6898875,
+    "ast_hash": "75440b6e44f84bbce5cd51690406cb38",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/src/components/Resume/ResumeNew.js": {
+    "mtime": 1776950777.0347176,
+    "ast_hash": "5f0073e046c3dc1e023114eda63f050c",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/src/components/About/Toolstack.js": {
+    "mtime": 1780500870.159881,
+    "ast_hash": "9d1be26e794d87cc81649b7e0107caf0",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/src/components/About/About.js": {
+    "mtime": 1759587630.0171542,
+    "ast_hash": "a8b3d4de1fa6b00a1a940b7078c40ebf",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/src/components/About/AboutCard.js": {
+    "mtime": 1759587630.0172231,
+    "ast_hash": "fe71eff8b673b19ac3092fa812004425",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/src/components/About/Github.js": {
+    "mtime": 1759587630.017291,
+    "ast_hash": "08e9269d6a51fd8770a5e6a9db61a4e6",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/src/components/About/Techstack.js": {
+    "mtime": 1780500864.0244882,
+    "ast_hash": "a02c8541606afca407f2be38a10bf4e4",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/public/index.html": {
+    "mtime": 1759587629.9914057,
+    "ast_hash": "be4708df2a2231d7031c1fa013586bc3",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/public/robots.txt": {
+    "mtime": 1759587629.9915621,
+    "ast_hash": "fa1ded1ed7c11438a9b0385b1e112850",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/src/Assets/WadeJoshua_Resume.pdf": {
+    "mtime": 1774984388.5425694,
+    "ast_hash": "5f2d522e39b68e2756bf90a5924e78a0",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/public/favicon.png": {
+    "mtime": 1759587629.991319,
+    "ast_hash": "05ba9dc2b0ff67dfb36e0fa512ff2572",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/preview/preview.png": {
+    "mtime": 1759587629.9909596,
+    "ast_hash": "47a50181068dc6cede3319865ecb8330",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/src/Assets/pre.svg": {
+    "mtime": 1759587630.0169902,
+    "ast_hash": "9477ef40f8a73405ce36710618cbf3fd",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/src/Assets/avatar.png": {
+    "mtime": 1759587630.014704,
+    "ast_hash": "28ca4f59299b261f7c44c6a10fe597a4",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/src/Assets/logo.png": {
+    "mtime": 1759587630.0169048,
+    "ast_hash": "4525ac5c19600408194936733c54079e",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/src/Assets/about.png": {
+    "mtime": 1759587630.012553,
+    "ast_hash": "1b21548cee23d1abfeec4a452a7e6267",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/src/Assets/home-main.png": {
+    "mtime": 1759587630.0161524,
+    "ast_hash": "1c5d4de6ed8db51919ad73909ea908b0",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/src/Assets/Projects/feedbacker.jpg": {
+    "mtime": 1759587630.0006719,
+    "ast_hash": "f2bd13c90c028234d5c7c669966ba6fb",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/src/Assets/Projects/paints.jpg": {
+    "mtime": 1759587630.0103662,
+    "ast_hash": "435e56bca7574129670634e82dddcdbb",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/src/Assets/Projects/localLLM.png": {
+    "mtime": 1759587630.0038621,
+    "ast_hash": "0b302cac9ab10085a306c24a38991aac",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/src/Assets/Projects/02.jpg": {
+    "mtime": 1759587629.992251,
+    "ast_hash": "d8820593fb3b0fd23af358dcd304b8e7",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/src/Assets/Projects/somebodybuiltthis.png": {
+    "mtime": 1776951472.2508335,
+    "ast_hash": "113cdc07687e9e1b50e0b0fd2f8a59d6",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/src/Assets/Projects/04.jpg": {
+    "mtime": 1759587629.9930735,
+    "ast_hash": "c32bbb88ec05e0b838c5ba60b3d07163",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/src/Assets/Projects/mymcat.png": {
+    "mtime": 1759587630.0075953,
+    "ast_hash": "b6feb1526deced1ea729e0bc58dc7efa",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/src/Assets/Projects/pets.png": {
+    "mtime": 1759587630.0112438,
+    "ast_hash": "f186e485a5f9629b18ab99fbb6562db8",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/src/Assets/Projects/investorchatbot.png": {
+    "mtime": 1759587630.0028486,
+    "ast_hash": "0a4483f5fec24af4a573b37c32f9be13",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/src/Assets/Projects/founderrise.png": {
+    "mtime": 1759588163.512318,
+    "ast_hash": "cd26500590530ff4b688180bf97237ae",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/src/Assets/Projects/insider-trader.png": {
+    "mtime": 1759587630.00221,
+    "ast_hash": "b1ec18169baf45ad2f68b6bbc6688ad9",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/src/Assets/Projects/adam.png": {
+    "mtime": 1759587629.9955573,
+    "ast_hash": "6e65aa0d1010b8db97eebf468a3f01c1",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/src/Assets/Projects/insider-trader.jpg": {
+    "mtime": 1759587630.0016618,
+    "ast_hash": "b50daf5d379948bbda86d56c2842780a",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/src/Assets/Projects/cubesat.png": {
+    "mtime": 1759587629.9993556,
+    "ast_hash": "baa75486217806bd739fd41e177e326a",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/src/Assets/Projects/aiChatBot.png": {
+    "mtime": 1759587629.9986093,
+    "ast_hash": "adb6a8964c7bd9eab92def84a09ee684",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/src/Assets/Projects/openaffect.png": {
+    "mtime": 1776950936.4191172,
+    "ast_hash": "615e0d23bc2dcb6d5968bab40be63207",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/.claude/settings.json": {
+    "mtime": 1780184408.693059,
+    "ast_hash": "87f0d903477984d0587a02f8fe185263",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/CLAUDE.md": {
+    "mtime": 1780184408.6927922,
+    "ast_hash": "82efb97a359f5c7290bf2513d14686be",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/src/Assets/Projects/convert2epub.png": {
+    "mtime": 1780486604.5221424,
+    "ast_hash": "e76cf36cff145f31c1355c5a4f273d4c",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/src/Assets/Projects/highstyle.png": {
+    "mtime": 1780489660.1565862,
+    "ast_hash": "f1c25d2838509bd3781fc5cd477b328b",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/src/components/About/BrandIcons.js": {
+    "mtime": 1780500640.6113918,
+    "ast_hash": "38c12ef7883f163466ff2da7c3d39d71",
+    "semantic_hash": ""
+  },
+  "/Users/joshua/Desktop/Code/React-Portfolio/src/Assets/Projects/disco.png": {
+    "mtime": 1780500857.07122,
+    "ast_hash": "745341a1b5818f47eb6eac89d0d880d8",
+    "semantic_hash": ""
+  }
+}

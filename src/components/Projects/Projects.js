@@ -20,6 +20,7 @@ import openaffect from "../../Assets/Projects/openaffect.png";
 import somebodybuiltthis from "../../Assets/Projects/somebodybuiltthis.png";
 import convert2epub from "../../Assets/Projects/convert2epub.png";
 import disco from "../../Assets/Projects/disco.png";
+import eigenvirtue from "../../Assets/Projects/eigenvirtue.png";
 
 function Projects() {
   return (
@@ -33,6 +34,15 @@ function Projects() {
           Here some projects I've worked on recently.
         </p>
         <Row style={{ justifyContent: "center", paddingBottom: "10px" }}>
+          <Col md={4} className="project-card">
+            <ProjectCard
+              imgPath={eigenvirtue}
+              type={"Github"}
+              title="Eigenvirtue"
+              description="Can you compute a mathematical representation of virtue? Eigenvirtue extracts the dominant direction of any abstract concept from a language model's embedding space, using virtue as the worked example: 61 virtue/vice sentence pairs built on Aristotle's table, one SVD, and an axis that recognizes virtues it was never fit on and ranks unpleasant honesty above pleasant flattery. Includes a paper-style write-up, full figures, and a responsible run of the original eigenslur question that inspired it."
+              ghLink="https://github.com/JoshW-dev/eigenvirtue"
+            />
+          </Col>
           <Col md={4} className="project-card">
             <ProjectCard
               imgPath={openaffect}

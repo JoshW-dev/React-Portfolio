@@ -2,25 +2,25 @@ import React from "react";
 import { Container, Row, Col } from "react-bootstrap";
 import ProjectCard from "./ProjectCards";
 import Particle from "../Particle";
-import adam from "../../Assets/Projects/adam.png";
-import aiChatBot from "../../Assets/Projects/aiChatBot.png";
-import investor from "../../Assets/Projects/investorchatbot.png";
-import insider from "../../Assets/Projects/insider-trader.jpg";
-import cubesat from "../../Assets/Projects/cubesat.png";
-import paints from "../../Assets/Projects/paints.jpg";
-import localLLM from "../../Assets/Projects/localLLM.png";
-import H2 from "../../Assets/Projects/02.jpg";
-import FPSO from "../../Assets/Projects/04.jpg";
-import pets from "../../Assets/Projects/pets.png";
-import highstyle from "../../Assets/Projects/highstyle.png";
-import FeedbackerAI from "../../Assets/Projects/feedbacker.jpg";
-import mymcat from "../../Assets/Projects/mymcat.png";
-import founderrise from "../../Assets/Projects/founderrise.png";
-import openaffect from "../../Assets/Projects/openaffect.png";
-import somebodybuiltthis from "../../Assets/Projects/somebodybuiltthis.png";
-import convert2epub from "../../Assets/Projects/convert2epub.png";
-import disco from "../../Assets/Projects/disco.png";
-import eigenvirtue from "../../Assets/Projects/eigenvirtue.png";
+import adam from "../../Assets/Projects/adam.webp";
+import aiChatBot from "../../Assets/Projects/aiChatBot.webp";
+import investor from "../../Assets/Projects/investorchatbot.webp";
+import insider from "../../Assets/Projects/insider-trader.webp";
+import cubesat from "../../Assets/Projects/cubesat.webp";
+import paints from "../../Assets/Projects/paints.webp";
+import localLLM from "../../Assets/Projects/localLLM.webp";
+import H2 from "../../Assets/Projects/02.webp";
+import FPSO from "../../Assets/Projects/04.webp";
+import pets from "../../Assets/Projects/pets.webp";
+import highstyle from "../../Assets/Projects/highstyle.webp";
+import FeedbackerAI from "../../Assets/Projects/feedbacker.webp";
+import mymcat from "../../Assets/Projects/mymcat.webp";
+import founderrise from "../../Assets/Projects/founderrise.webp";
+import openaffect from "../../Assets/Projects/openaffect.webp";
+import somebodybuiltthis from "../../Assets/Projects/somebodybuiltthis.webp";
+import convert2epub from "../../Assets/Projects/convert2epub.webp";
+import disco from "../../Assets/Projects/disco.webp";
+import eigenvirtue from "../../Assets/Projects/eigenvirtue.webp";
 
 function Projects() {
   return (
@@ -31,7 +31,7 @@ function Projects() {
           Recent <strong className="gold">Work </strong>
         </h1>
         <p style={{ color: "white" }}>
-          Here some projects I've worked on recently.
+          Here are some projects I've worked on recently.
         </p>
         <Row style={{ justifyContent: "center", paddingBottom: "10px" }}>
           <Col md={4} className="project-card">

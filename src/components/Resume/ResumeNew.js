@@ -25,6 +25,7 @@ function ResumeNew() {
             variant="primary"
             href={pdf}
             target="_blank"
+            rel="noopener noreferrer"
             style={{ maxWidth: "250px" }}
           >
             <AiOutlineDownload />
@@ -53,6 +54,7 @@ function ResumeNew() {
             variant="primary"
             href={pdf}
             target="_blank"
+            rel="noopener noreferrer"
             style={{ maxWidth: "250px" }}
           >
             <AiOutlineDownload />

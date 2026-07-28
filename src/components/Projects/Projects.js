@@ -21,6 +21,7 @@ import somebodybuiltthis from "../../Assets/Projects/somebodybuiltthis.webp";
 import convert2epub from "../../Assets/Projects/convert2epub.webp";
 import disco from "../../Assets/Projects/disco.webp";
 import eigenvirtue from "../../Assets/Projects/eigenvirtue.webp";
+import mcnicoll from "../../Assets/Projects/mcnicoll.webp";
 
 function Projects() {
   return (
@@ -34,6 +35,14 @@ function Projects() {
           Here are some projects I've worked on recently.
         </p>
         <Row style={{ justifyContent: "center", paddingBottom: "10px" }}>
+          <Col md={4} className="project-card">
+            <ProjectCard
+              imgPath={mcnicoll}
+              title="In Search of Light"
+              description="Eighteen Helen McNicoll paintings animated live in the browser and strung along the years she painted them. For every canvas the renderer builds a structure tensor from the image gradients and moves pixels along its minor eigenvector, which points down the length of her own brushstrokes, so wind crosses a field the way she painted it crossing while faces and figures hold still. Her canvases are not shaped like a screen, so each one was extended past its own edges by an outpainting pass and her untouched scan composited back over the middle at full resolution."
+              demoLink="https://mcnicoll-light.vercel.app/"
+            />
+          </Col>
           <Col md={4} className="project-card">
             <ProjectCard
               imgPath={eigenvirtue}

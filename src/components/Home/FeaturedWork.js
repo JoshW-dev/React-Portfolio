@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { AiOutlineArrowRight } from "react-icons/ai";
 import openaffect from "../../Assets/Projects/openaffect.webp";
 import highstyle from "../../Assets/Projects/highstyle.webp";
-import mcnicoll from "../../Assets/Projects/mcnicoll.webp";
+import insider from "../../Assets/Projects/insider-trader.webp";
 import Reveal from "../Reveal";
 import useSpotlight from "../../hooks/useSpotlight";
 
@@ -26,12 +26,12 @@ const FEATURED = [
     href: "https://highstyle.ai/",
   },
   {
-    img: mcnicoll,
-    tag: "WebGL · Art",
-    title: "In Search of Light",
+    img: insider,
+    tag: "AI · Trading",
+    title: "Insider Signal",
     blurb:
-      "Eighteen Helen McNicoll paintings animated live in the browser, with every pixel moving along the direction of her own brushstrokes.",
-    href: "https://mcnicoll-light.vercel.app/",
+      "Tracks stock purchases by high-level company insiders straight from SEC filings. I use it myself to inform my own trading.",
+    href: "https://www.insidersignal.ai/",
   },
 ];
 

@@ -23,10 +23,14 @@ function AboutCard() {
             <br /> 
             
             I've also led teams as an <span className="gold">Engineering Consultant</span>, driving significant improvements in large energy and manufacturing projects.
-            <br /> 
-            <br /> 
-            
-            I am always looking for ways to leverage technology to make a difference. 
+            <br />
+            <br />
+
+            Right now, I work in <span className="gold">GovTech</span> at a Y Combinator-backed startup.
+            <br />
+            <br />
+
+            I am always looking for ways to leverage technology to make a difference.
           </p>
 
         </blockquote>

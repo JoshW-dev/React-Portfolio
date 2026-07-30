@@ -60,6 +60,16 @@ function Projects() {
           </Col>
           <Col xs={12} sm={6} lg={4} className="project-card">
             <ProjectCard
+              imgPath={insider}
+              type={"Github"}
+              title="Insider Trader Watchlist"
+              description="Web app that tracks stock purchases by high-level company insiders by webscraping and compiling SEC data. I use this on a regular basis to inform my trading."
+              ghLink="https://github.com/JoshW-dev/insider-alert"
+              demoLink="https://www.insidersignal.ai/"
+            />
+          </Col>
+          <Col xs={12} sm={6} lg={4} className="project-card">
+            <ProjectCard
               imgPath={mcnicoll}
               title="In Search of Light"
               description="Eighteen Helen McNicoll paintings animated live in the browser and strung along the years she painted them. For every canvas the renderer builds a structure tensor from the image gradients and moves pixels along its minor eigenvector, which points down the length of her own brushstrokes, so wind crosses a field the way she painted it crossing while faces and figures hold still. Her canvases are not shaped like a screen, so each one was extended past its own edges by an outpainting pass and her untouched scan composited back over the middle at full resolution."
@@ -81,16 +91,6 @@ function Projects() {
               title="Disco"
               description="AI-powered learning management system (LMS) and social learning platform from Disco, a Canadian ed-tech startup with over 300,000 learners. As part of the team, I help build AI-native tools that let organizations create modern learning academies, bringing courses, community, and AI agents together in one fully branded experience."
               demoLink="https://www.disco.co/"
-            />
-          </Col>
-          <Col xs={12} sm={6} lg={4} className="project-card">
-            <ProjectCard
-              imgPath={insider}
-              type={"Github"}
-              title="Insider Trader Watchlist"
-              description="Web app that tracks stock purchases by high-level company insiders by webscraping and compiling SEC data. I use this on a regular basis to inform my trading."
-              ghLink="https://github.com/JoshW-dev/insider-alert"
-              demoLink="https://www.insidersignal.ai/"
             />
           </Col>
           <Col xs={12} sm={6} lg={4} className="project-card">

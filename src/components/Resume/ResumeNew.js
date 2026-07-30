@@ -1,68 +1,92 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Container, Row } from "react-bootstrap";
-import Button from "react-bootstrap/Button";
 import Particle from "../Particle";
-import pdf from "../../Assets/../Assets/WadeJoshua_Resume.pdf";
+import pdf from "../../Assets/WadeJoshua_Resume.pdf";
 import { AiOutlineDownload } from "react-icons/ai";
 import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/esm/Page/AnnotationLayer.css";
+import Reveal from "../Reveal";
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
+const MAX_PAGE_WIDTH = 900;
+
 function ResumeNew() {
-  const [width, setWidth] = useState(1200);
+  const shellRef = useRef(null);
+  const [pageWidth, setPageWidth] = useState(null);
   const [numPages, setNumPages] = useState(null);
 
+  // Render each page at the container's width so the PDF stays legible on a
+  // phone instead of being scaled down to a thumbnail.
   useEffect(() => {
-    setWidth(window.innerWidth);
+    const measure = () => {
+      const el = shellRef.current;
+      if (!el) return;
+      setPageWidth(Math.min(el.clientWidth, MAX_PAGE_WIDTH));
+    };
+
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
   }, []);
 
   return (
-    <div>
-      <Container fluid className="resume-section">
-        <Particle />
-        <Row style={{ justifyContent: "center", position: "relative" }}>
-          <Button
-            variant="primary"
-            href={pdf}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ maxWidth: "250px" }}
+    <Container fluid className="resume-section">
+      <Particle />
+      <Container>
+        <Reveal className="section__head">
+          <span className="eyebrow">
+            <span className="dot" />
+            Resume
+          </span>
+          <h1 className="section__title">The short version</h1>
+          <p className="section__lede">
+            Read it here, or take the PDF with you.
+          </p>
+          <div
+            className="btn-row"
+            style={{ justifyContent: "center", marginTop: "1.5rem" }}
           >
-            <AiOutlineDownload />
-            &nbsp;Download CV
-          </Button>
-        </Row>
+            <a
+              className="btn-solid"
+              href={pdf}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <AiOutlineDownload aria-hidden="true" />
+              Download CV
+            </a>
+          </div>
+        </Reveal>
 
         <Row className="resume">
-          <Document
-            file={pdf}
-            className="d-flex flex-column align-items-center"
-            onLoadSuccess={({ numPages }) => setNumPages(numPages)}
-          >
-            {Array.from({ length: numPages || 0 }, (_, i) => (
-              <Page
-                key={i + 1}
-                pageNumber={i + 1}
-                scale={width > 786 ? 1.7 : 0.6}
-              />
-            ))}
-          </Document>
+          <div className="resume-doc" ref={shellRef}>
+            {pageWidth && (
+              <Document
+                file={pdf}
+                onLoadSuccess={({ numPages: count }) => setNumPages(count)}
+                loading=""
+              >
+                {Array.from({ length: numPages || 0 }, (_, i) => (
+                  <Page key={i + 1} pageNumber={i + 1} width={pageWidth} />
+                ))}
+              </Document>
+            )}
+          </div>
         </Row>
 
-        <Row style={{ justifyContent: "center", position: "relative" }}>
-          <Button
-            variant="primary"
+        <div className="btn-row" style={{ justifyContent: "center" }}>
+          <a
+            className="btn-solid"
             href={pdf}
             target="_blank"
             rel="noopener noreferrer"
-            style={{ maxWidth: "250px" }}
           >
-            <AiOutlineDownload />
-            &nbsp;Download CV
-          </Button>
-        </Row>
+            <AiOutlineDownload aria-hidden="true" />
+            Download CV
+          </a>
+        </div>
       </Container>
-    </div>
+    </Container>
   );
 }
 

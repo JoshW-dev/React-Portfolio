@@ -1,116 +1,176 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Navbar from "react-bootstrap/Navbar";
 import Nav from "react-bootstrap/Nav";
 import Container from "react-bootstrap/Container";
 import logo from "../Assets/logo.png";
-import { Link } from "react-router-dom";
-import { ImBlog, } from "react-icons/im";
+import { Link, useLocation } from "react-router-dom";
+import { ImBlog } from "react-icons/im";
 import {
   AiOutlineHome,
   AiOutlineFundProjectionScreen,
   AiOutlineUser,
+  AiOutlineRight,
+  AiOutlineArrowRight,
+  AiFillGithub,
+  AiOutlineMedium,
 } from "react-icons/ai";
-
+import { FaLinkedinIn } from "react-icons/fa";
+import { HiOutlineSparkles } from "react-icons/hi";
 import { CgFileDocument } from "react-icons/cg";
 
+const LINKS = [
+  { to: "/", label: "Home", Icon: AiOutlineHome },
+  { to: "/about", label: "About", Icon: AiOutlineUser },
+  { to: "/projects", label: "Projects", Icon: AiOutlineFundProjectionScreen },
+  { to: "/resume", label: "Resume", Icon: CgFileDocument },
+];
+
+const EXTERNAL = [
+  { href: "https://medium.com/@wadan", label: "Blog", Icon: ImBlog },
+  { href: "https://method-ai.com/", label: "Method AI", Icon: HiOutlineSparkles },
+];
+
 function NavBar() {
-  const [expand, updateExpanded] = useState(false);
-  const [navColour, updateNavbar] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const { pathname } = useLocation();
+
+  const close = useCallback(() => setExpanded(false), []);
 
   useEffect(() => {
     function scrollHandler() {
-      updateNavbar(window.scrollY >= 20);
+      setScrolled(window.scrollY >= 20);
     }
-    window.addEventListener("scroll", scrollHandler);
+    scrollHandler();
+    window.addEventListener("scroll", scrollHandler, { passive: true });
     return () => window.removeEventListener("scroll", scrollHandler);
   }, []);
 
+  // Close the sheet on navigation and lock the page behind it while open.
+  useEffect(close, [pathname, close]);
+
+  useEffect(() => {
+    document.body.classList.toggle("nav-open", expanded);
+    if (!expanded) return;
+
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") close();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [expanded, close]);
+
+  useEffect(() => () => document.body.classList.remove("nav-open"), []);
+
   return (
-    <Navbar
-      expanded={expand}
-      fixed="top"
-      expand="md"
-      className={navColour ? "sticky" : "navbar"}
-    >
-      <Container>
-        <Navbar.Brand href="/" className="d-flex">
-          <img src={logo} className="img-fluid logo" alt="brand" />
-        </Navbar.Brand>
-        <Navbar.Toggle
-          aria-controls="responsive-navbar-nav"
-          onClick={() => {
-            updateExpanded(expand ? false : "expanded");
-          }}
-        >
-          <span></span>
-          <span></span>
-          <span></span>
-        </Navbar.Toggle>
-        <Navbar.Collapse id="responsive-navbar-nav">
-          <Nav className="ms-auto" defaultActiveKey="#home">
-            <Nav.Item>
-              <Nav.Link as={Link} to="/" onClick={() => updateExpanded(false)}>
-                <AiOutlineHome style={{ marginBottom: "2px" }} /> Home
-              </Nav.Link>
-            </Nav.Item>
+    <>
+      {expanded && (
+        <button
+          type="button"
+          className="nav-scrim d-lg-none"
+          aria-label="Close menu"
+          onClick={close}
+        />
+      )}
 
-            <Nav.Item>
-              <Nav.Link
-                as={Link}
-                to="/about"
-                onClick={() => updateExpanded(false)}
+      <Navbar
+        expanded={expanded}
+        fixed="top"
+        expand="lg"
+        className={scrolled || expanded ? "navbar sticky" : "navbar"}
+      >
+        <Container>
+          <Navbar.Brand as={Link} to="/" onClick={close}>
+            <img src={logo} className="img-fluid logo" alt="" />
+            <span className="brand-name">
+              Josh<span>.</span>
+            </span>
+          </Navbar.Brand>
+
+          <Navbar.Toggle
+            aria-controls="responsive-navbar-nav"
+            label={expanded ? "Close navigation menu" : "Open navigation menu"}
+            aria-expanded={expanded}
+            onClick={() => setExpanded((open) => !open)}
+          >
+            <span></span>
+            <span></span>
+            <span></span>
+          </Navbar.Toggle>
+
+          <Navbar.Collapse id="responsive-navbar-nav">
+            <Nav className="ms-auto">
+              {LINKS.map(({ to, label, Icon }) => (
+                <Nav.Item key={to}>
+                  <Nav.Link
+                    as={Link}
+                    to={to}
+                    onClick={close}
+                    className={pathname === to ? "is-active" : ""}
+                    aria-current={pathname === to ? "page" : undefined}
+                  >
+                    <Icon aria-hidden="true" /> {label}
+                    <AiOutlineRight className="nav-chevron d-lg-none" aria-hidden="true" />
+                  </Nav.Link>
+                </Nav.Item>
+              ))}
+
+              {EXTERNAL.map(({ href, label, Icon }) => (
+                <Nav.Item key={href}>
+                  <Nav.Link href={href} target="_blank" rel="noreferrer" onClick={close}>
+                    <Icon aria-hidden="true" /> {label}
+                    <AiOutlineRight className="nav-chevron d-lg-none" aria-hidden="true" />
+                  </Nav.Link>
+                </Nav.Item>
+              ))}
+            </Nav>
+
+            {/* Primary call to action: pill on desktop, full-width on the sheet */}
+            <div className="nav-sheet-cta">
+              <Link to="/projects" className="nav-cta" onClick={close}>
+                See my work
+                <AiOutlineArrowRight aria-hidden="true" />
+              </Link>
+            </div>
+
+            <div className="nav-divider d-lg-none" />
+
+            <div className="nav-sheet-foot d-lg-none">
+              <a
+                href="https://github.com/JoshW-dev"
+                target="_blank"
+                rel="noreferrer"
+                className="social-btn social-btn--sm"
+                aria-label="GitHub"
+                onClick={close}
               >
-                <AiOutlineUser style={{ marginBottom: "2px" }} /> About
-              </Nav.Link>
-            </Nav.Item>
-
-            <Nav.Item>
-              <Nav.Link
-                as={Link}
-                to="/projects"
-                onClick={() => updateExpanded(false)}
+                <AiFillGithub />
+              </a>
+              <a
+                href="https://www.linkedin.com/in/joshua-f-wade/"
+                target="_blank"
+                rel="noreferrer"
+                className="social-btn social-btn--sm"
+                aria-label="LinkedIn"
+                onClick={close}
               >
-                <AiOutlineFundProjectionScreen
-                  style={{ marginBottom: "2px" }}
-                />{" "}
-                Projects
-              </Nav.Link>
-            </Nav.Item>
-
-            <Nav.Item>
-              <Nav.Link
-                as={Link}
-                to="/resume"
-                onClick={() => updateExpanded(false)}
-              >
-                <CgFileDocument style={{ marginBottom: "2px" }} /> Resume
-              </Nav.Link>
-            </Nav.Item>
-
-            <Nav.Item>
-              <Nav.Link
+                <FaLinkedinIn />
+              </a>
+              <a
                 href="https://medium.com/@wadan"
                 target="_blank"
                 rel="noreferrer"
+                className="social-btn social-btn--sm"
+                aria-label="Medium"
+                onClick={close}
               >
-                <ImBlog style={{ marginBottom: "2px" }} /> Blog
-              </Nav.Link>
-            </Nav.Item>
-            <Nav.Item>
-              <Nav.Link
-                href="https://method-ai.com/"
-                target="_blank"
-                rel="noreferrer"
-              >
-
-                AI
-              </Nav.Link>
-            </Nav.Item>
-
-          </Nav>
-        </Navbar.Collapse>
-      </Container>
-    </Navbar>
+                <AiOutlineMedium />
+              </a>
+            </div>
+          </Navbar.Collapse>
+        </Container>
+      </Navbar>
+    </>
   );
 }
 

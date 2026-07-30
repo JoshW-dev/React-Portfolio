@@ -1,6 +1,7 @@
 import React from "react";
 import { Container, Row, Col } from "react-bootstrap";
 import ProjectCard from "./ProjectCards";
+import Reveal from "../Reveal";
 import Particle from "../Particle";
 import adam from "../../Assets/Projects/adam.webp";
 import aiChatBot from "../../Assets/Projects/aiChatBot.webp";
@@ -28,14 +29,20 @@ function Projects() {
     <Container fluid className="project-section">
       <Particle />
       <Container>
-        <h1 className="project-heading">
-          Recent <strong className="gold">Work </strong>
-        </h1>
-        <p style={{ color: "white" }}>
-          Here are some projects I've worked on recently.
-        </p>
+        <Reveal className="section__head">
+          <span className="eyebrow">
+            <span className="dot" />
+            20 projects
+          </span>
+          <h1 className="project-heading section__title">
+            Recent <strong className="gold">Work</strong>
+          </h1>
+          <p className="section__lede">
+            Here are some projects I've worked on recently, newest first.
+          </p>
+        </Reveal>
         <Row style={{ justifyContent: "center", paddingBottom: "10px" }}>
-          <Col md={4} className="project-card">
+          <Col xs={12} sm={6} lg={4} className="project-card">
             <ProjectCard
               imgPath={mcnicoll}
               title="In Search of Light"
@@ -43,7 +50,7 @@ function Projects() {
               demoLink="https://mcnicoll-light.vercel.app/"
             />
           </Col>
-          <Col md={4} className="project-card">
+          <Col xs={12} sm={6} lg={4} className="project-card">
             <ProjectCard
               imgPath={eigenvirtue}
               type={"Github"}
@@ -52,7 +59,7 @@ function Projects() {
               ghLink="https://github.com/JoshW-dev/eigenvirtue"
             />
           </Col>
-          <Col md={4} className="project-card">
+          <Col xs={12} sm={6} lg={4} className="project-card">
             <ProjectCard
               imgPath={openaffect}
               title="OpenAffect"
@@ -60,23 +67,23 @@ function Projects() {
               demoLink="https://www.openaffect.ai/"
             />
           </Col>
-          <Col md={4} className="project-card">
+          <Col xs={12} sm={6} lg={4} className="project-card">
             <ProjectCard
               imgPath={highstyle}
               title="Highstyle"
-              description="AI video clipper for content operators. Drop in a long-form podcast, webinar, or interview and Highstyle returns ranked, captioned, on-brand short clips — automatically reframed for 9:16, 1:1, and 16:9 and ready to post to TikTok, Reels, Shorts, and LinkedIn. Built for teams running clipping at real spend, it surfaces the moments that drive watch time and saves, not just the loudest ones."
+              description="AI video clipper for content operators. Drop in a long-form podcast, webinar, or interview and Highstyle returns ranked, captioned, on-brand short clips, automatically reframed for 9:16, 1:1, and 16:9 and ready to post to TikTok, Reels, Shorts, and LinkedIn. Built for teams running clipping at real spend, it surfaces the moments that drive watch time and saves, not just the loudest ones."
               demoLink="https://highstyle.ai/"
             />
           </Col>
-          <Col md={4} className="project-card">
+          <Col xs={12} sm={6} lg={4} className="project-card">
             <ProjectCard
               imgPath={disco}
               title="Disco"
-              description="AI-powered learning management system (LMS) and social learning platform from Disco, a Canadian ed-tech startup with over 300,000 learners. As part of the team, I help build AI-native tools that let organizations create modern learning academies — bringing courses, community, and AI agents together in one fully branded experience."
+              description="AI-powered learning management system (LMS) and social learning platform from Disco, a Canadian ed-tech startup with over 300,000 learners. As part of the team, I help build AI-native tools that let organizations create modern learning academies, bringing courses, community, and AI agents together in one fully branded experience."
               demoLink="https://www.disco.co/"
             />
           </Col>
-          <Col md={4} className="project-card">
+          <Col xs={12} sm={6} lg={4} className="project-card">
             <ProjectCard
               imgPath={insider}
               type={"Github"}
@@ -86,25 +93,25 @@ function Projects() {
               demoLink="https://www.insidersignal.ai/"
             />
           </Col>
-          <Col md={4} className="project-card">
+          <Col xs={12} sm={6} lg={4} className="project-card">
             <ProjectCard
               imgPath={convert2epub}
               type={"Github"}
               title="Convert2EPUB"
-              description="Free, privacy-first ebook converters that run entirely in your browser — no uploads, no servers, no accounts, so your files never leave your device. Turn a fixed-layout PDF into a reflowable EPUB (with OCR for scanned books and automatic chapter detection), or lay an EPUB out into a clean, paginated PDF with selectable text. Built with PDF.js, Tesseract.js, and jsPDF, all running client-side."
+              description="Free, privacy-first ebook converters that run entirely in your browser: no uploads, no servers, no accounts, so your files never leave your device. Turn a fixed-layout PDF into a reflowable EPUB (with OCR for scanned books and automatic chapter detection), or lay an EPUB out into a clean, paginated PDF with selectable text. Built with PDF.js, Tesseract.js, and jsPDF, all running client-side."
               ghLink="https://github.com/JoshW-dev/pdf-to-epub"
               demoLink="https://convert2epub.online"
             />
           </Col>
-          <Col md={4} className="project-card">
+          <Col xs={12} sm={6} lg={4} className="project-card">
             <ProjectCard
               imgPath={somebodybuiltthis}
               title="Somebody Built This"
-              description="A searchable index of small, focused indie apps that do one thing well — scheduling, analytics, forms, whiteboards, and the odd corner of the internet. If somebody built it, it's here. If not, go build it."
+              description="A searchable index of small, focused indie apps that do one thing well: scheduling, analytics, forms, whiteboards, and the odd corner of the internet. If somebody built it, it's here. If not, go build it."
               demoLink="https://somebodybuiltthis.vercel.app/"
             />
           </Col>
-          <Col md={4} className="project-card">
+          <Col xs={12} sm={6} lg={4} className="project-card">
             <ProjectCard
               imgPath={founderrise}
               title="FounderRise"
@@ -112,7 +119,7 @@ function Projects() {
               demoLink="https://www.founder-rise.com/"
             />
           </Col>
-          <Col md={4} className="project-card">
+          <Col xs={12} sm={6} lg={4} className="project-card">
             <ProjectCard
               imgPath={mymcat}
               title="MyMCAT.ai"
@@ -120,7 +127,7 @@ function Projects() {
               demoLink="https://mymcat.ai"
             />
           </Col>
-          <Col md={4} className="project-card">
+          <Col xs={12} sm={6} lg={4} className="project-card">
             <ProjectCard
               imgPath={FeedbackerAI}
               title="Feedbacker AI"
@@ -129,7 +136,7 @@ function Projects() {
               demoLink="https://www.youtube.com/watch?v=z3b7Iapg6_8"
             />
           </Col>
-          <Col md={4} className="project-card">
+          <Col xs={12} sm={6} lg={4} className="project-card">
             <ProjectCard
               imgPath={localLLM}
               type={"Github"}
@@ -139,7 +146,7 @@ function Projects() {
               demoLink="https://youtu.be/CL8GoBnLB90"
             />
           </Col>
-          <Col md={4} className="project-card">
+          <Col xs={12} sm={6} lg={4} className="project-card">
             <ProjectCard
               imgPath={adam}
               type={"Github"}
@@ -149,7 +156,7 @@ function Projects() {
               demoLink="https://twitter.com/ai_adam_"
             />
           </Col>
-          <Col md={4} className="project-card">
+          <Col xs={12} sm={6} lg={4} className="project-card">
             <ProjectCard
               imgPath={investor}
               title="Investor Assistant AI"
@@ -157,7 +164,7 @@ function Projects() {
               demoLink="https://investor-assistant.zapier.app/"
             />
           </Col>
-          <Col md={4} className="project-card">
+          <Col xs={12} sm={6} lg={4} className="project-card">
             <ProjectCard
               imgPath={aiChatBot}
               title="AI Education Assistant Platform"
@@ -165,7 +172,7 @@ function Projects() {
               demoLink="https://cac.queensu.ca/"
             />
           </Col>
-          <Col md={4} className="project-card">
+          <Col xs={12} sm={6} lg={4} className="project-card">
             <ProjectCard
               imgPath={cubesat}
               type={"Github"}
@@ -175,21 +182,21 @@ function Projects() {
               demoLink="https://qset.ca/satellite/"
            />
           </Col>
-          <Col md={4} className="project-card">
+          <Col xs={12} sm={6} lg={4} className="project-card">
             <ProjectCard
               imgPath={H2}
               title="Clean Hydrogen Production Facility"
               description="Led a team to identify and develop opportunities to optimize scope and reduce capital expenditure for a blue hydrogen production project. Designed to produce more than 300,000 tonnes of clean hydrogen per year, utilizing advanced technology to capture over 90% of the generated emissions."
             />
           </Col>
-          <Col md={4} className="project-card">
+          <Col xs={12} sm={6} lg={4} className="project-card">
             <ProjectCard
               imgPath={FPSO}
               title="Floating Production Storage and Offloading (FPSO)"
               description="Developed major logistics assessment and scheduling tools for the execution of a FPSO vessel refurbishment project, reducing project delays by over a month."
             />
           </Col>
-          <Col md={4} className="project-card">
+          <Col xs={12} sm={6} lg={4} className="project-card">
             <ProjectCard
               imgPath={pets}
               title="Masterpiece Pets"
@@ -197,7 +204,7 @@ function Projects() {
               demoLink="https://www.instagram.com/masterpiecepets/"
             />
           </Col>
-          <Col md={4} className="project-card">
+          <Col xs={12} sm={6} lg={4} className="project-card">
             <ProjectCard
               imgPath={paints}
               title="Abstract Painting"

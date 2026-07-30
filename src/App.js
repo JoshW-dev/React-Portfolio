@@ -10,12 +10,34 @@ import {
   BrowserRouter as Router,
   Route,
   Routes,
-  Navigate
+  Navigate,
+  useLocation,
 } from "react-router-dom";
 import ScrollToTop from "./components/ScrollToTop";
+import ScrollProgress from "./components/ScrollProgress";
+import MobileDock from "./components/MobileDock";
+// Bootstrap first so the design system below can override it without
+// leaning on !important everywhere.
+import "bootstrap/dist/css/bootstrap.min.css";
 import "./style.css";
 import "./App.css";
-import "bootstrap/dist/css/bootstrap.min.css";
+
+/** Re-keyed on every route change so each page fades in on arrival. */
+function AnimatedRoutes() {
+  const { pathname } = useLocation();
+
+  return (
+    <div className="page" key={pathname}>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/projects" element={<Projects />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/resume" element={<Resume />} />
+        <Route path="*" element={<Navigate to="/" />} />
+      </Routes>
+    </div>
+  );
+}
 
 function App() {
   const [load, upadateLoad] = useState(true);
@@ -23,7 +45,7 @@ function App() {
   useEffect(() => {
     const timer = setTimeout(() => {
       upadateLoad(false);
-    }, 1200);
+    }, 900);
 
     return () => clearTimeout(timer);
   }, []);
@@ -32,16 +54,12 @@ function App() {
     <Router>
       <Preloader load={load} />
       <div className="App" id={load ? "no-scroll" : "scroll"}>
+        <ScrollProgress />
         <Navbar />
         <ScrollToTop />
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/projects" element={<Projects />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/resume" element={<Resume />} />
-          <Route path="*" element={<Navigate to="/"/>} />
-        </Routes>
+        <AnimatedRoutes />
         <Footer />
+        <MobileDock />
       </div>
     </Router>
   );

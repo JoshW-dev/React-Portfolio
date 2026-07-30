@@ -1,51 +1,81 @@
-import React from "react";
+import React, { useState } from "react";
 import Card from "react-bootstrap/Card";
 import Button from "react-bootstrap/Button";
 import { CgWebsite } from "react-icons/cg";
 import { BsGithub } from "react-icons/bs";
+import useReveal from "../../hooks/useReveal";
+import useSpotlight from "../../hooks/useSpotlight";
+
+const CLAMP_AT = 240;
 
 function ProjectCards(props) {
+  const [revealRef, visible] = useReveal();
+  const spotlightRef = useSpotlight();
+  const [open, setOpen] = useState(false);
+
+  const description = props.description || "";
+  const isLong = description.length > CLAMP_AT;
+
+  const setRefs = (node) => {
+    revealRef.current = node;
+    spotlightRef.current = node;
+  };
+
   return (
-    <Card className="project-card-view">
-      <Card.Img
-        variant="top"
-        src={props.imgPath}
-        alt={props.title}
-        loading="lazy"
-      />
+    <Card
+      ref={setRefs}
+      className={`project-card-view reveal ${visible ? "is-visible" : ""}`}
+    >
+      <div className="project-card__media">
+        <img src={props.imgPath} alt={props.title} loading="lazy" />
+      </div>
       <Card.Body>
         <Card.Title>{props.title}</Card.Title>
-        <Card.Text style={{ textAlign: "left" }}>
-          {props.description}
-        </Card.Text>
-        {props.type &&
-        <Button
-          variant="primary"
-          href={props.ghLink}
-          target="_blank"
-          rel="noopener noreferrer"
+        <Card.Text
+          className={`project-card__text ${
+            isLong && !open ? "project-card__text--clamped" : ""
+          }`}
         >
-          <BsGithub /> &nbsp;
-          {props.type}
-        </Button>
-        }
-        {"\n"}
-        {"\n"}
+          {description}
+        </Card.Text>
 
-        {/* If the component contains Demo link and if it's not a Blog then, it will render the below component  */}
-
-        {!props.isBlog && props.demoLink && (
-          <Button
-            variant="primary"
-            href={props.demoLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ marginLeft: "10px" }}
+        {isLong && (
+          <button
+            type="button"
+            className="project-card__toggle"
+            onClick={() => setOpen((value) => !value)}
+            aria-expanded={open}
           >
-            <CgWebsite /> &nbsp;
-            {"Demo"}
-          </Button>
+            {open ? "Show less" : "Read more"}
+          </button>
         )}
+
+        <div className="project-card__actions">
+          {props.type && (
+            <Button
+              variant="primary"
+              className="btn-quiet"
+              href={props.ghLink}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <BsGithub aria-hidden="true" />
+              {props.type}
+            </Button>
+          )}
+
+          {!props.isBlog && props.demoLink && (
+            <Button
+              variant="primary"
+              href={props.demoLink}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <CgWebsite aria-hidden="true" />
+              Demo
+            </Button>
+          )}
+        </div>
       </Card.Body>
     </Card>
   );

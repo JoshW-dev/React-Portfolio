@@ -5,12 +5,19 @@ const prefersReducedMotion = () =>
   window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 /**
- * Reveals an element the first time it scrolls into view.
- * Returns a ref to attach and a flag for the visible state.
+ * Fades an element in as it enters the viewport and back out once it has left,
+ * so scrolling in either direction feels animated.
+ *
+ * Two observers, because enter and exit want different boundaries: it fades in
+ * the moment any part crosses the viewport edge (so you actually see the
+ * animation), and only fades out well past the edge. One shared boundary would
+ * either hide content that is still on screen or finish the fade before it
+ * came into view.
  */
-export default function useReveal({ threshold = 0.15, rootMargin = "0px 0px -8% 0px" } = {}) {
+export default function useReveal({ exitMargin = "15% 0px 15% 0px" } = {}) {
   const ref = useRef(null);
   const [visible, setVisible] = useState(false);
+  const [entered, setEntered] = useState(false);
 
   useEffect(() => {
     const el = ref.current;
@@ -21,21 +28,30 @@ export default function useReveal({ threshold = 0.15, rootMargin = "0px 0px -8% 
       return;
     }
 
-    const observer = new IntersectionObserver(
+    const enter = new IntersectionObserver(
       (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            setVisible(true);
-            observer.unobserve(entry.target);
-          }
-        });
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setVisible(true);
+          setEntered(true);
+        }
       },
-      { threshold, rootMargin }
+      { threshold: 0, rootMargin: "0px" }
     );
 
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [threshold, rootMargin]);
+    const exit = new IntersectionObserver(
+      (entries) => {
+        if (entries.every((entry) => !entry.isIntersecting)) setVisible(false);
+      },
+      { threshold: 0, rootMargin: exitMargin }
+    );
 
-  return [ref, visible];
+    enter.observe(el);
+    exit.observe(el);
+    return () => {
+      enter.disconnect();
+      exit.disconnect();
+    };
+  }, [exitMargin]);
+
+  return [ref, visible, entered];
 }

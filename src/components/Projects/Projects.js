@@ -38,10 +38,26 @@ function Projects() {
             Recent <strong className="gold">Work</strong>
           </h1>
           <p className="section__lede">
-            Here are some projects I've worked on recently, newest first.
+            Here are some projects I've worked on recently.
           </p>
         </Reveal>
         <Row style={{ justifyContent: "center", paddingBottom: "10px" }}>
+          <Col xs={12} sm={6} lg={4} className="project-card">
+            <ProjectCard
+              imgPath={openaffect}
+              title="OpenAffect"
+              description="Predictive AI for virality. Drop in any script, hook, or clip and see exactly how audiences will react, where you lose them, and what to change to make it go viral. Maps every second of content to neural activation to reveal the emotion viewers feel and the action they'll take next."
+              demoLink="https://www.openaffect.ai/"
+            />
+          </Col>
+          <Col xs={12} sm={6} lg={4} className="project-card">
+            <ProjectCard
+              imgPath={highstyle}
+              title="Highstyle"
+              description="AI video clipper for content operators. Drop in a long-form podcast, webinar, or interview and Highstyle returns ranked, captioned, on-brand short clips, automatically reframed for 9:16, 1:1, and 16:9 and ready to post to TikTok, Reels, Shorts, and LinkedIn. Built for teams running clipping at real spend, it surfaces the moments that drive watch time and saves, not just the loudest ones."
+              demoLink="https://highstyle.ai/"
+            />
+          </Col>
           <Col xs={12} sm={6} lg={4} className="project-card">
             <ProjectCard
               imgPath={mcnicoll}
@@ -57,22 +73,6 @@ function Projects() {
               title="Eigenvirtue"
               description="Can you compute a mathematical representation of virtue? Eigenvirtue extracts the dominant direction of any abstract concept from a language model's embedding space, using virtue as the worked example: 61 virtue/vice sentence pairs built on Aristotle's table, one SVD, and an axis that recognizes virtues it was never fit on and ranks unpleasant honesty above pleasant flattery. Includes a paper-style write-up, full figures, and a responsible run of the original eigenslur question that inspired it."
               ghLink="https://github.com/JoshW-dev/eigenvirtue"
-            />
-          </Col>
-          <Col xs={12} sm={6} lg={4} className="project-card">
-            <ProjectCard
-              imgPath={openaffect}
-              title="OpenAffect"
-              description="Predictive AI for virality. Drop in any script, hook, or clip and see exactly how audiences will react, where you lose them, and what to change to make it go viral. Maps every second of content to neural activation to reveal the emotion viewers feel and the action they'll take next."
-              demoLink="https://www.openaffect.ai/"
-            />
-          </Col>
-          <Col xs={12} sm={6} lg={4} className="project-card">
-            <ProjectCard
-              imgPath={highstyle}
-              title="Highstyle"
-              description="AI video clipper for content operators. Drop in a long-form podcast, webinar, or interview and Highstyle returns ranked, captioned, on-brand short clips, automatically reframed for 9:16, 1:1, and 16:9 and ready to post to TikTok, Reels, Shorts, and LinkedIn. Built for teams running clipping at real spend, it surfaces the moments that drive watch time and saves, not just the loudest ones."
-              demoLink="https://highstyle.ai/"
             />
           </Col>
           <Col xs={12} sm={6} lg={4} className="project-card">

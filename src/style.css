@@ -16,17 +16,20 @@
   /* Brand */
   --gold: #ffcb74;
   --gold-2: #f5a524;
-  --gold-soft: rgba(255, 203, 116, 0.14);
   --imp-text-color: #ffcb74;
+  /* Flat fills. No vertical gradients on controls: the sheen read as heavy. */
+  --gold-fill: #f6c476;
+  --gold-fill-hover: #ffd28a;
+  --on-gold: #16120b;
 
   /* Lines + glass */
   --line: rgba(255, 255, 255, 0.1);
   --line-strong: rgba(255, 255, 255, 0.2);
   --glass: linear-gradient(
     158deg,
-    rgba(255, 255, 255, 0.11),
-    rgba(255, 255, 255, 0.035) 46%,
-    rgba(255, 255, 255, 0.065)
+    rgba(255, 255, 255, 0.06),
+    rgba(255, 255, 255, 0.022) 46%,
+    rgba(255, 255, 255, 0.038)
   );
   --glass-flat: rgba(23, 23, 27, 0.72);
   --blur: blur(22px) saturate(170%);
@@ -37,15 +40,14 @@
   --radius-lg: 28px;
   --pill: 999px;
 
-  /* Elevation */
-  --shadow-sm: 0 6px 16px -10px rgba(0, 0, 0, 0.6);
-  --shadow: 0 22px 48px -26px rgba(0, 0, 0, 0.8);
-  --shadow-glow: 0 14px 34px -14px rgba(245, 165, 36, 0.45);
-  --edge: inset 0 1px 0 rgba(255, 255, 255, 0.16),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.28);
+  /* Elevation. Neutral only: coloured glows are what made this feel loud. */
+  --shadow-sm: 0 4px 12px -8px rgba(0, 0, 0, 0.65);
+  --shadow: 0 18px 40px -28px rgba(0, 0, 0, 0.85);
+  --edge: inset 0 1px 0 rgba(255, 255, 255, 0.07);
 
   /* Motion */
   --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
 
   /* Layout */
@@ -105,7 +107,7 @@ body {
   right: -10vmax;
   background: radial-gradient(
     circle,
-    rgba(245, 165, 36, 0.16),
+    rgba(245, 165, 36, 0.055),
     transparent 68%
   );
   animation: drift-a 26s var(--ease) infinite alternate;
@@ -118,7 +120,7 @@ body {
   left: -12vmax;
   background: radial-gradient(
     circle,
-    rgba(96, 122, 255, 0.13),
+    rgba(96, 122, 255, 0.045),
     transparent 68%
   );
   animation: drift-b 32s var(--ease) infinite alternate;
@@ -181,9 +183,9 @@ button:focus,
   border-radius: inherit;
   pointer-events: none;
   background: radial-gradient(
-    460px circle at var(--mx, 78%) var(--my, -12%),
-    rgba(255, 255, 255, 0.16),
-    transparent 62%
+    520px circle at var(--mx, 78%) var(--my, -12%),
+    rgba(255, 255, 255, 0.055),
+    transparent 64%
   );
   transition: opacity 0.45s var(--ease);
 }
@@ -200,38 +202,31 @@ button:focus,
   padding: clamp(1.25rem, 3vw, 2.25rem);
 }
 
+/* Outlined, not filled. The gold dot is the only accent it needs. */
 .eyebrow {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.55rem;
   font-family: "JetBrains Mono", ui-monospace, monospace;
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--gold);
-  padding: 0.4rem 0.85rem;
+  color: var(--ink-3);
+  padding: 0.38rem 0.8rem;
   border-radius: var(--pill);
-  border: 1px solid rgba(255, 203, 116, 0.24);
-  background: var(--gold-soft);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--line);
+  background: transparent;
 }
 
 .eyebrow .dot {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
   background: var(--gold);
-  box-shadow: 0 0 0 0 rgba(255, 203, 116, 0.7);
-  animation: pulse 2.6s var(--ease) infinite;
 }
 
 .text-gradient {
-  background: linear-gradient(96deg, #fff 8%, var(--gold) 48%, var(--gold-2));
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: transparent;
+  color: var(--gold);
 }
 
 .section {
@@ -260,11 +255,12 @@ button:focus,
   margin: 0;
 }
 
-/* Scroll reveal — driven by useReveal() */
+/* Scroll reveal — driven by useReveal(). Bidirectional: things fade back out
+   once they are past the viewport edge, so scrolling either way feels alive. */
 .reveal {
   opacity: 0;
-  transform: translate3d(0, 26px, 0);
-  transition: opacity 0.7s var(--ease), transform 0.7s var(--ease);
+  transform: translate3d(0, 46px, 0) scale(0.972);
+  transition: opacity 0.72s var(--ease-out), transform 0.82s var(--ease-out);
   transition-delay: var(--reveal-delay, 0ms);
   will-change: opacity, transform;
 }
@@ -272,6 +268,12 @@ button:focus,
 .reveal.is-visible {
   opacity: 1;
   transform: none;
+}
+
+/* Leaving is quicker than arriving, and never staggered */
+.reveal:not(.is-visible).has-entered {
+  transition-duration: 0.4s, 0.4s;
+  transition-delay: 0ms;
 }
 
 /* --------- */
@@ -352,8 +354,8 @@ button:focus,
   width: 100%;
   transform: scaleX(var(--progress, 0));
   transform-origin: 0 50%;
-  background: linear-gradient(90deg, var(--gold-2), var(--gold), #fff);
-  box-shadow: 0 0 12px rgba(255, 203, 116, 0.6);
+  background: var(--gold);
+  opacity: 0.85;
 }
 
 /* --------- */
@@ -507,8 +509,8 @@ button:focus,
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: var(--gold-soft);
-  border: 1px solid rgba(255, 203, 116, 0.26);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--line);
 }
 
 .nav-link svg {
@@ -523,21 +525,19 @@ button:focus,
   align-items: center;
   gap: 0.5rem;
   margin-left: 0.6rem;
-  padding: 0.58rem 1.15rem;
+  padding: 0.55rem 1.1rem;
   border-radius: var(--pill);
   font-weight: 700;
-  font-size: 0.95rem;
-  color: #17130a !important;
-  background: linear-gradient(180deg, #ffdca6, var(--gold-2));
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  box-shadow: var(--shadow-glow), inset 0 1px 0 rgba(255, 255, 255, 0.5);
-  transition: transform 0.3s var(--ease-spring), box-shadow 0.3s var(--ease);
+  font-size: 0.92rem;
+  color: var(--on-gold) !important;
+  background: var(--gold-fill);
+  border: 1px solid transparent;
+  transition: transform 0.28s var(--ease), background-color 0.28s var(--ease);
 }
 
 .nav-cta:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 18px 38px -14px rgba(245, 165, 36, 0.6),
-    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  transform: translateY(-1px);
+  background: var(--gold-fill-hover);
 }
 
 .nav-cta svg {
@@ -747,7 +747,7 @@ body.nav-open {
   }
 
   .dock__item--active {
-    color: #17130a;
+    color: var(--on-gold);
   }
 
   .dock__item--active::before {
@@ -756,8 +756,7 @@ body.nav-open {
     inset: 0;
     z-index: -1;
     border-radius: var(--pill);
-    background: linear-gradient(180deg, #ffdca6, var(--gold-2));
-    box-shadow: var(--shadow-glow), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+    background: var(--gold-fill);
     animation: dock-pop 0.4s var(--ease-spring) both;
   }
 }
@@ -790,40 +789,35 @@ body.nav-open {
 }
 
 .btn-solid {
-  color: #17130a;
-  background: linear-gradient(180deg, #ffdca6, var(--gold-2));
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  box-shadow: var(--shadow-glow), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  color: var(--on-gold);
+  background: var(--gold-fill);
+  border: 1px solid transparent;
 }
 
 .btn-solid:hover,
 .btn-solid:focus-visible {
-  color: #17130a;
-  transform: translateY(-2px);
-  box-shadow: 0 20px 40px -14px rgba(245, 165, 36, 0.62),
-    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  color: var(--on-gold);
+  background: var(--gold-fill-hover);
+  transform: translateY(-1px);
 }
 
 .btn-ghost {
   color: var(--ink);
-  background-image: var(--glass);
-  background-color: rgba(255, 255, 255, 0.02);
-  backdrop-filter: blur(12px) saturate(150%);
-  -webkit-backdrop-filter: blur(12px) saturate(150%);
-  border: 1px solid var(--line-strong);
-  box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  background-color: rgba(255, 255, 255, 0.045);
+  border: 1px solid var(--line);
 }
 
 .btn-ghost:hover,
 .btn-ghost:focus-visible {
   color: var(--ink);
-  transform: translateY(-2px);
-  background-color: rgba(255, 255, 255, 0.08);
+  transform: translateY(-1px);
+  background-color: rgba(255, 255, 255, 0.09);
+  border-color: var(--line-strong);
 }
 
 .btn-solid:active,
 .btn-ghost:active {
-  transform: translateY(0) scale(0.98);
+  transform: translateY(0) scale(0.985);
 }
 
 .btn-solid .arrow,
@@ -838,47 +832,48 @@ body.nav-open {
 
 /* Bootstrap button overrides (resume, project cards) */
 .btn-primary {
-  --bs-btn-color: #17130a;
+  --bs-btn-color: var(--on-gold);
   --bs-btn-bg: transparent;
   --bs-btn-border-color: transparent;
-  --bs-btn-hover-color: #17130a;
-  --bs-btn-active-color: #17130a;
+  --bs-btn-hover-color: var(--on-gold);
+  --bs-btn-active-color: var(--on-gold);
   display: inline-flex !important;
   align-items: center;
   justify-content: center;
   gap: 0.45rem;
-  min-height: 46px;
-  padding: 0.6rem 1.15rem !important;
+  min-height: 44px;
+  padding: 0.55rem 1.1rem !important;
   border-radius: var(--pill) !important;
   font-weight: 700 !important;
-  color: #17130a !important;
-  background: linear-gradient(180deg, #ffdca6, var(--gold-2)) !important;
-  border: 1px solid rgba(255, 255, 255, 0.28) !important;
-  box-shadow: var(--shadow-glow), inset 0 1px 0 rgba(255, 255, 255, 0.5);
-  transition: transform 0.3s var(--ease-spring), box-shadow 0.3s var(--ease);
+  font-size: 0.92rem !important;
+  color: var(--on-gold) !important;
+  background: var(--gold-fill) !important;
+  border: 1px solid transparent !important;
+  box-shadow: none;
+  transition: transform 0.28s var(--ease), background-color 0.28s var(--ease);
 }
 
 .btn-primary:hover,
 .btn-primary:focus,
 .btn-primary:active {
-  color: #17130a !important;
-  transform: translateY(-2px);
-  box-shadow: 0 18px 38px -14px rgba(245, 165, 36, 0.6),
-    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  color: var(--on-gold) !important;
+  background: var(--gold-fill-hover) !important;
+  transform: translateY(-1px);
+  box-shadow: none;
 }
 
 /* Secondary variant used for the Github link on project cards */
 .btn-quiet.btn-primary {
   color: var(--ink) !important;
-  background: rgba(255, 255, 255, 0.07) !important;
-  border: 1px solid var(--line-strong) !important;
-  box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.055) !important;
+  border: 1px solid var(--line) !important;
+  box-shadow: none;
 }
 
 .btn-quiet.btn-primary:hover {
   color: var(--ink) !important;
-  background: rgba(255, 255, 255, 0.12) !important;
-  box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-color: var(--line-strong) !important;
 }
 
 /* --------- */
@@ -995,11 +990,11 @@ body.nav-open {
   border-radius: 50%;
   background: radial-gradient(
     circle,
-    rgba(255, 203, 116, 0.22),
-    rgba(255, 203, 116, 0.04) 55%,
+    rgba(255, 203, 116, 0.07),
+    rgba(255, 203, 116, 0.015) 55%,
     transparent 72%
   );
-  filter: blur(6px);
+  filter: blur(8px);
   animation: breathe 9s var(--ease) infinite;
 }
 
@@ -1162,31 +1157,27 @@ body.nav-open {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 52px;
-  height: 52px;
+  width: 50px;
+  height: 50px;
   border-radius: 50%;
-  font-size: 1.35rem;
-  color: var(--ink) !important;
-  background-image: var(--glass);
-  background-color: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(12px) saturate(150%);
-  -webkit-backdrop-filter: blur(12px) saturate(150%);
-  border: 1px solid var(--line-strong);
-  box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.16);
-  transition: transform 0.35s var(--ease-spring), color 0.3s var(--ease),
-    box-shadow 0.35s var(--ease), background-color 0.3s var(--ease);
+  font-size: 1.3rem;
+  color: var(--ink-2) !important;
+  background-color: rgba(255, 255, 255, 0.045);
+  border: 1px solid var(--line);
+  transition: transform 0.32s var(--ease), color 0.3s var(--ease),
+    border-color 0.3s var(--ease), background-color 0.3s var(--ease);
 }
 
 .social-btn:hover,
 .social-btn:focus-visible {
-  color: #17130a !important;
-  background: linear-gradient(180deg, #ffdca6, var(--gold-2));
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-glow), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  color: var(--gold) !important;
+  background-color: rgba(255, 255, 255, 0.085);
+  border-color: rgba(255, 203, 116, 0.35);
+  transform: translateY(-3px);
 }
 
 .social-btn:active {
-  transform: translateY(-1px) scale(0.95);
+  transform: translateY(-1px) scale(0.96);
 }
 
 .social-btn--sm {
@@ -1243,9 +1234,9 @@ body.nav-open {
 }
 
 .featured-card:hover {
-  transform: translateY(-6px);
-  border-color: rgba(255, 203, 116, 0.42);
-  box-shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.9), var(--edge);
+  transform: translateY(-5px);
+  border-color: var(--line-strong);
+  box-shadow: 0 26px 50px -32px rgba(0, 0, 0, 0.9), var(--edge);
 }
 
 .featured-card__media {
@@ -1381,18 +1372,18 @@ body.nav-open {
   border-radius: inherit;
   pointer-events: none;
   background: radial-gradient(
-    420px circle at var(--mx, 50%) var(--my, -10%),
-    rgba(255, 255, 255, 0.14),
-    transparent 60%
+    440px circle at var(--mx, 50%) var(--my, -10%),
+    rgba(255, 255, 255, 0.05),
+    transparent 62%
   );
   opacity: 0;
   transition: opacity 0.45s var(--ease);
 }
 
 .project-card-view:hover {
-  transform: translateY(-6px);
-  border-color: rgba(255, 203, 116, 0.4) !important;
-  box-shadow: 0 32px 60px -30px rgba(0, 0, 0, 0.92), var(--edge) !important;
+  transform: translateY(-5px);
+  border-color: var(--line-strong) !important;
+  box-shadow: 0 28px 54px -32px rgba(0, 0, 0, 0.92), var(--edge) !important;
 }
 
 .project-card-view:hover::after {
@@ -1458,7 +1449,27 @@ body.nav-open {
   overflow: hidden;
 }
 
+/* The whole card is the link. This overlay sits under the controls below, so
+   the buttons and the read-more toggle still get their own clicks. */
+.project-card__overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+}
+
+.project-card-view:focus-within {
+  border-color: var(--line-strong) !important;
+}
+
+.project-card__overlay:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: -3px;
+}
+
 .project-card__toggle {
+  position: relative;
+  z-index: 2;
   align-self: flex-start;
   padding: 0.2rem 0;
   background: none;
@@ -1475,6 +1486,8 @@ body.nav-open {
 }
 
 .project-card__actions {
+  position: relative;
+  z-index: 2;
   display: flex;
   flex-wrap: wrap;
   gap: 0.6rem;
@@ -1903,18 +1916,6 @@ body.nav-open {
   }
   to {
     transform: translate3d(8vw, -5vh, 0);
-  }
-}
-
-@keyframes pulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba(255, 203, 116, 0.6);
-  }
-  70% {
-    box-shadow: 0 0 0 8px rgba(255, 203, 116, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(255, 203, 116, 0);
   }
 }
 

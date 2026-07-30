@@ -2,29 +2,13 @@ import React from "react";
 import { Container, Row, Col } from "react-bootstrap";
 import { Link } from "react-router-dom";
 import { AiOutlineArrowRight } from "react-icons/ai";
-import mcnicoll from "../../Assets/Projects/mcnicoll.webp";
-import eigenvirtue from "../../Assets/Projects/eigenvirtue.webp";
 import openaffect from "../../Assets/Projects/openaffect.webp";
+import highstyle from "../../Assets/Projects/highstyle.webp";
+import mcnicoll from "../../Assets/Projects/mcnicoll.webp";
 import Reveal from "../Reveal";
 import useSpotlight from "../../hooks/useSpotlight";
 
 const FEATURED = [
-  {
-    img: mcnicoll,
-    tag: "WebGL · Art",
-    title: "In Search of Light",
-    blurb:
-      "Eighteen Helen McNicoll paintings animated live in the browser, with every pixel moving along the direction of her own brushstrokes.",
-    href: "https://mcnicoll-light.vercel.app/",
-  },
-  {
-    img: eigenvirtue,
-    tag: "ML · Research",
-    title: "Eigenvirtue",
-    blurb:
-      "A mathematical direction for virtue, pulled out of a language model's embedding space from 61 sentence pairs and a single SVD.",
-    href: "https://github.com/JoshW-dev/eigenvirtue",
-  },
   {
     img: openaffect,
     tag: "AI · Product",
@@ -32,6 +16,22 @@ const FEATURED = [
     blurb:
       "Predictive AI for virality that maps a script second by second to the emotion viewers feel and the action they take next.",
     href: "https://www.openaffect.ai/",
+  },
+  {
+    img: highstyle,
+    tag: "AI · Video",
+    title: "Highstyle",
+    blurb:
+      "Drop in a long podcast or interview and get back ranked, captioned clips, reframed and ready for every platform.",
+    href: "https://highstyle.ai/",
+  },
+  {
+    img: mcnicoll,
+    tag: "WebGL · Art",
+    title: "In Search of Light",
+    blurb:
+      "Eighteen Helen McNicoll paintings animated live in the browser, with every pixel moving along the direction of her own brushstrokes.",
+    href: "https://mcnicoll-light.vercel.app/",
   },
 ];
 

@@ -9,12 +9,14 @@ import useSpotlight from "../../hooks/useSpotlight";
 const CLAMP_AT = 240;
 
 function ProjectCards(props) {
-  const [revealRef, visible] = useReveal();
+  const [revealRef, visible, entered] = useReveal();
   const spotlightRef = useSpotlight();
   const [open, setOpen] = useState(false);
 
   const description = props.description || "";
   const isLong = description.length > CLAMP_AT;
+  // Clicking anywhere on the card opens the demo, or the repo when there is no demo.
+  const cardLink = (!props.isBlog && props.demoLink) || props.ghLink;
 
   const setRefs = (node) => {
     revealRef.current = node;
@@ -24,8 +26,26 @@ function ProjectCards(props) {
   return (
     <Card
       ref={setRefs}
-      className={`project-card-view reveal ${visible ? "is-visible" : ""}`}
+      className={[
+        "project-card-view reveal",
+        visible ? "is-visible" : "",
+        entered ? "has-entered" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
     >
+      {cardLink && (
+        <a
+          className="project-card__overlay"
+          href={cardLink}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <span className="visually-hidden">
+            {`${props.title} (opens in a new tab)`}
+          </span>
+        </a>
+      )}
       <div className="project-card__media">
         <img src={props.imgPath} alt={props.title} loading="lazy" />
       </div>

@@ -23,6 +23,7 @@ import convert2epub from "../../Assets/Projects/convert2epub.webp";
 import disco from "../../Assets/Projects/disco.webp";
 import eigenvirtue from "../../Assets/Projects/eigenvirtue.webp";
 import mcnicoll from "../../Assets/Projects/mcnicoll.webp";
+import quietOrder from "../../Assets/Projects/quiet-order.webp";
 
 function Projects() {
   return (
@@ -32,7 +33,7 @@ function Projects() {
         <Reveal className="section__head">
           <span className="eyebrow">
             <span className="dot" />
-            20 projects
+            21 projects
           </span>
           <h1 className="project-heading section__title">
             Recent <strong className="gold">Work</strong>
@@ -66,6 +67,14 @@ function Projects() {
               description="Web app that tracks stock purchases by high-level company insiders by webscraping and compiling SEC data. I use this on a regular basis to inform my trading."
               ghLink="https://github.com/JoshW-dev/insider-alert"
               demoLink="https://www.insidersignal.ai/"
+            />
+          </Col>
+          <Col xs={12} sm={6} lg={4} className="project-card">
+            <ProjectCard
+              imgPath={quietOrder}
+              title="The Quiet Order"
+              description="A turn-based strategy game about running a secret society, where everything you do to grow it is the same thing that exposes you. You buy seats inside institutions and put your own people in them, and four investigators turn the trace you leave into evidence that ends the run once it reaches print. The simulation is a pure deterministic core with a seeded RNG, so a run replays exactly and the balance harness means something: it plays scripted policies and reports whether there is a game in there at all. It has already caught a missing rung in the Standing ladder that quietly made both victory conditions unreachable, an economy that stopped being a constraint around turn sixty, and a final act that resolved as a shopping trip instead of the siege it was written to be."
+              demoLink="https://quiet-order.vercel.app/"
             />
           </Col>
           <Col xs={12} sm={6} lg={4} className="project-card">

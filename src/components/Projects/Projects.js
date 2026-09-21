@@ -98,7 +98,7 @@ function Projects() {
             <ProjectCard
               imgPath={disco}
               title="Disco"
-              description="AI-powered learning management system (LMS) and social learning platform from Disco, a Canadian ed-tech startup with over 300,000 learners. As part of the team, I help build AI-native tools that let organizations create modern learning academies, bringing courses, community, and AI agents together in one fully branded experience."
+              description="AI-powered learning management system (LMS) and social learning platform from Disco, a Canadian ed-tech startup with over 300,000 learners. As part of the team, I helped build AI-native tools that let organizations create modern learning academies, bringing courses, community, and AI agents together in one fully branded experience."
               demoLink="https://www.disco.co/"
             />
           </Col>

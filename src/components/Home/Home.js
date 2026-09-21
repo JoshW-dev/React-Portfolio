@@ -50,9 +50,9 @@ function Home() {
               </Reveal>
 
               <Reveal delay={220} as="p" className="hero__blurb">
-                Designer, developer and engineer with a background in applied
-                mathematics, working across AI research and large energy and
-                manufacturing projects.
+                I build AI agents and work directly with the customers who use
+                them. I've led projects in government, education, energy and
+                manufacturing.
               </Reveal>
 
               <Reveal delay={280} className="btn-row hero__actions">

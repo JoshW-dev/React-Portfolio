@@ -25,6 +25,7 @@ import eigenvirtue from "../../Assets/Projects/eigenvirtue.webp";
 import mcnicoll from "../../Assets/Projects/mcnicoll.webp";
 import quietOrder from "../../Assets/Projects/quiet-order.webp";
 import bottleneckRadar from "../../Assets/Projects/bottleneck-radar.webp";
+import duskmere from "../../Assets/Projects/duskmere.webp";
 
 function Projects() {
   return (
@@ -34,7 +35,7 @@ function Projects() {
         <Reveal className="section__head">
           <span className="eyebrow">
             <span className="dot" />
-            22 projects
+            23 projects
           </span>
           <h1 className="project-heading section__title">
             Recent <strong className="gold">Work</strong>
@@ -78,6 +79,14 @@ function Projects() {
               description="A monthly research pipeline for the AI data center buildout. It turns hyperscaler capex from SEC filings into gigawatts, GPUs, HBM and gas turbines, then reads Korean memory exports, Taiwan export orders, turbine backlogs and ERCOT's large-load queue to find which physical input is tightest. Angus the Nontechnical ran this analysis on TikTok as four prompts, and I rebuilt it so code fetches every number and Claude Sonnet only makes the call, which keeps each month comparable with the last. The model can only name companies from a fixed list, and it has to say what would prove the call wrong. Two more stages clone Situational Awareness LP's latest 13F and check a portfolio's exposure to the bottleneck through a read-only IBKR Flex query. GitHub Actions publishes the results each month as a static dashboard, where a WebGL globe draws arcs from where each input is made to two big US data center markets."
               ghLink="https://github.com/JoshW-dev/bottleneck-radar"
               demoLink="https://bottleneck-radar-two.vercel.app/"
+            />
+          </Col>
+          <Col xs={12} sm={6} lg={4} className="project-card">
+            <ProjectCard
+              imgPath={duskmere}
+              title="Duskmere"
+              description="A first-person pixel-art dark fantasy RPG that runs in the browser. You walk up a valley at dusk toward Hollowspire, where the Hollow King has woken, with a torch that burns down in one hand and a sword in the other. Every texture, model, sound effect and bar of music is generated in code with Three.js and the Web Audio API, so the game has no asset files. The pixel look comes from rendering to a small target, then adding outlines and dithered shading in one pass. A jab of the torch sets the dead alight along with trees, fences and dry grass, and the fire spreads with the wind. There's a bow whose arrows stick where they land, crafting at any fire, fire magic learned from a hermit on the west ridge, and four floors under the castle laid out fresh from each run's seed down to the King's throne. The valley's merchants keep shop hours and prices that move with what you sell, and deer, rabbits and birds scatter as you come close."
+              demoLink="https://playduskmere.vercel.app/"
             />
           </Col>
           <Col xs={12} sm={6} lg={4} className="project-card">

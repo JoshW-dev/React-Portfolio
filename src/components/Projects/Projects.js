@@ -24,6 +24,7 @@ import disco from "../../Assets/Projects/disco.webp";
 import eigenvirtue from "../../Assets/Projects/eigenvirtue.webp";
 import mcnicoll from "../../Assets/Projects/mcnicoll.webp";
 import quietOrder from "../../Assets/Projects/quiet-order.webp";
+import bottleneckRadar from "../../Assets/Projects/bottleneck-radar.webp";
 
 function Projects() {
   return (
@@ -33,7 +34,7 @@ function Projects() {
         <Reveal className="section__head">
           <span className="eyebrow">
             <span className="dot" />
-            21 projects
+            22 projects
           </span>
           <h1 className="project-heading section__title">
             Recent <strong className="gold">Work</strong>
@@ -67,6 +68,16 @@ function Projects() {
               description="Web app that tracks stock purchases by high-level company insiders by webscraping and compiling SEC data. I use this on a regular basis to inform my trading."
               ghLink="https://github.com/JoshW-dev/insider-alert"
               demoLink="https://www.insidersignal.ai/"
+            />
+          </Col>
+          <Col xs={12} sm={6} lg={4} className="project-card">
+            <ProjectCard
+              imgPath={bottleneckRadar}
+              type={"Github"}
+              title="Bottleneck Radar"
+              description="A monthly research pipeline for the AI data center buildout. It turns hyperscaler capex from SEC filings into gigawatts, GPUs, HBM and gas turbines, then reads Korean memory exports, Taiwan export orders, turbine backlogs and ERCOT's large-load queue to find which physical input is tightest. Angus the Nontechnical ran this analysis on TikTok as four prompts, and I rebuilt it so code fetches every number and Claude Sonnet only makes the call, which keeps each month comparable with the last. The model can only name companies from a fixed list, and it has to say what would prove the call wrong. Two more stages clone Situational Awareness LP's latest 13F and check a portfolio's exposure to the bottleneck through a read-only IBKR Flex query. GitHub Actions publishes the results each month as a static dashboard, where a WebGL globe draws arcs from where each input is made to two big US data center markets."
+              ghLink="https://github.com/JoshW-dev/bottleneck-radar"
+              demoLink="https://bottleneck-radar-two.vercel.app/"
             />
           </Col>
           <Col xs={12} sm={6} lg={4} className="project-card">

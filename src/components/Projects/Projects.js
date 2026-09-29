@@ -26,6 +26,7 @@ import mcnicoll from "../../Assets/Projects/mcnicoll.webp";
 import quietOrder from "../../Assets/Projects/quiet-order.webp";
 import bottleneckRadar from "../../Assets/Projects/bottleneck-radar.webp";
 import duskmere from "../../Assets/Projects/duskmere.webp";
+import formRoam from "../../Assets/Projects/form-roam.webp";
 
 function Projects() {
   return (
@@ -35,7 +36,7 @@ function Projects() {
         <Reveal className="section__head">
           <span className="eyebrow">
             <span className="dot" />
-            23 projects
+            24 projects
           </span>
           <h1 className="project-heading section__title">
             Recent <strong className="gold">Work</strong>
@@ -69,6 +70,14 @@ function Projects() {
               description="Web app that tracks stock purchases by high-level company insiders by webscraping and compiling SEC data. I use this on a regular basis to inform my trading."
               ghLink="https://github.com/JoshW-dev/insider-alert"
               demoLink="https://www.insidersignal.ai/"
+            />
+          </Col>
+          <Col xs={12} sm={6} lg={4} className="project-card">
+            <ProjectCard
+              imgPath={formRoam}
+              title="Form Roam"
+              description="A form filler for government and immigration paperwork. Drop in any PDF and every box turns into a plain-English question, grouped the way the form is laid out, with a short briefing on what to have ready and the mistakes people make on it. Answers land on the real form as you type or talk, and a saved profile fills in the details you repeat. Claude reads each page as an image with a numbered box over every field to write the questions, and on a scanned form with no fields it finds the blanks itself and returns their coordinates. It's built as a paid product, with a two-field signup that holds on to the file you dropped, Stripe subscriptions and the paywall at the download, a monthly AI spend ceiling on each plan, and saved client profiles on Pro. Playwright tests pay with Stripe's test card and open the downloaded PDF to check the answer is in it."
+              demoLink="https://form-roam.vercel.app/"
             />
           </Col>
           <Col xs={12} sm={6} lg={4} className="project-card">

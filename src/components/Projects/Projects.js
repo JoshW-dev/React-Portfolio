@@ -27,6 +27,7 @@ import quietOrder from "../../Assets/Projects/quiet-order.webp";
 import bottleneckRadar from "../../Assets/Projects/bottleneck-radar.webp";
 import duskmere from "../../Assets/Projects/duskmere.webp";
 import formRoam from "../../Assets/Projects/form-roam.webp";
+import sketchDeck from "../../Assets/Projects/sketch-deck.webp";
 
 function Projects() {
   return (
@@ -36,7 +37,7 @@ function Projects() {
         <Reveal className="section__head">
           <span className="eyebrow">
             <span className="dot" />
-            24 projects
+            25 projects
           </span>
           <h1 className="project-heading section__title">
             Recent <strong className="gold">Work</strong>
@@ -70,6 +71,16 @@ function Projects() {
               description="Web app that tracks stock purchases by high-level company insiders by webscraping and compiling SEC data. I use this on a regular basis to inform my trading."
               ghLink="https://github.com/JoshW-dev/insider-alert"
               demoLink="https://www.insidersignal.ai/"
+            />
+          </Col>
+          <Col xs={12} sm={6} lg={4} className="project-card">
+            <ProjectCard
+              imgPath={sketchDeck}
+              type={"Github"}
+              title="Sketch Deck"
+              description="A system I use to make explainer videos where hand-drawn diagrams build up beside me as I talk. Each video is one HTML page with an overview board of the talk, and each part of it builds in about five steps as I press a key, with text typing itself out while boxes, arrows and bars draw themselves in. I present it live in full-screen Chrome and record screen and camera together, so every drawing lands on the sentence it belongs to and there's nothing to sync in the edit. The strokes come from rough.js with fixed seeds, which means a diagram looks the same every time it's drawn, and the fonts are Excalidraw's. A presenter window shows my notes for each step on a second screen. New videos start from a template with one command, and a second command renders screenshots and GIFs in headless Chrome. The first deck is a five-minute talk on why AI belongs on a business's bottleneck, told through a lemonade stand and a juice box line from my years as an operations consultant in manufacturing plants. I worked out the format by taking apart one of Nick Saraev's Claude Code videos frame by frame."
+              ghLink="https://github.com/JoshW-dev/sketch-deck"
+              demoLink="https://joshw-dev.github.io/sketch-deck/videos/ai-bottleneck/?demo"
             />
           </Col>
           <Col xs={12} sm={6} lg={4} className="project-card">

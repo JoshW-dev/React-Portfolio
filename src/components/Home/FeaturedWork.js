@@ -91,7 +91,7 @@ function FeaturedWork() {
 
         <Reveal className="featured__foot">
           <Link to="/projects" className="btn-solid">
-            Browse all 24 projects
+            Browse all 25 projects
             <AiOutlineArrowRight className="arrow" aria-hidden="true" />
           </Link>
         </Reveal>

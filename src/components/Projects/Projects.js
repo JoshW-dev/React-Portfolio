@@ -26,7 +26,7 @@ import mcnicoll from "../../Assets/Projects/mcnicoll.webp";
 import quietOrder from "../../Assets/Projects/quiet-order.webp";
 import bottleneckRadar from "../../Assets/Projects/bottleneck-radar.webp";
 import duskmere from "../../Assets/Projects/duskmere.webp";
-import formRoam from "../../Assets/Projects/form-roam.webp";
+import fastform from "../../Assets/Projects/fastform.webp";
 import sketchDeck from "../../Assets/Projects/sketch-deck.webp";
 
 function Projects() {
@@ -47,6 +47,14 @@ function Projects() {
           </p>
         </Reveal>
         <Row style={{ justifyContent: "center", paddingBottom: "10px" }}>
+          <Col xs={12} sm={6} lg={4} className="project-card">
+            <ProjectCard
+              imgPath={fastform}
+              title="Fastform"
+              description="A form filler for government and immigration paperwork. Drop in any PDF and every box turns into a plain-English question, grouped the way the form is laid out, with a short briefing on what to have ready and the mistakes people make on it. Answers land on the real form as you type or talk, and a saved profile fills in the details you repeat. Claude reads each page as an image with a numbered box over every field to write the questions, and on a scanned form with no fields it finds the blanks itself and returns their coordinates. It's built as a paid product, with a two-field signup that holds on to the file you dropped, Stripe subscriptions and the paywall at the download, a monthly AI spend ceiling on each plan, and saved client profiles on Pro. Playwright tests pay with Stripe's test card and open the downloaded PDF to check the answer is in it."
+              demoLink="https://fastform.site/"
+            />
+          </Col>
           <Col xs={12} sm={6} lg={4} className="project-card">
             <ProjectCard
               imgPath={openaffect}
@@ -81,14 +89,6 @@ function Projects() {
               description="A system I use to make explainer videos where hand-drawn diagrams build up beside me as I talk. Each video is one HTML page with an overview board of the talk, and each part of it builds in about five steps as I press a key, with text typing itself out while boxes, arrows and bars draw themselves in. I present it live in full-screen Chrome and record screen and camera together, so every drawing lands on the sentence it belongs to and there's nothing to sync in the edit. The strokes come from rough.js with fixed seeds, which means a diagram looks the same every time it's drawn, and the fonts are Excalidraw's. A presenter window shows my notes for each step on a second screen. New videos start from a template with one command, and a second command renders screenshots and GIFs in headless Chrome. The first deck is a five-minute talk on why AI belongs on a business's bottleneck, told through a lemonade stand and a juice box line from my years as an operations consultant in manufacturing plants. I worked out the format by taking apart one of Nick Saraev's Claude Code videos frame by frame."
               ghLink="https://github.com/JoshW-dev/sketch-deck"
               demoLink="https://joshw-dev.github.io/sketch-deck/videos/ai-bottleneck/?demo"
-            />
-          </Col>
-          <Col xs={12} sm={6} lg={4} className="project-card">
-            <ProjectCard
-              imgPath={formRoam}
-              title="Form Roam"
-              description="A form filler for government and immigration paperwork. Drop in any PDF and every box turns into a plain-English question, grouped the way the form is laid out, with a short briefing on what to have ready and the mistakes people make on it. Answers land on the real form as you type or talk, and a saved profile fills in the details you repeat. Claude reads each page as an image with a numbered box over every field to write the questions, and on a scanned form with no fields it finds the blanks itself and returns their coordinates. It's built as a paid product, with a two-field signup that holds on to the file you dropped, Stripe subscriptions and the paywall at the download, a monthly AI spend ceiling on each plan, and saved client profiles on Pro. Playwright tests pay with Stripe's test card and open the downloaded PDF to check the answer is in it."
-              demoLink="https://form-roam.vercel.app/"
             />
           </Col>
           <Col xs={12} sm={6} lg={4} className="project-card">

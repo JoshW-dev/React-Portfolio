@@ -26,6 +26,7 @@ import mcnicoll from "../../Assets/Projects/mcnicoll.webp";
 import quietOrder from "../../Assets/Projects/quiet-order.webp";
 import bottleneckRadar from "../../Assets/Projects/bottleneck-radar.webp";
 import duskmere from "../../Assets/Projects/duskmere.webp";
+import syntropy from "../../Assets/Projects/syntropy.webp";
 import fastform from "../../Assets/Projects/fastform.webp";
 import sketchDeck from "../../Assets/Projects/sketch-deck.webp";
 
@@ -37,7 +38,7 @@ function Projects() {
         <Reveal className="section__head">
           <span className="eyebrow">
             <span className="dot" />
-            25 projects
+            26 projects
           </span>
           <h1 className="project-heading section__title">
             Recent <strong className="gold">Work</strong>
@@ -99,6 +100,16 @@ function Projects() {
               description="A monthly research pipeline for the AI data center buildout. It turns hyperscaler capex from SEC filings into gigawatts, GPUs, HBM and gas turbines, then reads Korean memory exports, Taiwan export orders, turbine backlogs and ERCOT's large-load queue to find which physical input is tightest. Angus the Nontechnical ran this analysis on TikTok as four prompts, and I rebuilt it so code fetches every number and Claude Sonnet only makes the call, which keeps each month comparable with the last. The model can only name companies from a fixed list, and it has to say what would prove the call wrong. Two more stages clone Situational Awareness LP's latest 13F and check a portfolio's exposure to the bottleneck through a read-only IBKR Flex query. GitHub Actions publishes the results each month as a static dashboard, where a WebGL globe draws arcs from where each input is made to two big US data center markets."
               ghLink="https://github.com/JoshW-dev/bottleneck-radar"
               demoLink="https://bottleneck-radar-two.vercel.app/"
+            />
+          </Col>
+          <Col xs={12} sm={6} lg={4} className="project-card">
+            <ProjectCard
+              imgPath={syntropy}
+              type={"Github"}
+              title="Syntropy"
+              description="A 3D take on Conway's Game of Life that keeps going after the cells. Coloured cells on a lattice settle into forms, the forms that hold become organisms that eat, breed and age, and the organisms sort themselves into tribes and then realms where some of them rule the others. I count a realm as a government once it outlives its ruler and keeps most of its members. The rules only cover what one organism does next to its neighbours: eat, stay near kin, take the loser of a fight as a follower, pass tribute up, rebel when your branch outgrows the rest of the realm, and accept an heir only if it's clearly stronger. Each level lights up when a measurement notices the new kind of order. Followers settle just below their lord, so every realm hangs from its ruler like an upside-down tree, with a line in the ruler's colour running up from each follower. The simulation core also runs in Node with no graphics, and a parameter sweep across worker threads tuned 32 knobs until hierarchy and government showed up in 31 of 32 worlds, half of them seeds the sweep never saw. It runs entirely in the browser with Three.js, and every world has a seed in the URL, so a link replays the same history."
+              ghLink="https://github.com/JoshW-dev/syntropy"
+              demoLink="https://syntropy-sim.vercel.app/"
             />
           </Col>
           <Col xs={12} sm={6} lg={4} className="project-card">

@@ -1,0 +1,254 @@
+.panel {
+  border-top: 1px solid var(--ink);
+  border-bottom: 1px solid var(--line);
+}
+
+/* ---------- header ---------- */
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  font-size: 0.9375rem;
+}
+
+.live {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--faint);
+  flex: none;
+}
+
+.live[data-on="true"] {
+  background: var(--agent);
+  animation: pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgb(37 64 245 / 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 7px rgb(37 64 245 / 0);
+  }
+}
+
+.what {
+  font-weight: 600;
+}
+
+.where {
+  color: var(--muted);
+  margin-right: auto;
+}
+
+.clock {
+  display: inline-flex;
+  color: var(--muted);
+}
+
+.digit {
+  display: inline-block;
+  width: 0.62em;
+  text-align: center;
+}
+
+.colon {
+  display: inline-block;
+  width: 0.3em;
+  text-align: center;
+}
+
+.toggle {
+  min-width: 68px;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.18s var(--ease);
+}
+
+.toggle:hover {
+  border-color: var(--ink);
+}
+
+/* ---------- waveform ---------- */
+
+.wave {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  align-items: stretch;
+  border-top: 1px solid var(--line);
+  padding-block: 10px;
+}
+
+.lanes {
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  align-items: center;
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+.agentName {
+  color: var(--agent);
+}
+
+.canvas {
+  width: 100%;
+  height: clamp(96px, 11vw, 136px);
+}
+
+/* ---------- transcript and trace ---------- */
+
+.lower {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  border-top: 1px solid var(--line);
+}
+
+.lines {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 14px;
+  padding: 22px 40px 26px 0;
+  min-height: 15.5rem;
+}
+
+.line {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  align-items: baseline;
+}
+
+.who {
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+.who.agentName {
+  color: var(--agent);
+}
+
+.text {
+  font-size: clamp(1.15rem, 1.75vw, 1.6rem);
+  line-height: 1.24;
+  letter-spacing: -0.014em;
+  font-weight: 500;
+  font-variation-settings: "wdth" 92;
+}
+
+.text span {
+  color: #c9cbd1;
+  transition: color 0.16s linear;
+}
+
+.text span[data-said="true"] {
+  color: var(--ink);
+}
+
+.agentText span[data-said="true"] {
+  color: var(--agent);
+}
+
+.trace {
+  border-left: 1px solid var(--line);
+  padding: 22px 0 26px 28px;
+}
+
+.traceTitle {
+  font-size: 0.8125rem;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+
+.trace li {
+  display: grid;
+  grid-template-columns: 11.5em minmax(0, 1fr);
+  align-items: center;
+  min-height: 30px;
+  font-size: 0.875rem;
+  border-top: 1px solid var(--line);
+}
+
+.trace li:last-child {
+  border-bottom: 1px solid var(--line);
+}
+
+.stepName {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 10px;
+}
+
+.track {
+  position: relative;
+  height: 8px;
+}
+
+.slot {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 4px;
+  background: var(--agent-pale);
+  overflow: hidden;
+}
+
+.fill {
+  position: absolute;
+  inset: 0;
+  border-radius: 4px;
+  background: var(--agent);
+  transform: scaleX(0);
+  transform-origin: left center;
+  will-change: transform;
+}
+
+@media (max-width: 900px) {
+  .lower {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .lines {
+    padding-right: 0;
+    min-height: 13.5rem;
+  }
+
+  .trace {
+    border-left: 0;
+    border-top: 1px solid var(--line);
+    padding: 18px 0 22px;
+  }
+}
+
+@media (max-width: 560px) {
+  .where {
+    display: none;
+  }
+
+  .what {
+    margin-right: auto;
+  }
+
+  .wave,
+  .line {
+    grid-template-columns: 52px minmax(0, 1fr);
+  }
+
+  .lines {
+    min-height: 15rem;
+  }
+
+  .trace li {
+    grid-template-columns: 12.75em minmax(0, 1fr);
+  }
+}

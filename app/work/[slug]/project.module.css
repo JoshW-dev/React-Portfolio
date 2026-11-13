@@ -1,0 +1,106 @@
+/* Small text link, padded to a 44px tap target. */
+.back {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+
+.head {
+  margin-top: clamp(12px, 2vw, 24px);
+}
+
+.summary {
+  margin-top: clamp(20px, 2.4vw, 32px);
+}
+
+.figure {
+  max-width: 1040px;
+  margin-top: clamp(40px, 6vw, 80px);
+}
+
+.image {
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: clamp(40px, 6vw, 96px);
+  align-items: start;
+  margin-top: clamp(48px, 7vw, 104px);
+}
+
+.fact {
+  display: grid;
+  grid-template-columns: 6.5rem minmax(0, 1fr);
+  gap: 16px;
+  align-items: baseline;
+  padding-block: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.fact:last-child {
+  border-bottom: 1px solid var(--line);
+}
+
+.fact dt {
+  font-size: 0.875rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 28px;
+}
+
+/* Link to the next project. The whole block is one link. */
+.next {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+  min-height: 120px;
+  margin-top: clamp(72px, 10vw, 140px);
+  padding-block: 28px;
+  border-top: 1px solid var(--line);
+  text-decoration: none;
+  transition: padding-left 0.25s var(--ease);
+}
+
+.next:focus-visible {
+  padding-left: 12px;
+}
+
+@media (hover: hover) {
+  .next:hover {
+    padding-left: 12px;
+  }
+}
+
+@media (max-width: 799px) {
+  .cols {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .actions {
+    flex-direction: column;
+  }
+
+  .actions a {
+    width: 100%;
+  }
+}
+
+.diagram {
+  max-width: 700px;
+  padding-block: clamp(8px, 2vw, 24px);
+}
+
+.figure figcaption {
+  margin-top: 14px;
+  max-width: 34em;
+}

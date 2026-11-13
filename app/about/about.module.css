@@ -1,0 +1,104 @@
+/* ---------- intro ---------- */
+
+.intro {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  column-gap: clamp(16px, 2vw, 28px);
+  align-items: start;
+  padding-top: clamp(40px, 6vw, 96px);
+  padding-bottom: var(--section);
+}
+
+.text {
+  grid-column: 1 / span 7;
+}
+
+.copy {
+  margin-top: clamp(32px, 4vw, 56px);
+}
+
+.portrait {
+  grid-column: 9 / span 4;
+  justify-self: end;
+  width: 100%;
+  max-width: 420px;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+/* ---------- trace ---------- */
+
+.how {
+  margin-top: 20px;
+  max-width: 36em;
+  text-wrap: pretty;
+}
+
+.trace {
+  margin-top: clamp(40px, 5vw, 72px);
+}
+
+/* ---------- facts ---------- */
+
+.facts {
+  border-top: 1px solid var(--line);
+}
+
+.fact {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 3fr);
+  column-gap: clamp(24px, 3vw, 48px);
+  row-gap: 4px;
+  padding-block: 22px;
+  border-bottom: 1px solid var(--line);
+}
+
+.fact dt {
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.fact dd {
+  max-width: 40em;
+  text-wrap: pretty;
+}
+
+/* ---------- closing ---------- */
+
+.next {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 32px;
+  margin-top: 20px;
+}
+
+.next a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-weight: 600;
+}
+
+/* ---------- narrow screens ---------- */
+
+@media (max-width: 899px) {
+  .intro {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 48px;
+  }
+
+  .text,
+  .portrait {
+    grid-column: 1;
+  }
+
+  .portrait {
+    justify-self: start;
+  }
+}
+
+@media (max-width: 699px) {
+  .fact {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

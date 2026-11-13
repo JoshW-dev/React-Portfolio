@@ -1,0 +1,37 @@
+.page {
+  padding-top: clamp(40px, 6vw, 96px);
+  padding-bottom: var(--section);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 28px;
+  margin-top: clamp(28px, 3.5vw, 44px);
+}
+
+.short {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--muted);
+}
+
+.sheets {
+  display: grid;
+  gap: clamp(20px, 3vw, 36px);
+  max-width: 880px;
+  margin-top: clamp(40px, 5vw, 72px);
+}
+
+.frame {
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.sheet {
+  width: 100%;
+  height: auto;
+}

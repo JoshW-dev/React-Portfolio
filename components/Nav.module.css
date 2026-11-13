@@ -1,0 +1,63 @@
+.bar {
+  position: relative;
+  z-index: 10;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 72px;
+}
+
+.mark {
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  font-variation-settings: "wdth" 80;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.links {
+  display: flex;
+  align-items: center;
+  gap: clamp(14px, 2.6vw, 34px);
+  font-size: 0.975rem;
+  font-weight: 500;
+}
+
+.links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.links a:hover {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.3em;
+}
+
+.cta a {
+  min-height: 40px;
+  padding: 0 1em;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius);
+  transition: background 0.18s var(--ease), color 0.18s var(--ease);
+}
+
+.cta a:hover {
+  background: var(--ink);
+  color: #fff;
+  text-decoration: none;
+}
+
+@media (max-width: 520px) {
+  .cta {
+    display: none;
+  }
+}

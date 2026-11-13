@@ -1,0 +1,38 @@
+/* The photo carries the layout; the canvas sits exactly on top of it. */
+.frame {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.photo,
+.motion {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.photo {
+  object-fit: cover;
+}
+
+/* Hidden until the first frame is drawn, which matches the photo pixel for
+   pixel, so the fade never shows a seam. */
+.motion {
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+}
+
+.drawn {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .motion {
+    display: none;
+  }
+}

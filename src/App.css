@@ -1,6 +1,0 @@
-/* Layout-level bits that sit outside the design system in style.css. */
-
-.content-shell {
-  position: relative;
-  z-index: 1;
-}

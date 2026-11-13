@@ -27,3 +27,9 @@ yarn-error.log*
 
 Server/node_modules
 Server/config.js
+# next
+/.next
+/out
+next-env.d.ts
+*.tsbuildinfo
+.vercel

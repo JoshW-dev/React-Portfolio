@@ -1,0 +1,40 @@
+.head {
+  max-width: 52rem;
+}
+
+.lede {
+  margin-top: clamp(20px, 2.4vw, 32px);
+}
+
+/* Plain text buttons. The active one is underlined, the rest are muted. */
+.filter {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: clamp(18px, 2.2vw, 28px);
+  margin-top: clamp(48px, 7vw, 96px);
+  margin-bottom: 14px;
+}
+
+.option {
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 1rem;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.3em;
+  transition: color 0.18s var(--ease), text-decoration-color 0.18s var(--ease);
+}
+
+.option:hover {
+  color: var(--ink);
+}
+
+.option[aria-pressed="true"] {
+  color: var(--ink);
+  text-decoration-color: currentColor;
+}

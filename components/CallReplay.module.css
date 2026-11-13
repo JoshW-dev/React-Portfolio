@@ -169,9 +169,16 @@
   margin-bottom: 12px;
 }
 
+/* One shared label column, as wide as the longest step name. */
+.trace ul {
+  display: grid;
+  grid-template-columns: minmax(max-content, 11.5em) minmax(0, 1fr);
+}
+
 .trace li {
   display: grid;
-  grid-template-columns: 11.5em minmax(0, 1fr);
+  grid-template-columns: subgrid;
+  grid-column: 1 / -1;
   align-items: center;
   min-height: 30px;
   font-size: 0.875rem;
@@ -184,9 +191,7 @@
 
 .stepName {
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  padding-right: 10px;
+  padding-right: 14px;
 }
 
 .track {
@@ -246,9 +251,5 @@
 
   .lines {
     min-height: 15rem;
-  }
-
-  .trace li {
-    grid-template-columns: 12.75em minmax(0, 1fr);
   }
 }

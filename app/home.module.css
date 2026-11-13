@@ -1,30 +1,4 @@
-/* ---------- top: a hello, then the projects ---------- */
-
-.top {
-  padding-top: clamp(20px, 3.4vw, 48px);
-}
-
-.intro {
-  display: grid;
-  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
-  gap: 16px clamp(24px, 5vw, 80px);
-  align-items: end;
-  margin-bottom: clamp(28px, 3.6vw, 48px);
-}
-
-.hello {
-  font-size: clamp(2.8rem, 6.4vw, 5.6rem);
-  line-height: 0.95;
-  font-weight: 700;
-  letter-spacing: -0.035em;
-  font-variation-settings: "wdth" 88;
-}
-
-.intro p {
-  max-width: 33em;
-}
-
-/* ---------- more projects ---------- */
+/* ---------- projects, under the film ---------- */
 
 .more {
   padding-top: clamp(72px, 9vw, 130px);
@@ -104,7 +78,6 @@
 /* ---------- small screens ---------- */
 
 @media (max-width: 900px) {
-  .intro,
   .about {
     grid-template-columns: minmax(0, 1fr);
     align-items: start;

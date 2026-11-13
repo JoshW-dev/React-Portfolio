@@ -1,5 +1,5 @@
 /*
-  The scroll film on /film: the stops it holds on, and the hops that fly between them.
+  The scroll film on the home page: the stops it holds on, and the hops that fly between them.
 
   To add a clip to a hop:
     1. scripts/film-encode.sh <source.mp4> <name>   (writes public/film/clips/<name>-*)

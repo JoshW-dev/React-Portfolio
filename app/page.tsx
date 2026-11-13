@@ -1,9 +1,8 @@
 import Link from "next/link";
+import FilmScroll from "@/components/FilmScroll";
 import Portrait from "@/components/Portrait";
 import ProjectGrid from "@/components/ProjectGrid";
-import Stage, { type Slide } from "@/components/Stage";
-import { mediaFor } from "@/lib/media";
-import { stage, work } from "@/lib/work";
+import { work } from "@/lib/work";
 import styles from "./home.module.css";
 
 const jobs = [
@@ -46,46 +45,19 @@ const jobs = [
 ];
 
 export default function Home() {
-  const slides: Slide[] = stage.flatMap((slug) => {
-    const item = work.find((w) => w.slug === slug);
-    if (!item?.image) return [];
-    const media = mediaFor(slug);
-    return [
-      {
-        slug,
-        title: item.title,
-        summary: item.summary,
-        kind: item.kind,
-        image: media.hero ? { ...media.hero, alt: item.image.alt } : item.image,
-        video: media.video,
-      },
-    ];
-  });
-
-  const more = work.filter((w) => !stage.includes(w.slug)).slice(0, 9);
-
   return (
     <>
-      <section className={`wrap ${styles.top}`}>
-        <div className={styles.intro}>
-          <h1 className={styles.hello}>Hi, I&rsquo;m Josh.</h1>
-          <p className="lede">
-            I&rsquo;m an AI engineer in Toronto. I build voice and chat agents at work, and on my
-            own time I make products, research projects, games and the odd painting. Here are
-            some of them.
-          </p>
-        </div>
-        <Stage slides={slides} />
-      </section>
+      <h1 className="sr">Josh Wade, AI engineer</h1>
+      <FilmScroll />
 
       <section className={`wrap ${styles.more}`}>
         <div className={styles.head}>
-          <h2 className="h2">More projects</h2>
+          <h2 className="h2">What I&rsquo;ve built</h2>
           <Link className="link" href="/projects">
             See all {work.length}
           </Link>
         </div>
-        <ProjectGrid items={more} />
+        <ProjectGrid items={work.slice(0, 12)} />
         <p className={styles.all}>
           <Link className="btn" href="/projects">
             See all {work.length} projects

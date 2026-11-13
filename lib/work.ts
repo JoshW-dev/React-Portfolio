@@ -590,18 +590,6 @@ export const work: Work[] = [
   ...entries.filter((w) => !order.includes(w.slug)),
 ];
 
-/** The projects that play on the home page, one at a time. */
-export const stage = [
-  "openaffect",
-  "highstyle",
-  "fastform",
-  "game-of-society",
-  "duskmere",
-  "in-search-of-light",
-  "bottleneck-radar",
-  "insider-signal",
-];
-
 export function getWork(slug: string): Work | undefined {
   return work.find((w) => w.slug === slug);
 }

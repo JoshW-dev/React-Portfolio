@@ -12,12 +12,40 @@
   color: #fff;
 }
 
+/* The live Earth sits under everything and takes clicks while it shows. */
+.orbit {
+  position: absolute;
+  inset: 0;
+}
+
+/* Every frame of the film. Scaled as one for the slow push-in; never takes clicks. */
+.media {
+  position: absolute;
+  inset: 0;
+  isolation: isolate;
+  pointer-events: none;
+  transform-origin: 50% 50%;
+}
+
 .layer {
   position: absolute;
   inset: 0;
+  background-color: transparent;
   background-size: cover;
   background-position: center;
-  will-change: transform, opacity;
+  background-repeat: no-repeat;
+  opacity: 0;
+  visibility: hidden;
+}
+
+.video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  opacity: 0;
 }
 
 .veil {
@@ -30,6 +58,7 @@
 /* The edge of the real-to-model wipe. */
 .scan {
   position: absolute;
+  z-index: 3;
   top: 0;
   bottom: 0;
   width: 2px;
@@ -37,7 +66,6 @@
   background: #cfe3ff;
   box-shadow: 0 0 24px 6px rgb(120 170 255 / 0.55);
   opacity: 0;
-  pointer-events: none;
 }
 
 /* Darkens the lower left so the words read on any frame. */
@@ -55,18 +83,6 @@
   left: var(--gutter);
   bottom: clamp(28px, 6vh, 72px);
   width: min(40rem, calc(100% - 2 * var(--gutter)));
-  animation: arrive 0.6s var(--ease) both;
-}
-
-@keyframes arrive {
-  from {
-    opacity: 0;
-    transform: translateY(14px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
 }
 
 .place {
@@ -84,6 +100,7 @@
   letter-spacing: -0.022em;
   font-variation-settings: "wdth" 90;
   text-wrap: balance;
+  text-shadow: 0 1px 18px rgb(0 0 0 / 0.35);
 }
 
 .open {
@@ -103,13 +120,6 @@
 .open:hover {
   background: var(--agent);
   color: #fff;
-}
-
-.how {
-  margin-top: 14px;
-  font-size: 0.95rem;
-  line-height: 1.4;
-  opacity: 0.75;
 }
 
 /* ---------- the list of stops ---------- */
@@ -190,6 +200,11 @@
 
   .caption {
     bottom: 96px;
+  }
+
+  .text {
+    font-size: clamp(1.3rem, 5.6vw, 1.75rem);
+    line-height: 1.16;
   }
 
   .tour {

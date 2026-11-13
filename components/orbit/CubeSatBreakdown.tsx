@@ -1,0 +1,255 @@
+"use client";
+
+import { useRef } from "react";
+import ScrollBreakdown, {
+  BreakdownCanvas,
+  type BreakdownApi,
+  type BreakdownStep,
+  type SceneFactory,
+} from "@/components/breakdown/ScrollBreakdown";
+import type { Callout } from "@/components/breakdown/kit";
+import type { CalloutKey, CubeSatDom, NoteKey } from "./cubesatBreakdownScene";
+import styles from "./CubeSatBreakdown.module.css";
+
+const STEPS: BreakdownStep[] = [
+  {
+    id: "task",
+    title: "A photo on the next pass",
+    body: (
+      <p>
+        Operators on the ground send the satellite a pair of coordinates by radio. It holds on to
+        them, and the next time its orbit carries it over that place it points its camera at the
+        ground and takes a photo. The camera is fixed to the body, so pointing it means turning
+        the whole satellite.
+      </p>
+    ),
+  },
+  {
+    id: "power",
+    title: "Power from one flat array",
+    body: (
+      <p>
+        Solar cells cover one long face, and two wings hinged on its long edges fold out flat
+        beside it, so the array is a single plane of nine cells, three by three and about 30 cm
+        square. A cell makes less power the further it tilts away from the sun, which is why one
+        flat array that can be aimed beats cells spread over every face. In its power mode the
+        satellite turns until the array faces the sun to within 10 degrees.
+      </p>
+    ),
+  },
+  {
+    id: "pointing",
+    title: "Pointing, my part of the design",
+    body: (
+      <p>
+        The middle unit holds four small reaction wheels: spin one up and the satellite turns the
+        other way, which gives fine control from electricity alone. Three wheels cover three axes,
+        so the fourth is a spare, and it also lets the controller keep every wheel away from zero
+        speed, where bearing friction makes the torque hard to control. A wheel can only spin so
+        fast, so three magnetorquers push against Earth&rsquo;s magnetic field to bleed off the
+        momentum the wheels build up, with no fuel. Right after release they also run a{" "}
+        <span className={styles.nowrap}>B-dot</span> law that slows the tumble.
+      </p>
+    ),
+  },
+  {
+    id: "computer",
+    title: "A computer that rides out radiation",
+    body: (
+      <p>
+        Even in low Earth orbit, charged particles from the sun and from deep space pass straight
+        through the electronics. One hit can flip a bit in memory, which is a single-event upset, or
+        start a latch-up that draws current until the power is cut, while the total dose slowly wears
+        parts down. Radiation-hardened chips resist this but cost more than a student team can
+        spend, so our computer was built with redundancy: a spare copy of a part or a piece of data
+        lets the system catch a fault in one and carry on.
+      </p>
+    ),
+  },
+  {
+    id: "photo",
+    title: "Holding the camera on target",
+    body: (
+      <p>
+        Over the target, the controller compares the attitude it wants with the one its sensors
+        measure and turns the error into wheel torques. It does that maths in quaternions, four
+        numbers that describe any orientation without the gimbal lock that three angles run into,
+        and they&rsquo;re cheap to compute. The wheels slew the satellite until the camera points
+        at the coordinates and hold it there, within 6.5 degrees, for the photo.
+      </p>
+    ),
+  },
+];
+
+const CALLOUTS: { key: CalloutKey; text: string }[] = [
+  { key: "antenna", text: "Radio antennas" },
+  { key: "camera", text: "Camera" },
+  { key: "array", text: "Solar array, 3 × 3 cells" },
+  { key: "wheels", text: "4 reaction wheels" },
+  { key: "torquers", text: "3 magnetorquers" },
+  { key: "computer", text: "Flight computer" },
+];
+
+const NOTES: { key: NoteKey; text: string }[] = [
+  { key: "station", text: "Ground station" },
+  { key: "sun", text: "Sun" },
+  { key: "angle10", text: "10°" },
+  { key: "particles", text: "Charged particles" },
+  { key: "target", text: "Target" },
+  { key: "angle65", text: "6.5°" },
+];
+
+type Refs = {
+  svg: Partial<Record<"earth" | "station" | "uplink" | "rays" | "wedge" | "tracks" | "sight" | "cone", SVGPathElement>> & {
+    sun?: SVGGElement;
+    target?: SVGGElement;
+  };
+  particles: (SVGCircleElement | null)[];
+  lines: Partial<Record<CalloutKey, SVGLineElement>>;
+  dots: Partial<Record<CalloutKey, SVGCircleElement>>;
+  tags: Partial<Record<CalloutKey, HTMLSpanElement>>;
+  notes: Partial<Record<NoteKey, HTMLSpanElement>>;
+};
+
+function collect(r: Refs): CubeSatDom {
+  const need = <E,>(el: E | undefined | null, name: string): E => {
+    if (!el) throw new Error(`CubeSat overlay is missing ${name}`);
+    return el;
+  };
+  const callouts = {} as Record<CalloutKey, Callout>;
+  for (const { key } of CALLOUTS)
+    callouts[key] = { el: need(r.tags[key], key), line: need(r.lines[key], key), dot: r.dots[key] ?? null };
+  const notes = {} as Record<NoteKey, HTMLElement>;
+  for (const { key } of NOTES) notes[key] = need(r.notes[key], key);
+  return {
+    earth: need(r.svg.earth, "earth"),
+    station: need(r.svg.station, "station"),
+    uplink: need(r.svg.uplink, "uplink"),
+    sun: need(r.svg.sun, "sun"),
+    rays: need(r.svg.rays, "rays"),
+    wedge: need(r.svg.wedge, "wedge"),
+    tracks: need(r.svg.tracks, "tracks"),
+    particles: r.particles.map((p, i) => need(p, `particle ${i}`)),
+    sight: need(r.svg.sight, "sight"),
+    cone: need(r.svg.cone, "cone"),
+    target: need(r.svg.target, "target"),
+    callouts,
+    notes,
+  };
+}
+
+/** Eight short ticks around the sun's disc. */
+const SUN_TICKS = Array.from({ length: 8 }, (_, i) => {
+  const a = (i * Math.PI) / 4;
+  const c = Math.cos(a);
+  const s = Math.sin(a);
+  return `M ${(c * 15).toFixed(1)} ${(s * 15).toFixed(1)} L ${(c * 20).toFixed(1)} ${(s * 20).toFixed(1)}`;
+}).join(" ");
+
+function Visual({ api }: { api: BreakdownApi }) {
+  const refs = useRef<Refs>({ svg: {}, particles: [null, null, null], lines: {}, dots: {}, tags: {}, notes: {} });
+  const r = refs.current;
+  const path = (name: keyof Refs["svg"]) => (el: SVGPathElement | null) => {
+    if (el) (r.svg as Record<string, unknown>)[name] = el;
+  };
+
+  const load = async (): Promise<SceneFactory> => {
+    const mod = await import("./cubesatBreakdownScene");
+    return (T, ctx) => mod.createCubeSatBreakdown(T, ctx, collect(refs.current));
+  };
+
+  return (
+    <BreakdownCanvas api={api} load={load} fallback="The 3D drawing of the satellite needs WebGL." className={styles.host}>
+      <svg className={styles.overlay} aria-hidden="true">
+        <path ref={path("earth")} className={styles.earth} />
+        <path ref={path("station")} className={styles.station} />
+        <path ref={path("uplink")} className={styles.uplink} />
+        <path ref={path("rays")} className={styles.rays} />
+        <path ref={path("wedge")} className={styles.wedge} />
+        <g
+          ref={(el) => {
+            if (el) r.svg.sun = el;
+          }}
+          className={styles.sun}
+        >
+          <circle r={10} />
+          <path d={SUN_TICKS} />
+        </g>
+        <path ref={path("tracks")} className={styles.tracks} />
+        {[0, 1, 2].map((i) => (
+          <circle
+            key={i}
+            r={2.6}
+            className={styles.particle}
+            ref={(el) => {
+              r.particles[i] = el;
+            }}
+          />
+        ))}
+        <path ref={path("cone")} className={styles.cone} />
+        <path ref={path("sight")} className={styles.sight} />
+        <g
+          ref={(el) => {
+            if (el) r.svg.target = el;
+          }}
+          className={styles.target}
+        >
+          <circle r={8} />
+          <circle r={2} className={styles.targetDot} />
+        </g>
+        {CALLOUTS.map((c) => (
+          <g key={c.key} className={styles.leader}>
+            <line
+              ref={(el) => {
+                if (el) r.lines[c.key] = el;
+              }}
+            />
+            <circle
+              r={2.5}
+              ref={(el) => {
+                if (el) r.dots[c.key] = el;
+              }}
+            />
+          </g>
+        ))}
+      </svg>
+      {CALLOUTS.map((c) => (
+        <span
+          key={c.key}
+          className={styles.tag}
+          aria-hidden="true"
+          ref={(el) => {
+            if (el) r.tags[c.key] = el;
+          }}
+        >
+          {c.text}
+        </span>
+      ))}
+      {NOTES.map((n) => (
+        <span
+          key={n.key}
+          className={styles.note}
+          aria-hidden="true"
+          ref={(el) => {
+            if (el) r.notes[n.key] = el;
+          }}
+        >
+          {n.text}
+        </span>
+      ))}
+    </BreakdownCanvas>
+  );
+}
+
+/** The CubeSat project's scroll breakdown: the model on the left, the five steps on the right. */
+export default function CubeSatBreakdown({ className }: { className?: string }) {
+  return (
+    <ScrollBreakdown
+      className={className}
+      label="How the satellite does its job"
+      steps={STEPS}
+      visual={(api) => <Visual api={api} />}
+      caption="A simplified model drawn for this page. Drag it to turn it."
+    />
+  );
+}

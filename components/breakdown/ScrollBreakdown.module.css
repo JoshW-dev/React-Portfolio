@@ -1,0 +1,150 @@
+/*
+  Wide: the visual pins on the left at full screen height while the steps scroll past on
+  the right. Narrow: the visual pins across the top and the steps scroll under it.
+*/
+
+.root {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  column-gap: clamp(32px, 4.4vw, 72px);
+}
+
+.stage {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  height: 100vh;
+  height: 100svh;
+  display: flex;
+  flex-direction: column;
+  padding-block: 20px;
+}
+
+.visual {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+.caption {
+  flex: none;
+  padding-top: 10px;
+  max-width: 34em;
+}
+
+.steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 85vh;
+  min-height: 85svh;
+  padding-block: 32px;
+}
+
+.copy {
+  max-width: 27em;
+  opacity: 0.28;
+  transition: opacity 0.35s var(--ease);
+}
+
+.step[data-active] .copy {
+  opacity: 1;
+}
+
+.title {
+  text-wrap: balance;
+}
+
+.body {
+  margin-top: 16px;
+}
+
+.body p {
+  text-wrap: pretty;
+}
+
+.body p + p,
+.body p + ul,
+.body ul + p {
+  margin-top: 0.9em;
+}
+
+/* ---------- the canvas host ---------- */
+
+.host {
+  position: absolute;
+  inset: 0;
+}
+
+.canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 0.6s var(--ease);
+  cursor: grab;
+  /* Vertical swipes scroll the page; only sideways drags turn the model. */
+  touch-action: pan-y;
+}
+
+.canvas[data-dragging] {
+  cursor: grabbing;
+}
+
+.host[data-mode="live"] .canvas {
+  opacity: 1;
+}
+
+.fallback {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  color: var(--muted);
+  text-align: center;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+@media (max-width: 799px) {
+  .root {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .stage {
+    z-index: 2;
+    height: 46vh;
+    height: 46svh;
+    padding-block: 8px 0;
+    margin-inline: calc(-1 * var(--gutter));
+    padding-inline: var(--gutter);
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .caption {
+    padding-top: 4px;
+    padding-bottom: 6px;
+    font-size: 0.8rem;
+  }
+
+  .step {
+    min-height: 70vh;
+    min-height: 70svh;
+    padding-block: 24px;
+  }
+
+  .body {
+    margin-top: 12px;
+    font-size: 1rem;
+  }
+}

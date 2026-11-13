@@ -104,3 +104,8 @@
   margin-top: 14px;
   max-width: 34em;
 }
+
+/* A scroll breakdown runs the full width of the page. */
+.breakdown {
+  margin-top: clamp(32px, 5vw, 64px);
+}

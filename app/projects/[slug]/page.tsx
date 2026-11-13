@@ -7,7 +7,7 @@ import { site } from "@/lib/site";
 import { mediaFor } from "@/lib/media";
 import CallReplay from "@/components/CallReplay";
 import TwinCompare from "@/components/TwinCompare";
-import CubeSatViewer from "@/components/orbit/CubeSatViewer";
+import { breakdowns } from "@/components/breakdown/registry";
 import styles from "./project.module.css";
 
 /** The figure under the title. Returns the project image, or null when there isn't one. */
@@ -23,17 +23,7 @@ function Figure({ item }: { item: Work }) {
       </figure>
     );
   }
-  if (item.slug === "cubesat") {
-    return (
-      <figure className={styles.figure}>
-        <CubeSatViewer />
-        <figcaption className="small muted">
-          Drag to turn it, and use the slider to take it apart. It&rsquo;s a simplified model
-          drawn for this page.
-        </figcaption>
-      </figure>
-    );
-  }
+  if (item.slug === "cubesat") return null;
   if (item.slug === "production-lines") {
     return (
       <figure className={styles.figure}>
@@ -112,6 +102,7 @@ export default async function ProjectPage({ params }: Props) {
   const item = getWork(slug);
   if (!item) notFound();
 
+  const Breakdown = breakdowns[item.slug];
   const index = work.findIndex((w) => w.slug === item.slug);
   const next = work[(index + 1) % work.length];
 
@@ -131,6 +122,7 @@ export default async function ProjectPage({ params }: Props) {
         <p className={`lede ${styles.summary}`}>{item.summary}</p>
       </header>
 
+      {Breakdown ? <Breakdown className={styles.breakdown} /> : null}
       <Figure item={item} />
 
       <div className={styles.cols}>

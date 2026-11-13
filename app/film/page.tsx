@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import FilmStoryboard from "@/components/FilmStoryboard";
+import FilmScroll from "@/components/FilmScroll";
 import ProjectGrid from "@/components/ProjectGrid";
 import { work } from "@/lib/work";
 
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 export default function FilmPage() {
   return (
     <>
-      <FilmStoryboard />
+      <FilmScroll />
       <section className="wrap section">
         <div
           style={{

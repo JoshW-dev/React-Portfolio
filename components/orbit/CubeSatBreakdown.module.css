@@ -1,0 +1,177 @@
+.host {
+  container-type: size;
+}
+
+/* Close-ups run parts off the edge of the stage; fade them out there. */
+.host canvas {
+  mask-image: linear-gradient(to right, transparent, #000 5%, #000 95%, transparent),
+    linear-gradient(to bottom, transparent, #000 4%, #000 96%, transparent);
+  mask-composite: intersect;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.overlay path,
+.overlay line,
+.overlay circle,
+.overlay g {
+  vector-effect: non-scaling-stroke;
+}
+
+/* Hidden until the first frame has placed everything, and gone without WebGL. */
+.host[data-mode="loading"] .overlay,
+.host[data-mode="loading"] .tag,
+.host[data-mode="loading"] .note,
+.host[data-mode="fallback"] .overlay,
+.host[data-mode="fallback"] .tag,
+.host[data-mode="fallback"] .note {
+  visibility: hidden;
+}
+
+.earth {
+  fill: #f4f5f7;
+  stroke: var(--ink);
+  stroke-width: 1;
+  opacity: 0;
+}
+
+.station {
+  fill: var(--ink);
+  opacity: 0;
+}
+
+.uplink {
+  fill: none;
+  stroke: var(--agent);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 6;
+  opacity: 0;
+}
+
+.sun {
+  opacity: 0;
+}
+
+.sun circle {
+  fill: var(--bg);
+  stroke: var(--ink);
+  stroke-width: 1;
+}
+
+.sun path {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1;
+  stroke-linecap: round;
+}
+
+/* The 10 degree cone from the array, and the circle it makes around the sun. */
+.rays,
+.wedge {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+  opacity: 0;
+}
+
+.tracks {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1;
+  stroke-dasharray: 1 4;
+  opacity: 0;
+}
+
+.particle {
+  fill: var(--ink);
+  opacity: 0;
+}
+
+.cone {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+  opacity: 0;
+}
+
+.sight {
+  fill: none;
+  stroke: var(--agent);
+  stroke-width: 1.5;
+  opacity: 0;
+}
+
+.target {
+  opacity: 0;
+}
+
+.target circle {
+  fill: none;
+  stroke: var(--agent);
+  stroke-width: 1.5;
+}
+
+.target .targetDot {
+  fill: var(--agent);
+  stroke: none;
+}
+
+.leader line {
+  stroke: var(--ink);
+  stroke-width: 1;
+  opacity: 0;
+}
+
+.leader circle {
+  fill: var(--ink);
+  opacity: 0;
+}
+
+.tag,
+.note {
+  position: absolute;
+  left: 0;
+  top: 0;
+  white-space: nowrap;
+  font-size: 0.9rem;
+  line-height: 1.3;
+  color: var(--ink);
+  padding: 2px 6px;
+  pointer-events: none;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+.tag {
+  background: var(--bg);
+  font-weight: 550;
+}
+
+.note {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+@container (max-width: 520px) {
+  .tag {
+    font-size: 0.78rem;
+    padding: 1px 4px;
+  }
+
+  .note {
+    font-size: 0.74rem;
+  }
+}
+
+.nowrap {
+  white-space: nowrap;
+}

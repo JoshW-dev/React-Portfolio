@@ -485,9 +485,8 @@ const entries: Work[] = [
     ],
     body: [
       "At Queen\u2019s I worked on the university\u2019s satellite team, and in my last year I was its chief technical officer, leading 35 students through the design and build of a 3U CubeSat.",
-      "My own part was the ADCS, the attitude determination and control system. It\u2019s the middle unit of the satellite, and its job is to know which way the satellite is facing and to turn it. Ours used four reaction wheels to point, and three magnetorquers to slow the tumble after launch and shed the momentum the wheels build up.",
-      "The payload was a camera, so pointing was the mission: the ADCS is what aims it at the ground. I built a real-time simulation of the control loop in MATLAB and Simulink, so we could test it before any hardware turned.",
-      "Around that sat an electrical system fed by the solar panels, and a computer with redundancy built in for radiation. We presented the design at the Canadian Satellite Design Challenge\u2019s Critical Design Review in 2019, where each university team defends its satellite in front of a panel of judges.",
+      "My own part was the ADCS, the attitude determination and control system that works out which way the satellite is facing and turns it. The payload was a camera, so pointing was the mission. I built a real-time simulation of the control loop in MATLAB and Simulink, so we could test it before any hardware turned.",
+      "We presented the design at the Canadian Satellite Design Challenge\u2019s Critical Design Review in 2019, where each university team defends its satellite in front of a panel of judges.",
     ],
   },
   {

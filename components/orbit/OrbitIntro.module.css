@@ -8,6 +8,11 @@
   background-repeat: no-repeat;
 }
 
+/* Satellite only: the picture behind shows through. */
+.wrap[data-earth="false"] {
+  background: none;
+}
+
 .canvas {
   position: absolute;
   inset: 0;

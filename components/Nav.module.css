@@ -13,9 +13,8 @@
 
 .mark {
   font-size: 1.25rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: -0.03em;
-  font-variation-settings: "wdth" 80;
   text-decoration: none;
   white-space: nowrap;
 }

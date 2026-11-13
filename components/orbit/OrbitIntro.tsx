@@ -10,7 +10,12 @@ type Props = {
   /** False pauses the render loop (the film hides this layer after the first stop). */
   active?: boolean;
   className?: string;
-  /** Shown until the first real frame, and kept when WebGL can't run. */
+  /**
+   * False draws only the CubeSat on a transparent canvas, with no poster behind it, so it
+   * sits over whatever is under this layer. Read once, at mount.
+   */
+  earth?: boolean;
+  /** Shown until the first real frame, and kept when WebGL can't run. Not used without the Earth. */
   poster?: string;
 };
 
@@ -22,7 +27,7 @@ const HREF = "/projects/cubesat";
  * The film's opening shot: Earth from low orbit with Josh's CubeSat drifting in. three.js
  * loads inside the effect, so it stays out of the first bundle.
  */
-export default function OrbitIntro({ active = true, className, poster = "/film/01-orbit.webp" }: Props) {
+export default function OrbitIntro({ active = true, className, earth = true, poster = "/film/01-orbit.webp" }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const labelRef = useRef<HTMLAnchorElement>(null);
   const sceneRef = useRef<OrbitScene | null>(null);
@@ -110,6 +115,7 @@ export default function OrbitIntro({ active = true, className, poster = "/film/0
       try {
         scene = mod.createOrbitScene(T, {
           canvas,
+          earth,
           onReady: () => {
             if (!cancelled) setMode("live");
           },
@@ -201,7 +207,8 @@ export default function OrbitIntro({ active = true, className, poster = "/film/0
     <div
       ref={wrapRef}
       className={className ? `${styles.wrap} ${className}` : styles.wrap}
-      style={{ backgroundImage: `url(${poster})` }}
+      style={earth ? { backgroundImage: `url(${poster})` } : undefined}
+      data-earth={earth ? undefined : "false"}
       data-mode={mode}
     >
       <Link ref={labelRef} href={HREF} className={styles.label} data-settled={settled ? "true" : "false"}>

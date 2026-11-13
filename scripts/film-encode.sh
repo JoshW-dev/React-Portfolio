@@ -4,13 +4,17 @@
 #   scripts/film-encode.sh <source.mp4> <name>
 #
 # Writes to public/film/clips/:
-#   <name>-d.mp4      desktop, 1280 wide (FILM_WIDTH=1600 for a sharper, larger file)
-#   <name>-m.mp4      phone, 854 wide
+#   <name>-hd.mp4     1920 wide, for desktops on a fast connection
+#   <name>-d.mp4      1280 wide, for desktops on a slow connection and phones on a fast one
+#   <name>-m.mp4      854 wide, for phones on a slow connection
 #   <name>-first.webp first frame, 1600 wide
 #   <name>-last.webp  last frame, 1600 wide
 #
-# Both mp4s are H.264, 24 fps, no audio, and all-intra (every frame a keyframe), so any
-# seek lands on a frame the browser can show without decoding a run of earlier ones.
+# All three mp4s are H.264, 24 fps, no audio, with a keyframe every 12 frames and no B-frames,
+# so a seek decodes 12 frames at most. All-intra files were 2 to 3 times larger, and on a
+# slow connection the download time mattered more than the seek time. A light denoise
+# removes grain that costs bits, and the first and last frames get extra quality because
+# the film rests on them.
 # Then set `kind: "video", clip: "<name>"` on the hop in lib/film.ts.
 
 set -euo pipefail
@@ -31,31 +35,34 @@ command -v ffprobe >/dev/null || die "ffprobe is not installed"
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 OUT="$ROOT/public/film/clips"
 mkdir -p "$OUT"
-D_WIDTH=${FILM_WIDTH:-1280}
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 
+GOP=12
+# Frames in the 24 fps output, for the quality zones on the first and last frames.
+FRAMES=$(ffprobe -v error -select_streams v:0 -show_entries format=duration -of csv=p=0 "$SRC" | awk '{printf "%d", $1 * 24 + 0.5}')
+[ "$FRAMES" -gt 4 ] || die "source is too short"
+
 encode() { # <width> <crf> <out>
   ffmpeg -hide_banner -loglevel error -y -i "$SRC" -an \
-    -vf "fps=24,scale=$1:-2:flags=lanczos" \
+    -vf "fps=24,hqdn3d=1.5:1.5:6:6,scale=$1:-2:flags=lanczos" \
     -c:v libx264 -preset slow -crf "$2" -pix_fmt yuv420p \
-    -g 1 -keyint_min 1 -x264-params scenecut=0 \
+    -g "$GOP" -keyint_min "$GOP" -bf 0 \
+    -x264-params "scenecut=0:zones=0,1,q=20/$((FRAMES - 3)),$((FRAMES + 2)),q=20" \
     -movflags +faststart "$3"
 }
 
-# Every frame must be an I-frame, or scrubbing stutters on the frames between keyframes.
-check_intra() { # <file>
-  local counts total intra
-  counts=$(ffprobe -v error -select_streams v:0 -show_entries frame=pict_type -of csv=p=0 "$1" | tr -d ' ,' | sort | uniq -c)
-  total=$(echo "$counts" | awk '{s += $1} END {print s + 0}')
-  intra=$(echo "$counts" | awk '$2 == "I" {print $1}')
-  intra=${intra:-0}
+# A B-frame or a long run between keyframes makes a seek decode more frames and stutter.
+check_gop() { # <file>
+  local types total run
+  types=$(ffprobe -v error -select_streams v:0 -show_entries frame=pict_type -of csv=p=0 "$1" | tr -d ' ,\n')
+  total=${#types}
   [ "$total" -gt 0 ] || die "$1 has no video frames"
-  if [ "$intra" -ne "$total" ]; then
-    echo "$counts" >&2
-    die "$1 is not all-intra: $intra of $total frames are I-frames"
-  fi
-  echo "  $(basename "$1"): $total frames, all I-frames"
+  case "$types" in *B*) die "$1 has B-frames" ;; esac
+  [ "${types:0:1}" = "I" ] || die "$1 does not start on a keyframe"
+  run=$(echo "$types" | tr 'I' '\n' | awk '{ if (length($0) > m) m = length($0) } END { print m + 1 }')
+  [ "$run" -le "$GOP" ] || die "$1 has $run frames between keyframes, more than $GOP"
+  echo "  $(basename "$1"): $total frames, a keyframe every $run at most, no B-frames"
 }
 
 to_webp() { # <png> <webp>
@@ -69,10 +76,12 @@ to_webp() { # <png> <webp>
 }
 
 echo "Encoding $SRC as $NAME"
-encode "$D_WIDTH" 24 "$OUT/$NAME-d.mp4"
-encode 854 26 "$OUT/$NAME-m.mp4"
-check_intra "$OUT/$NAME-d.mp4"
-check_intra "$OUT/$NAME-m.mp4"
+encode 1920 24 "$OUT/$NAME-hd.mp4"
+encode 1280 30 "$OUT/$NAME-d.mp4"
+encode 854 31 "$OUT/$NAME-m.mp4"
+check_gop "$OUT/$NAME-hd.mp4"
+check_gop "$OUT/$NAME-d.mp4"
+check_gop "$OUT/$NAME-m.mp4"
 
 # The stills stand in for the clip while it downloads, so they come from the same source.
 ffmpeg -hide_banner -loglevel error -y -i "$SRC" -vf "scale=1600:-2:flags=lanczos" -frames:v 1 "$TMP/first.png"
@@ -85,6 +94,6 @@ to_webp "$TMP/last.png" "$OUT/$NAME-last.webp"
 
 DUR=$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$OUT/$NAME-d.mp4")
 echo "Done ($DUR s):"
-for f in "$NAME-d.mp4" "$NAME-m.mp4" "$NAME-first.webp" "$NAME-last.webp"; do
+for f in "$NAME-hd.mp4" "$NAME-d.mp4" "$NAME-m.mp4" "$NAME-first.webp" "$NAME-last.webp"; do
   printf '  %-24s %6s KB\n' "$f" "$(( $(stat -f %z "$OUT/$f") / 1024 ))"
 done

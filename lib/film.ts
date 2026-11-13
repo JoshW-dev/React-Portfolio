@@ -1,19 +1,32 @@
 /*
   The scroll film on the home page: the stops it holds on, and the hops that fly between them.
+  components/FilmScroll.tsx plays it. The scroll sets where the film should be, and a playhead
+  follows at a speed that keeps every flight watchable, waiting at a clip until it has loaded.
 
   To add a clip to a hop:
     1. scripts/film-encode.sh <source.mp4> <name>   (writes public/film/clips/<name>-*)
     2. On that hop below, set kind "video" and clip "<name>".
   A hop with no clip, or whose files are missing, falls back to a still cross-fade.
+
+  The first stop has no picture of its own in the film: it is the first frame of the first
+  clip, with the live CubeSat drawn over it. Its still is used by reduced motion.
+
+  A pass stop is a place the film flies through without resting: a short hold that blends
+  one clip's last frame into the next clip's first frame, with no words.
 */
 
 export type Stop = {
   /** The stop's own frame, used by the still fallback and reduced motion. */
   still: string;
   place: string;
-  text: string;
+  /** The caption. A pass stop has none. */
+  text?: string;
   /** The project this stop opens. */
   link?: { href: string; label: string };
+  /** Up to two more projects that belong to the same place. */
+  more?: { href: string; label: string }[];
+  /** Flown through without a rest, a caption or a push-in. */
+  pass?: boolean;
 };
 
 export type Veil = "cloud" | "steam" | "fog" | "dark";
@@ -39,13 +52,13 @@ export const STOPS: Stop[] = [
   {
     still: "/film/02-rockies.webp",
     place: "Alberta Rockies",
-    text: "After school I moved to Alberta and spent two years as an engineering consultant.",
+    pass: true,
   },
   {
     still: "/film/03-plant.webp",
     link: { href: "/projects/hydrogen-plant", label: "Open the hydrogen plant project" },
     place: "Hydrogen plant, Alberta",
-    text: "On a clean hydrogen plant, the design sessions I led cut more than $300M from the capital budget.",
+    text: "After school I moved to Alberta as an engineering consultant. On a clean hydrogen plant there, the design sessions I led cut more than $300M from the capital budget.",
   },
   {
     still: "/film/04-line.webp",
@@ -68,12 +81,17 @@ export const STOPS: Stop[] = [
   {
     still: "/film/07-towns.webp",
     link: { href: "/projects/alltus", label: "Open the Alltus project" },
+    more: [{ href: "/projects/crimsonlead", label: "Crimsonlead, built on public records" }],
     place: "Counties across the U.S.",
     text: "Our agents answer phone lines that take more than 100,000 calls a year, and one deployment helped run elections in North Carolina.",
   },
   {
     still: "/film/08-nyc.webp",
     link: { href: "/projects", label: "See all my projects" },
+    more: [
+      { href: "/projects/bottleneck-radar", label: "Bottleneck Radar" },
+      { href: "/projects/insider-signal", label: "Insider Signal" },
+    ],
     place: "New York, at night",
     text: "Nights are for my own projects: products, research, games and art.",
   },
@@ -104,23 +122,22 @@ export const VEILS: Record<Veil, string> = {
   dark: "#05070b",
 };
 
-/** Scroll distance of each part, in viewport heights. */
+/**
+ * Scroll distance of each part, in viewport heights. These set how far the scroll moves the
+ * film. How fast a flight plays is set by the playhead in components/FilmScroll.tsx.
+ */
 export const SCROLL = {
-  /** The opening hold on the live Earth, shorter so the first scroll starts moving. */
+  /** The opening hold on Earth, shorter so the first scroll starts moving. */
   firstHold: 40,
   hold: 70,
+  /** A pass stop's hold: just long enough to blend one clip into the next. */
+  pass: 20,
   video: 170,
   fade: 100,
   wipe: 110,
 };
 
-/** Seconds the tour spends on each part. A clip plays at its own length when known. */
-export const TOUR = {
-  hold: 2.5,
-  video: 10,
-  fade: 3,
-  wipe: 4,
-};
+/** Clip files: hd (1920 wide), d (1280), m (854), and the first and last frames as stills. */
+export type ClipPart = "hd.mp4" | "d.mp4" | "m.mp4" | "first.webp" | "last.webp";
 
-export const clipFile = (clip: string, part: "d.mp4" | "m.mp4" | "first.webp" | "last.webp") =>
-  `/film/clips/${clip}-${part}`;
+export const clipFile = (clip: string, part: ClipPart) => `/film/clips/${clip}-${part}`;

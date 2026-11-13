@@ -9,6 +9,9 @@ import { TEXTURES, earthFragment, earthVertex, latLon, loadImage, makeTexture, t
   Two passes share one renderer. The planet is ray-cast on a full-screen triangle in
   Earth radii; the satellite is a normal scene in metres, drawn after a depth clear with
   a camera that has the same orientation and field of view. Both use the same sun.
+
+  With earth set to false only the satellite is drawn, on a transparent canvas, so it can
+  sit over a picture of the planet. The Earth textures are then never loaded.
 */
 
 type Three = typeof THREE;
@@ -64,6 +67,8 @@ export type SatFrame = {
 
 export type OrbitSceneOptions = {
   canvas: HTMLCanvasElement;
+  /** False draws only the satellite, on a transparent background. Defaults to true. */
+  earth?: boolean;
   onReady?: () => void;
   onFail?: () => void;
   onFrame?: (f: SatFrame) => void;
@@ -89,10 +94,11 @@ function fovFor(aspect: number) {
 }
 
 export function createOrbitScene(T: Three, opts: OrbitSceneOptions): OrbitScene {
-  const { canvas, onReady, onFail, onFrame } = opts;
+  const { canvas, onReady, onFail, onFrame, earth = true } = opts;
   const gl = canvas.getContext("webgl2", {
     antialias: true,
-    alpha: false,
+    alpha: !earth,
+    premultipliedAlpha: true,
     depth: true,
     stencil: false,
     powerPreference: "high-performance",
@@ -101,7 +107,8 @@ export function createOrbitScene(T: Three, opts: OrbitSceneOptions): OrbitScene 
 
   const renderer = new T.WebGLRenderer({ canvas, context: gl, antialias: true });
   renderer.autoClear = false;
-  renderer.setClearColor(0x020306, 1);
+  if (earth) renderer.setClearColor(0x020306, 1);
+  else renderer.setClearColor(0x000000, 0);
   renderer.outputColorSpace = T.SRGBColorSpace;
   renderer.toneMapping = T.NeutralToneMapping;
   renderer.toneMappingExposure = 1;
@@ -506,7 +513,7 @@ export function createOrbitScene(T: Three, opts: OrbitSceneOptions): OrbitScene 
     satScene.environmentIntensity = 1 + 0.9 * hover;
 
     renderer.clear();
-    renderer.render(earthScene, earthCam);
+    if (earth) renderer.render(earthScene, earthCam);
     if (shown) {
       renderer.clearDepth();
       renderer.render(satScene, satCam);
@@ -566,7 +573,7 @@ export function createOrbitScene(T: Three, opts: OrbitSceneOptions): OrbitScene 
 
   (async () => {
     try {
-      await loadSet(firstTier);
+      if (earth) await loadSet(firstTier);
       if (disposed || failed) return;
       draw(0);
       ready = true;
@@ -582,7 +589,7 @@ export function createOrbitScene(T: Three, opts: OrbitSceneOptions): OrbitScene 
       }
       return;
     }
-    if (!upgradeTier) return;
+    if (!earth || !upgradeTier) return;
     try {
       await loadSet(upgradeTier);
       if (!running && ready && !disposed) draw(0);

@@ -17,6 +17,11 @@ export type Work = {
   years?: string;
   /** "/work/<file>.webp", sizes vary, so each entry carries its own. */
   image?: { src: string; alt: string; width: number; height: number };
+  /**
+   * The home page film's frame for this project. When set, the project page opens on it,
+   * full-bleed, with the title over it where the film's caption sits.
+   */
+  frame?: { src: string; alt: string };
   body: string[];
   stack?: string[];
   links: { label: string; href: string }[];
@@ -31,6 +36,10 @@ const entries: Work[] = [
     industry: "Government",
     years: "2026 to now",
     stack: ["Twilio", "ElevenLabs", "Langfuse", "RAG", "Python", "TypeScript"],
+    frame: {
+      src: "/film/07-towns.webp",
+      alt: "Illustration of farm country at night from high above, a river and the lights of small towns under a full moon",
+    },
     links: [{ label: "Open alltus.com", href: "https://www.alltus.com/" }],
     body: [
       "Alltus makes AI software for local government, and until 2026 it was called Just Appraised.",
@@ -53,6 +62,10 @@ const entries: Work[] = [
       alt: "Disco's home page with the headline Human-First, AI-Native Learning",
     },
     stack: ["Claude", "RAG", "MCP", "Make.com", "TypeScript", "Python"],
+    frame: {
+      src: "/film/05-twin.webp",
+      alt: "Illustration of a carton packaging line drawn as a glowing wireframe model, robot arms over the conveyor",
+    },
     links: [{ label: "Open disco.co", href: "https://www.disco.co/" }],
     body: [
       "I worked on the product and on the systems the sales and marketing teams ran on.",
@@ -70,6 +83,10 @@ const entries: Work[] = [
       src: "/film/03-plant.webp",
       width: 1344,
       height: 752,
+      alt: "Illustration of a hydrogen plant at sunrise, seen along a pipe rack with mountains behind",
+    },
+    frame: {
+      src: "/film/03-plant.webp",
       alt: "Illustration of a hydrogen plant at sunrise, seen along a pipe rack with mountains behind",
     },
     links: [],
@@ -130,6 +147,26 @@ const entries: Work[] = [
     body: [
       "AI video clipper for content operators. Drop in a long-form podcast, webinar, or interview and Highstyle returns ranked, captioned, on-brand short clips, automatically reframed for 9:16, 1:1, and 16:9 and ready to post to TikTok, Reels, Shorts, and LinkedIn.",
       "Built for teams running clipping at real spend, it surfaces the moments that drive watch time and saves, which often aren't the loudest ones.",
+    ],
+  },
+  {
+    slug: "crimsonlead",
+    title: "Crimsonlead",
+    summary: "Reads public records each morning and turns the new ones into graded leads.",
+    kind: "Product",
+    industry: "Sales",
+    image: {
+      src: "/work/crimsonlead.webp",
+      width: 1200,
+      height: 630,
+      alt: "Crimsonlead's front page: a headline beside a map of North America, with red lines joining records to buyers",
+    },
+    stack: ["Next.js", "TypeScript", "Postgres"],
+    links: [{ label: "Open crimsonlead.com", href: "https://crimsonlead.com/" }],
+    body: [
+      "Government offices publish records every day that show a business is about to need something. A new trucking authority needs insurance, a federal bid for HVAC work needs a contractor, and a company that files a fundraising notice will soon need payroll. Crimsonlead reads those records each morning and turns the new ones into leads.",
+      "It runs eight desks on 25 public sources, and each desk is built for one kind of buyer. Every record is checked and graded A, B or C against a rubric written for its source, then shown with a plain reason for why it matters now. The site drafts a first message, and a person reads it before anything goes out.",
+      "It runs daily behind a password, and so far I haven't sent a single message from it. I'm still finding out which desks produce leads that are worth a person's time.",
     ],
   },
   {
@@ -473,6 +510,10 @@ const entries: Work[] = [
       alt: "Table of the satellite's control modes above a block diagram of its reaction wheel control loop",
     },
     stack: ["MATLAB", "Simulink"],
+    frame: {
+      src: "/film/clips/orbit-rockies-first.webp",
+      alt: "Earth from low orbit, with snow on the Rockies and city lights on the night side",
+    },
     links: [
       { label: "Open qset.ca", href: "https://qset.ca/satellite/" },
       { label: "View the code", href: "https://github.com/queens-satellite-team" },
@@ -494,6 +535,10 @@ const entries: Work[] = [
       src: "/film/04-line.webp",
       width: 1344,
       height: 752,
+      alt: "Illustration of a carton packaging line, seen low along the conveyor",
+    },
+    frame: {
+      src: "/film/04-line.webp",
       alt: "Illustration of a carton packaging line, seen low along the conveyor",
     },
     links: [],

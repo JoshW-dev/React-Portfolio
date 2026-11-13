@@ -1,8 +1,8 @@
 /*
   joshwade.site design tokens.
 
-  One family (Bricolage Grotesque) carries the whole site. Headlines use its
-  narrow width, body text uses the normal width.
+  Two families. Instrument Serif sets page titles, section headings and the film's
+  captions. Geist sets everything else.
   Blue means the agent, or something live. Nothing else on the site is blue.
   Sections are separated by whitespace and 1px rules. No cards, no shadows.
 */
@@ -46,8 +46,6 @@ body {
   font-size: 1.0625rem;
   line-height: 1.55;
   font-weight: 400;
-  font-optical-sizing: auto;
-  font-variation-settings: "wdth" 100;
   overflow-x: clip;
 }
 
@@ -137,45 +135,44 @@ button {
 
 /* Page-opening headline. One per page. */
 .display {
-  font-size: clamp(3.1rem, 8.4vw, 8.75rem);
-  line-height: 0.9;
-  font-weight: 700;
-  letter-spacing: -0.024em;
-  font-variation-settings: "wdth" 78;
+  font-family: var(--font-serif), ui-serif, Georgia, serif;
+  font-size: clamp(3.5rem, 9.4vw, 9.75rem);
+  line-height: 0.92;
+  font-weight: 400;
+  letter-spacing: -0.022em;
   text-wrap: balance;
 }
 
 /* Inner-page title. */
 .title {
-  font-size: clamp(2.5rem, 5.4vw, 4.8rem);
+  font-family: var(--font-serif), ui-serif, Georgia, serif;
+  font-size: clamp(2.9rem, 6.2vw, 5.6rem);
   line-height: 0.98;
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  font-variation-settings: "wdth" 88;
+  font-weight: 400;
+  letter-spacing: -0.02em;
   text-wrap: balance;
 }
 
 .h2 {
-  font-size: clamp(1.75rem, 2.9vw, 2.6rem);
+  font-family: var(--font-serif), ui-serif, Georgia, serif;
+  font-size: clamp(2.1rem, 3.5vw, 3.2rem);
   line-height: 1.04;
-  font-weight: 650;
-  letter-spacing: -0.026em;
-  font-variation-settings: "wdth" 90;
+  font-weight: 400;
+  letter-spacing: -0.015em;
   text-wrap: balance;
 }
 
 .h3 {
   font-size: clamp(1.3rem, 1.9vw, 1.65rem);
   line-height: 1.12;
-  font-weight: 650;
-  letter-spacing: -0.018em;
-  font-variation-settings: "wdth" 90;
+  font-weight: 600;
+  letter-spacing: -0.03em;
 }
 
 .lede {
   font-size: clamp(1.15rem, 1.55vw, 1.4rem);
   line-height: 1.4;
-  letter-spacing: -0.008em;
+  letter-spacing: -0.012em;
   max-width: 34em;
   text-wrap: pretty;
 }

@@ -1,14 +1,20 @@
 import type { Metadata, Viewport } from "next";
-import { Bricolage_Grotesque } from "next/font/google";
+import { Geist, Instrument_Serif } from "next/font/google";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import { site } from "@/lib/site";
 import "./globals.css";
 
-const sans = Bricolage_Grotesque({
+const sans = Geist({
   subsets: ["latin"],
-  axes: ["opsz", "wdth"],
   variable: "--font-sans",
+  display: "swap",
+});
+
+const serif = Instrument_Serif({
+  subsets: ["latin"],
+  weight: "400",
+  variable: "--font-serif",
   display: "swap",
 });
 
@@ -51,7 +57,7 @@ const person = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={sans.variable}>
+    <html lang="en" className={`${sans.variable} ${serif.variable}`}>
       <body>
         <a href="#main" className="sr">
           Skip to content

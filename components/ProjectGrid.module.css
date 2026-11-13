@@ -74,9 +74,8 @@
 .name {
   font-size: 1.3rem;
   line-height: 1.15;
-  font-weight: 650;
-  letter-spacing: -0.018em;
-  font-variation-settings: "wdth" 92;
+  font-weight: 600;
+  letter-spacing: -0.03em;
 }
 
 .tile:hover .name {

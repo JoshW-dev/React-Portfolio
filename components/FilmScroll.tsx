@@ -1,19 +1,30 @@
 "use client";
 
 import Link from "next/link";
-import { Fragment, useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState, type CSSProperties } from "react";
 import OrbitIntro from "@/components/orbit/OrbitIntro";
-import { HOPS, SCROLL, STOPS, TOUR, VEILS, clipFile, type Hop } from "@/lib/film";
+import { HOPS, SCROLL, STOPS, VEILS, clipFile, type ClipPart, type Hop } from "@/lib/film";
 import styles from "./FilmScroll.module.css";
 
 /*
-  The film. Scrolling rests on a stop (a hold), then flies to the next one (a hop). A hop
-  with a clip scrubs that clip's frames with the scroll position; a hop without one, or
-  whose clip is still downloading, cross-fades stills. Stop and hop data live in lib/film.ts.
+  The film. Scrolling rests on a stop (a hold), then flies to the next one (a hop). Stop and
+  hop data live in lib/film.ts.
 
-  Scrubbing follows the usual recipe for smooth video seeks: all-intra H.264, fetched whole
-  into a Blob URL before seeking (iOS freezes on seeks into unloaded ranges), and the shown
-  time eased toward the scroll's time each frame, seeking only when the last seek is done.
+  The scroll sets where the film should be (x). A playhead (p) follows it, and everything on
+  screen is drawn from p. The playhead moves at most a few times a clip's own speed, so one
+  fast swipe still plays every flight it crosses from start to end. It waits at
+  the edge of a clip hop until that clip can show frames, with a hairline at the bottom that
+  tracks the download. A hop without a clip, or whose clip failed, cross-fades stills.
+
+  Every clip is fetched whole into a Blob from mount, one file at a time, in the order the
+  playhead will need them. iOS freezes on seeks into unloaded ranges, and fetching one file
+  at a time gives the next clip all the bandwidth. Only the clip at the playhead and its
+  neighbours are attached to their video elements. The first fetch measures the connection
+  and sets the quality tier for the rest of the visit.
+
+  The first stop is the first frame of the first clip, with the live CubeSat drawn over it.
+  A pass stop is flown through: its short hold blends the clip before it into the clip after
+  it, with no caption, so the two clips play as one flight.
 */
 
 type Kind = "video" | "wipe" | "fade";
@@ -27,6 +38,15 @@ const HOP_LIST: Hop[] = STOPS.slice(1).map(
 
 const kindOf = (h: Hop): Kind => (h.kind === "video" ? (h.clip ? "video" : "fade") : h.kind);
 
+const isPass = (k: number) => STOPS[k]?.pass === true;
+
+/** The stop whose caption belongs to stop k: a pass stop lends the slot to the stop after it. */
+const captionStop = (k: number) => {
+  let i = k;
+  while (i < LAST && isPass(i)) i++;
+  return i;
+};
+
 /** A hold (resting on a stop) or a hop (flying to the next stop), in viewport heights. */
 type Seg = { start: number; len: number; stop: number; hop: number | null };
 
@@ -36,7 +56,8 @@ const { SEGS, HOLD_SEG, HOP_SEG, TOTAL } = (() => {
   const hops: Seg[] = [];
   let at = 0;
   for (let i = 0; i <= LAST; i++) {
-    const hold: Seg = { start: at, len: i === 0 ? SCROLL.firstHold : SCROLL.hold, stop: i, hop: null };
+    const len = i === 0 ? SCROLL.firstHold : STOPS[i].pass ? SCROLL.pass : SCROLL.hold;
+    const hold: Seg = { start: at, len, stop: i, hop: null };
     segs.push(hold);
     holds.push(hold);
     at += hold.len;
@@ -50,42 +71,64 @@ const { SEGS, HOLD_SEG, HOP_SEG, TOTAL } = (() => {
   return { SEGS: segs, HOLD_SEG: holds, HOP_SEG: hops, TOTAL: at };
 })();
 
-/** Where each stop's button scrolls to: the middle of its hold (the ends for the first and last). */
-const REST = HOLD_SEG.map((s, i) => (i === 0 ? 0 : i === LAST ? TOTAL : s.start + s.len / 2));
-
 const CLIP_HOPS = HOP_LIST.flatMap((h, i) => (kindOf(h) === "video" ? [i] : []));
 
 /** Still layers, with the stretch of film they belong to, so each loads only when it is near. */
 type Still = { key: string; bg: string; from: number; to: number; clip: boolean };
 const STILLS: Still[] = [
-  ...STOPS.flatMap((s, i): Still[] => {
-    if (i === 0) return [];
+  ...STOPS.map((s, i): Still => {
     const after = HOP_SEG[i] ?? HOLD_SEG[i];
-    return [{ key: `stop-${i}`, bg: `url(${s.still})`, from: HOP_SEG[i - 1].start, to: after.start + after.len, clip: false }];
+    return { key: `stop-${i}`, bg: `url(${s.still})`, from: i === 0 ? 0 : HOP_SEG[i - 1].start, to: after.start + after.len, clip: false };
   }),
   ...CLIP_HOPS.flatMap((h): Still[] => {
     const name = HOP_LIST[h].clip as string;
-    const from = HOP_SEG[h].start;
-    const to = from + HOP_SEG[h].len;
+    const from = h === 0 ? 0 : HOP_SEG[h].start;
+    const to = HOP_SEG[h].start + HOP_SEG[h].len;
     // The stop's own still sits under each clip still, so a missing file never leaves a hole.
-    const last = { key: `last-${h}`, bg: `url(${clipFile(name, "last.webp")}), url(${STOPS[h + 1].still})`, from, to, clip: true };
-    if (h === 0) return [last];
-    return [{ key: `first-${h}`, bg: `url(${clipFile(name, "first.webp")}), url(${STOPS[h].still})`, from, to, clip: true }, last];
+    return [
+      { key: `first-${h}`, bg: `url(${clipFile(name, "first.webp")}), url(${STOPS[h].still})`, from, to, clip: true },
+      { key: `last-${h}`, bg: `url(${clipFile(name, "last.webp")}), url(${STOPS[h + 1].still})`, from, to, clip: true },
+    ];
   }),
 ];
+
+/** The layer on screen before any script runs: the first clip's first frame. */
+const OPENING_KEY = CLIP_HOPS[0] === 0 ? "first-0" : "stop-0";
+const OPENING_STYLE: CSSProperties = {
+  backgroundImage: STILLS.find((s) => s.key === OPENING_KEY)?.bg,
+  opacity: 1,
+  visibility: "visible",
+  zIndex: 1,
+};
 
 const PUSH = 0.035; // push-in across a hold
 const DRIFT = 0.012; // a slow breath while resting, so a held frame is never frozen
 const DRIFT_MS = 16000;
-const CAPTION_FADE = 22; // vh of scroll the caption takes to fade at each end of a hop
-const ORBIT_FADE = 0.06; // share of hop 0 over which the live Earth hands over to the clip
-const LOAD_NEAR = SCROLL.video + SCROLL.hold; // fetch a clip once within about one hop of it
-const RELEASE_FAR = 3 * LOAD_NEAR; // drop its blob beyond this
-const STILL_NEAR = 1.5 * LOAD_NEAR;
-const EASE = 0.12; // share of the gap closed per 60 Hz frame
+const CAPTION_FADE = 22; // vh of film the caption takes to fade at each end of a hop
+const SAT_FADE = 0.08; // share of hop 0 over which the CubeSat fades out
+const STILL_NEAR = 1.5 * (SCROLL.video + SCROLL.hold);
+
+// The playhead.
+const FOLLOW = 6; // per second: speed is the gap to the scroll times this, before the caps below
+const HOLD_SPEED = 260; // vh/s across a hold
+const PASS_SPEED = 80; // vh/s across a pass stop's hold, so its blend takes at least a quarter second
+const WIPE_SECS = 0.9;
+const FADE_SECS = 1.2;
+const RATE = 2.5; // a clip plays at up to this multiple of its own speed
+const RATE_STEP = 1.5; // plus this for each further clip hop the scroll is ahead
+const RATE_MAX = 7;
+const SNAP = 0.01; // vh: closer than this, the playhead lands on the scroll
+const LOADER_DELAY = 250; // ms of waiting before the hairline shows
+
 const SEEK_EPS = 0.005;
 const HALF_FRAME = 0.5 / 24;
 const PHONE = "(max-width: 800px)";
+
+// The quality tier, measured on the first fetch.
+const SLOW_TYPES = ["slow-2g", "2g", "3g"];
+const PROBE_MS = 2000; // time after the first byte when the first fetch is measured
+const PROBE_MAX_SECS = 8; // a projected download longer than this drops to the low tier
+const PROBE_GUESS = 10e6; // bytes assumed for a file sent without content-length
 
 const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
 const ease = (t: number) => t * t * (3 - 2 * t);
@@ -93,18 +136,35 @@ const distance = (x: number, from: number, to: number) => (x < from ? from - x :
 const locate = (x: number) => SEGS.find((s) => x < s.start + s.len) ?? SEGS[SEGS.length - 1];
 const hopProgress = (h: number, x: number) => clamp01((x - HOP_SEG[h].start) / HOP_SEG[h].len);
 
+/** The part of the film the playhead is in or about to enter, moving in direction d. */
+const segToward = (at: number, d: number) =>
+  d > 0
+    ? (SEGS.find((s) => at < s.start + s.len) ?? SEGS[SEGS.length - 1])
+    : (SEGS.find((s) => at > s.start && at <= s.start + s.len) ?? SEGS[0]);
+
+type Tier = "high" | "low";
+type NetInfo = { saveData?: boolean; effectiveType?: string };
+
 type Clip = {
   hop: number;
   name: string;
-  state: "idle" | "loading" | "ready" | "failed";
+  /**
+   * idle: not fetched yet. loading: fetching. fetched: the Blob is held, no video attached.
+   * attaching: the video is loading the Blob. ready: attached and seeked, frames can show.
+   */
+  state: "idle" | "loading" | "fetched" | "attaching" | "ready" | "failed";
+  /** The file fetched or being fetched. */
+  file: string;
+  received: number;
+  /** From content-length; 0 when unknown. */
+  total: number;
   url: string | null;
-  abort: AbortController | null;
-  /** The time on screen, eased toward the scroll's time. */
-  shown: number;
   dur: number;
+  fetchAbort: AbortController | null;
+  attachAbort: AbortController | null;
 };
 
-/** What the screen shows at one scroll position. Layer keys: orbit, stop-i, first-h, last-h, video-h. */
+/** What the screen shows at one playhead position. Layer keys: stop-i, first-h, last-h, video-h. */
 type Shot = {
   base: string;
   top: string | null;
@@ -118,52 +178,60 @@ type Shot = {
   rest: number;
   caption: number;
   stop: number;
+  /** Opacity of the CubeSat layer. */
+  sat: number;
 };
 
-function compose(x: number, ready: (h: number) => boolean, reduced: boolean): Shot {
+function compose(p: number, ready: (h: number) => boolean, reduced: boolean): Shot {
   const kind = (h: number): Kind => {
     const k = kindOf(HOP_LIST[h]);
     return reduced ? "fade" : k;
   };
-  const still = (i: number) => (i === 0 ? "orbit" : `stop-${i}`);
+  const still = (i: number) => `stop-${i}`;
   const isClip = (h: number) => h >= 0 && h < LAST && kind(h) === "video";
-  const startOf = (h: number) => (h === 0 ? "orbit" : ready(h) ? `video-${h}` : `first-${h}`);
+  const startOf = (h: number) => (ready(h) ? `video-${h}` : `first-${h}`);
   const endOf = (h: number) => (ready(h) ? `video-${h}` : `last-${h}`);
   // A hold shows the incoming clip's last frame and the outgoing clip's first frame, so
   // nothing pops; the wipe works on the stops' own stills.
   const arrive = (k: number) =>
-    k === 0 ? "orbit" : kind(k - 1) === "wipe" ? still(k) : isClip(k - 1) ? endOf(k - 1) : isClip(k) ? startOf(k) : still(k);
+    k > 0 && kind(k - 1) === "wipe" ? still(k) : isClip(k - 1) ? endOf(k - 1) : isClip(k) ? startOf(k) : still(k);
   const depart = (k: number) =>
-    k === 0 ? "orbit" : k < LAST && kind(k) === "wipe" ? still(k) : isClip(k) ? startOf(k) : isClip(k - 1) ? endOf(k - 1) : still(k);
-  const push = (k: number) => (reduced || k === 0 ? 0 : PUSH);
+    k < LAST && kind(k) === "wipe" ? still(k) : isClip(k) ? startOf(k) : isClip(k - 1) ? endOf(k - 1) : still(k);
+  const push = (k: number) => (reduced || k === 0 || isPass(k) ? 0 : PUSH);
 
-  const seg = locate(x);
-  const shot: Shot = { base: "orbit", top: null, alpha: 0, wipe: null, veil: null, veilAlpha: 0, scale: 1, rest: 0, caption: 1, stop: seg.stop };
+  const seg = locate(p);
+  const sat = p <= HOP_SEG[0].start ? 1 : 1 - ease(clamp01(hopProgress(0, p) / SAT_FADE));
+  const shot: Shot = { base: still(0), top: null, alpha: 0, wipe: null, veil: null, veilAlpha: 0, scale: 1, rest: 0, caption: 1, stop: captionStop(seg.stop), sat };
 
   if (seg.hop === null) {
     const k = seg.stop;
-    const u = clamp01((x - seg.start) / seg.len);
+    const u = clamp01((p - seg.start) / seg.len);
     shot.base = arrive(k);
     shot.top = depart(k);
-    shot.alpha = ease(clamp01((u - 0.25) / 0.5));
-    shot.scale = 1 + push(k) * u;
-    shot.rest = reduced || k === 0 ? 0 : ease(Math.min(1, u / 0.25, (1 - u) / 0.25));
+    if (isPass(k)) {
+      // Flown through: the whole hold is the blend, with no words, push or breath.
+      shot.alpha = ease(u);
+      shot.caption = 0;
+    } else {
+      shot.alpha = ease(clamp01((u - 0.25) / 0.5));
+      shot.scale = 1 + push(k) * u;
+      // The breath eases in and out at the ends of a hold, except where the film starts and ends.
+      const into = k === 0 ? 1 : u / 0.25;
+      const out = k === LAST ? 1 : (1 - u) / 0.25;
+      shot.rest = reduced ? 0 : ease(clamp01(Math.min(into, out)));
+    }
   } else {
     const h = seg.hop;
-    const f = clamp01((x - seg.start) / seg.len);
+    const f = clamp01((p - seg.start) / seg.len);
+    const near = f < 0.5 ? h : h + 1;
     shot.scale = 1 + push(h) * (1 - f);
-    shot.stop = f < 0.5 ? h : h + 1;
-    // The words leave as the flight starts and come back as it lands, never mid-flight.
-    shot.caption = 1 - clamp01((f < 0.5 ? x - seg.start : seg.start + seg.len - x) / CAPTION_FADE);
+    shot.stop = captionStop(near);
+    // The words leave as the flight starts and come back as it lands, never mid-flight. A
+    // pass stop has none, so they stay away across it.
+    shot.caption = isPass(near) ? 0 : 1 - clamp01((f < 0.5 ? p - seg.start : seg.start + seg.len - p) / CAPTION_FADE);
     const k = kind(h);
     if (k === "video" && ready(h)) {
-      if (h === 0) {
-        shot.base = "orbit";
-        shot.top = "video-0";
-        shot.alpha = ease(clamp01(f / ORBIT_FADE));
-      } else {
-        shot.base = `video-${h}`;
-      }
+      shot.base = `video-${h}`;
     } else if (k === "video") {
       shot.base = startOf(h);
       shot.top = `last-${h}`;
@@ -199,7 +267,7 @@ function compose(x: number, ready: (h: number) => boolean, reduced: boolean): Sh
   return shot;
 }
 
-type StyleProp = "opacity" | "visibility" | "zIndex" | "clipPath" | "transform" | "background" | "left";
+type StyleProp = "opacity" | "visibility" | "zIndex" | "clipPath" | "transform" | "background" | "left" | "pointerEvents";
 
 export default function FilmScroll() {
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -207,17 +275,13 @@ export default function FilmScroll() {
   const mediaRef = useRef<HTMLDivElement>(null);
   const veilRef = useRef<HTMLDivElement>(null);
   const scanRef = useRef<HTMLDivElement>(null);
-  const railRef = useRef<HTMLSpanElement>(null);
   const captionRef = useRef<HTMLDivElement>(null);
-  const tourBtnRef = useRef<HTMLButtonElement>(null);
+  const loadRef = useRef<HTMLDivElement>(null);
+  const loadFillRef = useRef<HTMLSpanElement>(null);
   const layers = useRef(new Map<string, HTMLElement>());
   const refFns = useRef(new Map<string, (el: HTMLElement | null) => void>());
-  const clipsRef = useRef<Clip[]>([]);
-  const reducedRef = useRef(false);
-  const tourRef = useRef<number | null>(null);
   const [stop, setStop] = useState(0);
   const [orbitOn, setOrbitOn] = useState(true);
-  const [touring, setTouring] = useState(false);
 
   // Stable ref callbacks, so React attaches each layer once.
   const layer = (key: string) => {
@@ -236,34 +300,124 @@ export default function FilmScroll() {
     const wrap = wrapRef.current;
     const media = mediaRef.current;
     if (!wrap || !media) return;
+    let disposed = false;
 
     const reduceQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
     let reduced = reduceQuery.matches;
-    reducedRef.current = reduced;
-    const onReduce = () => {
-      reduced = reduceQuery.matches;
-      reducedRef.current = reduced;
-      kick();
-    };
-    reduceQuery.addEventListener("change", onReduce);
+    const conn = (navigator as Navigator & { connection?: NetInfo }).connection;
+    const saveData = conn?.saveData === true;
+    // Reduced motion and data saver fetch no clips and cross-fade stills.
+    const videoOff = () => reduced || saveData;
+
+    // Desktop plays 1920 or 1280 wide, phones 1280 or 854. A slow link starts low; otherwise
+    // the first fetch starts high and drops to low if it would take too long.
+    const parts: Record<Tier, ClipPart> = window.matchMedia(PHONE).matches
+      ? { high: "d.mp4", low: "m.mp4" }
+      : { high: "hd.mp4", low: "d.mp4" };
+    // The browser's own downlink figure reads low on many good connections, so only its
+    // coarse type is trusted here. The measured first fetch decides the rest.
+    const slowLink = !!conn && SLOW_TYPES.includes(conn.effectiveType ?? "");
+    let tier: Tier = slowLink ? "low" : "high";
+    let tierFixed = slowLink;
 
     const clips: Clip[] = CLIP_HOPS.map((h) => ({
       hop: h,
       name: HOP_LIST[h].clip as string,
       state: "idle",
+      file: "",
+      received: 0,
+      total: 0,
       url: null,
-      abort: null,
-      shown: 0,
       dur: 0,
+      fetchAbort: null,
+      attachAbort: null,
     }));
-    clipsRef.current = clips;
     const clipOf: (Clip | undefined)[] = [];
     clips.forEach((c) => (clipOf[c.hop] = c));
     const videoOf = (c: Clip) => layers.current.get(`video-${c.hop}`) as HTMLVideoElement | undefined;
     const ready = (h: number) => clipOf[h]?.state === "ready";
+    /** A clip hop that will play its clip once it is ready. */
+    const playable = (h: number) => !videoOff() && kindOf(HOP_LIST[h]) === "video" && clipOf[h]?.state !== "failed";
+    const gated = (h: number) => playable(h) && !ready(h);
 
-    let x = 0;
-    const targetOf = (c: Clip) => Math.min(Math.max(0, c.dur - HALF_FRAME), hopProgress(c.hop, x) * c.dur);
+    let x = 0; // where the scroll puts the film, in vh
+    let p = 0; // the playhead
+    let dir = 1; // the way the playhead last moved
+    let started = false;
+    let waitHop: number | null = null; // the clip hop the playhead is waiting at
+    let waitSince = 0;
+    let lastShot: Shot | null = null;
+
+    const targetOf = (c: Clip) => Math.min(Math.max(0, c.dur - HALF_FRAME), hopProgress(c.hop, p) * c.dur);
+
+    // ---- Playhead ------------------------------------------------------------------------
+
+    /** Top speed in a part of the film, in vh/s. */
+    const speedIn = (seg: Seg, d: number) => {
+      if (seg.hop === null) return isPass(seg.stop) ? PASS_SPEED : HOLD_SPEED;
+      const h = seg.hop;
+      const k = kindOf(HOP_LIST[h]);
+      if (k === "wipe") return seg.len / WIPE_SECS;
+      const c = clipOf[h];
+      if (k !== "video" || !c || !playable(h) || !c.dur) return seg.len / FADE_SECS;
+      // Faster when the scroll is further ahead, so a long jump does not take minutes. Clips
+      // joined by pass stops are one flight, so they do not count as further.
+      let further = 0;
+      for (const g of CLIP_HOPS) {
+        if (!playable(g)) continue;
+        const s = HOP_SEG[g];
+        if (!(d > 0 ? g > h && s.start < x : g < h && s.start + s.len > x)) continue;
+        let joined = true;
+        for (let k = Math.min(g, h) + 1; k <= Math.max(g, h); k++) if (!isPass(k)) joined = false;
+        if (!joined) further++;
+      }
+      return (seg.len / c.dur) * Math.min(RATE_MAX, RATE + RATE_STEP * further);
+    };
+
+    /** The first clip hop between the playhead and the scroll that is not ready to play. */
+    const gateAhead = () => {
+      let gate: { edge: number; hop: number } | null = null;
+      for (const h of CLIP_HOPS) {
+        if (!gated(h)) continue;
+        const s = HOP_SEG[h];
+        const end = s.start + s.len;
+        if (x > p && p <= s.start && x > s.start) {
+          if (!gate || s.start < gate.edge) gate = { edge: s.start, hop: h };
+        } else if (x < p && p >= end && x < end) {
+          if (!gate || end > gate.edge) gate = { edge: end, hop: h };
+        }
+      }
+      return gate;
+    };
+
+    // Moves the playhead toward the scroll for dt seconds, one part of the film at a time,
+    // since each part has its own top speed.
+    const advance = (dt: number) => {
+      const gate = gateAhead();
+      let left = dt;
+      for (let i = 0; i < 32 && left > 0 && p !== x; i++) {
+        if (gate && p === gate.edge) break;
+        const gap = x - p;
+        if (Math.abs(gap) < SNAP) {
+          p = gate ? gate.edge : x;
+          break;
+        }
+        const d = gap > 0 ? 1 : -1;
+        const seg = segToward(p, d);
+        const room = d > 0 ? seg.start + seg.len - p : p - seg.start;
+        const top = speedIn(seg, d);
+        const step = Math.min(Math.abs(gap) * (1 - Math.exp(-FOLLOW * left)), top * left);
+        if (step < room) {
+          p += d * step;
+          break;
+        }
+        left -= room / Math.max(1e-6, Math.min(Math.abs(gap) * FOLLOW, top));
+        p = d > 0 ? seg.start + seg.len : seg.start;
+      }
+      waitHop = gate && p === gate.edge ? gate.hop : null;
+    };
+
+    // ---- Attaching ------------------------------------------------------------------------
 
     // iOS only shows seeks on a video that has played once from a user gesture.
     let primed = false;
@@ -309,19 +463,13 @@ export default function FilmScroll() {
         signal.addEventListener("abort", stop);
       });
 
-    const load = async (c: Clip) => {
+    const attach = async (c: Clip) => {
       const el = videoOf(c);
-      if (!el) return;
+      if (!el || !c.url) return;
       const ac = new AbortController();
-      c.abort = ac;
-      c.state = "loading";
-      const part = window.matchMedia(PHONE).matches ? "m.mp4" : "d.mp4";
+      c.attachAbort = ac;
+      c.state = "attaching";
       try {
-        const res = await fetch(clipFile(c.name, part), { signal: ac.signal });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const blob = await res.blob();
-        if (ac.signal.aborted) return;
-        c.url = URL.createObjectURL(blob);
         const loaded = waitFor(el, "loadeddata", ac.signal, 15000);
         el.muted = true;
         el.setAttribute("muted", "");
@@ -329,34 +477,181 @@ export default function FilmScroll() {
         await loaded;
         c.dur = Number.isFinite(el.duration) ? el.duration : 0;
         if (!c.dur) throw new Error("no duration");
-        c.shown = targetOf(c);
         const seeked = waitFor(el, "seeked", ac.signal, 1500);
-        el.currentTime = c.shown;
+        el.currentTime = targetOf(c);
         await seeked;
-        c.abort = null;
+        c.attachAbort = null;
         c.state = "ready";
         if (primed) prime(el);
         kick();
       } catch (err) {
         if (ac.signal.aborted) return;
-        c.abort = null;
+        c.attachAbort = null;
         c.state = "failed";
-        console.warn(`Film clip "${c.name}" did not load, so its hop keeps the stills.`, err);
+        el.removeAttribute("src");
+        el.load();
+        console.warn(`Film clip "${c.name}" did not play, so its hop keeps the stills.`, err);
       }
     };
 
-    const release = (c: Clip) => {
-      c.abort?.abort();
-      c.abort = null;
+    // The Blob stays; only the video lets go of it.
+    const detach = (c: Clip) => {
+      c.attachAbort?.abort();
+      c.attachAbort = null;
       const el = videoOf(c);
       if (el?.getAttribute("src")) {
         el.removeAttribute("src");
         el.load();
       }
-      if (c.url) URL.revokeObjectURL(c.url);
-      c.url = null;
-      if (c.state !== "failed") c.state = "idle";
+      c.state = "fetched";
     };
+
+    /** The clip hops to keep attached: the one at the playhead and one each side of it. */
+    const wanted = () => {
+      const out = new Set<number>();
+      if (videoOff()) return out;
+      const n = CLIP_HOPS.length;
+      let inside = -1;
+      let ahead = n;
+      for (let i = 0; i < n; i++) {
+        const s = HOP_SEG[CLIP_HOPS[i]];
+        if (p > s.start && p < s.start + s.len) {
+          inside = i;
+          break;
+        }
+        if (s.start >= p) {
+          ahead = i;
+          break;
+        }
+      }
+      const idx =
+        inside >= 0 ? [inside - 1, inside, inside + 1] : dir > 0 ? [ahead - 1, ahead, ahead + 1] : [ahead, ahead - 1, ahead - 2];
+      for (const i of idx) if (i >= 0 && i < n) out.add(CLIP_HOPS[i]);
+      return out;
+    };
+
+    const manage = () => {
+      const want = wanted();
+      for (const c of clips) {
+        const on = want.has(c.hop);
+        if (on && c.state === "fetched") void attach(c);
+        else if (!on && (c.state === "attaching" || c.state === "ready")) detach(c);
+      }
+    };
+
+    // ---- Fetching -------------------------------------------------------------------------
+
+    let fetching: Clip | null = null;
+
+    /** Next clip to fetch: the one at the playhead, then those ahead of it, then behind. */
+    const pickNext = () => {
+      let best: Clip | null = null;
+      let bestScore = Infinity;
+      for (const c of clips) {
+        if (c.state !== "idle") continue;
+        const s = HOP_SEG[c.hop];
+        const end = s.start + s.len;
+        let score: number;
+        if (c.hop === waitHop || (p >= s.start && p <= end)) score = -1;
+        else {
+          const gapAhead = dir > 0 ? s.start - p : p - end;
+          score = gapAhead >= 0 ? gapAhead : 1e6 - gapAhead;
+        }
+        if (score < bestScore) {
+          best = c;
+          bestScore = score;
+        }
+      }
+      return best;
+    };
+
+    const pump = () => {
+      if (fetching || disposed || videoOff()) return;
+      const next = pickNext();
+      if (next) void fetchClip(next);
+    };
+
+    const fetchClip = async (c: Clip) => {
+      fetching = c;
+      let t: Tier = tier;
+      try {
+        for (;;) {
+          const ac = new AbortController();
+          c.fetchAbort = ac;
+          c.state = "loading";
+          c.file = clipFile(c.name, parts[t]);
+          c.received = 0;
+          c.total = 0;
+          const probe = t === "high" && !tierFixed;
+          const res = await fetch(c.file, { signal: ac.signal });
+          if (!res.ok) {
+            // A missing high-tier file falls back to the low tier for this clip only.
+            if (t === "high") {
+              void res.body?.cancel().catch(() => {});
+              t = "low";
+              continue;
+            }
+            throw new Error(`HTTP ${res.status}`);
+          }
+          c.total = Number(res.headers.get("content-length")) || 0;
+          const chunks: BlobPart[] = [];
+          let tooSlow = false;
+          const reader = res.body?.getReader();
+          if (!reader) chunks.push(await res.blob());
+          else {
+            let first = 0;
+            for (;;) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              chunks.push(value);
+              c.received += value.byteLength;
+              const now = performance.now();
+              if (!first) first = now;
+              else if (probe && !tierFixed && now - first >= PROBE_MS) {
+                // Project the whole download from the rate so far.
+                tierFixed = true;
+                const secs = ((c.total || PROBE_GUESS) * (now - first)) / 1000 / c.received;
+                if (secs > PROBE_MAX_SECS) {
+                  tooSlow = true;
+                  break;
+                }
+              }
+              if (waitHop === c.hop) kick();
+            }
+          }
+          if (tooSlow) {
+            tier = "low";
+            t = "low";
+            void reader?.cancel().catch(() => {});
+            ac.abort();
+            continue;
+          }
+          // A first fetch that finished inside the probe window keeps the high tier.
+          if (probe) tierFixed = true;
+          c.fetchAbort = null;
+          c.url = URL.createObjectURL(new Blob(chunks, { type: "video/mp4" }));
+          c.state = "fetched";
+          break;
+        }
+      } catch (err) {
+        const aborted = c.fetchAbort?.signal.aborted ?? false;
+        c.fetchAbort = null;
+        c.received = 0;
+        if (aborted) c.state = "idle";
+        else {
+          c.state = "failed";
+          if (!disposed) console.warn(`Film clip "${c.name}" did not load, so its hop keeps the stills.`, err);
+        }
+      } finally {
+        fetching = null;
+      }
+      if (disposed) return;
+      manage();
+      pump();
+      kick();
+    };
+
+    // ---- Drawing --------------------------------------------------------------------------
 
     // Style writes go through a cache, so a still frame costs no style work.
     const written = new WeakMap<HTMLElement, Partial<Record<StyleProp, string>>>();
@@ -369,9 +664,9 @@ export default function FilmScroll() {
       (el.style as unknown as Record<StyleProp, string>)[prop] = value;
     };
 
-    const painted = new Set<string>();
+    const painted = new Set<string>([OPENING_KEY]);
     const paintStill = (key: string) => {
-      if (painted.has(key)) return;
+      if (painted.has(key) || key.startsWith("video-")) return;
       const s = STILLS.find((t) => t.key === key);
       const el = layers.current.get(key);
       if (!s || !el) return;
@@ -380,9 +675,9 @@ export default function FilmScroll() {
     };
 
     let lastStop = -1;
-    let lastOrbit = true;
+    let lastSat = true;
     const apply = (s: Shot, now: number) => {
-      if (s.base !== "orbit") paintStill(s.base);
+      paintStill(s.base);
       if (s.top) paintStill(s.top);
       for (const [key, el] of layers.current) {
         let o = 0;
@@ -405,11 +700,13 @@ export default function FilmScroll() {
         if (el.tagName !== "VIDEO") put(el, "visibility", o > 0 ? "visible" : "hidden");
       }
 
-      const orbitShown = s.base === "orbit" || s.top === "orbit";
-      put(orbitRef.current, "visibility", orbitShown ? "visible" : "hidden");
-      if (orbitShown !== lastOrbit) {
-        lastOrbit = orbitShown;
-        setOrbitOn(orbitShown);
+      const sat = s.sat > 0.001;
+      put(orbitRef.current, "opacity", s.sat.toFixed(3));
+      put(orbitRef.current, "visibility", sat ? "visible" : "hidden");
+      put(orbitRef.current, "pointerEvents", sat ? "auto" : "none");
+      if (sat !== lastSat) {
+        lastSat = sat;
+        setOrbitOn(sat);
       }
 
       const breath = s.rest * DRIFT * (0.5 - 0.5 * Math.cos((2 * Math.PI * now) / DRIFT_MS));
@@ -420,7 +717,6 @@ export default function FilmScroll() {
       const scanOn = s.wipe !== null;
       put(scanRef.current, "opacity", scanOn ? "1" : "0");
       if (scanOn) put(scanRef.current, "left", `${((s.wipe ?? 0) * 100).toFixed(2)}%`);
-      put(railRef.current, "transform", `scaleY(${(x / TOTAL).toFixed(4)})`);
 
       const c = s.caption;
       put(captionRef.current, "opacity", c.toFixed(3));
@@ -430,7 +726,22 @@ export default function FilmScroll() {
         lastStop = s.stop;
         setStop(s.stop);
       }
+
+      // The hairline: bytes of the clip the playhead is waiting for.
+      const wait = waitHop === null ? undefined : clipOf[waitHop];
+      put(loadRef.current, "opacity", wait && now - waitSince > LOADER_DELAY ? "1" : "0");
+      if (wait) {
+        const got =
+          wait.state !== "idle" && wait.state !== "loading"
+            ? 1
+            : wait.total > 0
+              ? wait.received / wait.total
+              : wait.received / (wait.received + PROBE_GUESS);
+        put(loadFillRef.current, "transform", `scaleX(${clamp01(got).toFixed(3)})`);
+      }
     };
+
+    // ---- Loop -----------------------------------------------------------------------------
 
     let raf = 0;
     let inView = true;
@@ -443,41 +754,63 @@ export default function FilmScroll() {
       const span = Math.max(1, rect.height - window.innerHeight);
       x = clamp01(-rect.top / span) * TOTAL;
 
-      const k = 1 - Math.pow(1 - EASE, dt * 60);
+      const waited = waitHop;
+      // Nobody sees the playhead catch up on the first frame, with reduced motion, or off screen.
+      if (!started || reduced || !inView) {
+        p = x;
+        waitHop = null;
+        started = true;
+      } else advance(dt);
+      if (x !== p) dir = x > p ? 1 : -1;
+      if (waitHop !== null && waitHop !== waited) waitSince = now;
+
+      manage();
+      pump();
+
+      let busy = p !== x || waitHop !== null;
       for (const c of clips) {
-        const seg = HOP_SEG[c.hop];
-        const d = distance(x, seg.start, seg.start + seg.len);
-        if (!reduced && c.state === "idle" && d <= LOAD_NEAR) void load(c);
-        else if ((reduced || d > RELEASE_FAR) && (c.state === "loading" || c.state === "ready")) release(c);
         if (c.state !== "ready") continue;
         const el = videoOf(c);
         if (!el) continue;
         const target = targetOf(c);
-        c.shown += (target - c.shown) * k;
-        if (Math.abs(target - c.shown) < SEEK_EPS / 2) c.shown = target;
-        if (!el.seeking && Math.abs(el.currentTime - c.shown) > SEEK_EPS) el.currentTime = c.shown;
+        if (!el.seeking && Math.abs(el.currentTime - target) > SEEK_EPS) el.currentTime = target;
+        if (el.seeking) busy = true;
       }
 
       for (const s of STILLS) {
-        if (!painted.has(s.key) && (!s.clip || !reduced) && distance(x, s.from, s.to) <= STILL_NEAR) paintStill(s.key);
+        if (!painted.has(s.key) && (!s.clip || !reduced) && distance(p, s.from, s.to) <= STILL_NEAR) paintStill(s.key);
       }
 
-      apply(compose(x, ready, reduced), now);
-      if (inView && !document.hidden) raf = requestAnimationFrame(frame);
+      const shot = compose(p, ready, reduced);
+      lastShot = shot;
+      apply(shot, now);
+      // The breath animates for as long as a hold is in view.
+      if (shot.rest > 0) busy = true;
+      if (busy && inView && !document.hidden) raf = requestAnimationFrame(frame);
     };
-    const kick = () => {
-      if (raf || !inView || document.hidden) return;
+    const kick = (force = false) => {
+      if (raf || disposed || document.hidden || (!inView && !force)) return;
       prev = performance.now();
       raf = requestAnimationFrame(frame);
     };
+    const onKick = () => kick();
+
+    const onReduce = () => {
+      reduced = reduceQuery.matches;
+      if (reduced) fetching?.fetchAbort?.abort();
+      kick();
+    };
+    reduceQuery.addEventListener("change", onReduce);
 
     const io = new IntersectionObserver(([entry]) => {
       inView = entry.isIntersecting;
-      kick();
+      // One frame either way: off screen it lands the playhead on the scroll.
+      kick(true);
     });
     io.observe(wrap);
-    document.addEventListener("visibilitychange", kick);
-    window.addEventListener("scroll", kick, { passive: true });
+    document.addEventListener("visibilitychange", onKick);
+    window.addEventListener("scroll", onKick, { passive: true });
+    window.addEventListener("resize", onKick);
     kick();
 
     if (process.env.NODE_ENV !== "production") {
@@ -485,129 +818,60 @@ export default function FilmScroll() {
         get x() {
           return x;
         },
+        get p() {
+          return p;
+        },
+        get tier() {
+          return tier;
+        },
+        get waiting() {
+          return waitHop;
+        },
+        get shot() {
+          return lastShot;
+        },
         total: TOTAL,
         segs: SEGS,
-        rest: REST,
         clips,
       };
     }
 
     return () => {
+      disposed = true;
       if (raf) cancelAnimationFrame(raf);
       io.disconnect();
       reduceQuery.removeEventListener("change", onReduce);
-      document.removeEventListener("visibilitychange", kick);
-      window.removeEventListener("scroll", kick);
+      document.removeEventListener("visibilitychange", onKick);
+      window.removeEventListener("scroll", onKick);
+      window.removeEventListener("resize", onKick);
       window.removeEventListener("touchstart", onGesture);
       window.removeEventListener("pointerdown", onGesture);
-      clips.forEach(release);
+      for (const c of clips) {
+        c.fetchAbort?.abort();
+        if (c.state === "attaching" || c.state === "ready") detach(c);
+        if (c.url) URL.revokeObjectURL(c.url);
+        c.url = null;
+      }
       if (process.env.NODE_ENV !== "production") delete (window as unknown as { __film?: unknown }).__film;
     };
   }, []);
-
-  const stopTour = () => {
-    if (tourRef.current) cancelAnimationFrame(tourRef.current);
-    tourRef.current = null;
-    setTouring(false);
-  };
-
-  const goTo = (i: number) => {
-    stopTour();
-    const wrap = wrapRef.current;
-    if (!wrap) return;
-    const top = wrap.getBoundingClientRect().top + window.scrollY;
-    const span = wrap.offsetHeight - window.innerHeight;
-    window.scrollTo({ top: top + (REST[i] / TOTAL) * span, behavior: reducedRef.current ? "auto" : "smooth" });
-  };
-
-  // How long the tour spends on a part: clips at their own length, so they play at speed.
-  const tourSeconds = (seg: Seg) => {
-    if (seg.hop === null) return TOUR.hold;
-    const kind = kindOf(HOP_LIST[seg.hop]);
-    if (kind !== "video") return TOUR[kind];
-    if (reducedRef.current) return TOUR.fade;
-    const clip = clipsRef.current.find((c) => c.hop === seg.hop);
-    return clip && clip.dur > 0 ? clip.dur : TOUR.video;
-  };
-
-  // The tour scrolls the page itself until someone scrolls, touches or presses a key.
-  const startTour = () => {
-    const wrap = wrapRef.current;
-    if (!wrap) return;
-    stopTour();
-    const top = wrap.getBoundingClientRect().top + window.scrollY;
-    const span = () => Math.max(1, wrap.offsetHeight - window.innerHeight);
-    let x = clamp01((window.scrollY - top) / span()) * TOTAL;
-    if (x >= TOTAL - 1) x = 0;
-    let i = SEGS.indexOf(locate(x));
-    let frac = clamp01((x - SEGS[i].start) / SEGS[i].len);
-    let prev = performance.now();
-    setTouring(true);
-    const step = (now: number) => {
-      let dt = Math.min(0.1, (now - prev) / 1000);
-      prev = now;
-      while (dt > 0) {
-        const secs = tourSeconds(SEGS[i]);
-        const left = (1 - frac) * secs;
-        if (dt < left) {
-          frac += dt / secs;
-          dt = 0;
-        } else if (i === SEGS.length - 1) {
-          frac = 1;
-          dt = 0;
-        } else {
-          dt -= left;
-          i += 1;
-          frac = 0;
-        }
-      }
-      const at = SEGS[i].start + frac * SEGS[i].len;
-      window.scrollTo({ top: top + (at / TOTAL) * span(), behavior: "instant" });
-      if (i === SEGS.length - 1 && frac >= 1) return stopTour();
-      tourRef.current = requestAnimationFrame(step);
-    };
-    tourRef.current = requestAnimationFrame(step);
-  };
-
-  useEffect(() => {
-    if (!touring) return;
-    const cancel = (e: Event) => {
-      // The tour button handles its own presses.
-      if (e.target instanceof Node && tourBtnRef.current?.contains(e.target)) return;
-      stopTour();
-    };
-    window.addEventListener("wheel", cancel, { passive: true });
-    window.addEventListener("touchstart", cancel, { passive: true });
-    window.addEventListener("keydown", cancel);
-    return () => {
-      window.removeEventListener("wheel", cancel);
-      window.removeEventListener("touchstart", cancel);
-      window.removeEventListener("keydown", cancel);
-    };
-  }, [touring]);
-
-  useEffect(
-    () => () => {
-      if (tourRef.current) cancelAnimationFrame(tourRef.current);
-    },
-    [],
-  );
 
   const here = STOPS[stop];
 
   return (
     <div className={styles.film} data-film ref={wrapRef} style={{ height: `${TOTAL + 100}vh` }}>
       <div className={styles.screen}>
-        {/* The first stop is live: a real-time Earth with the CubeSat, which can be clicked. */}
-        <div ref={orbitRef} className={styles.orbit}>
-          <OrbitIntro active={orbitOn} poster={STOPS[0].still} />
-        </div>
-
         <div ref={mediaRef} className={styles.media} aria-hidden="true">
-          {STOPS.map((s, i) => (i === 0 ? null : <div key={s.still} ref={layer(`stop-${i}`)} className={styles.layer} />))}
+          {STOPS.map((s, i) => (
+            <div key={`stop-${i}`} ref={layer(`stop-${i}`)} className={styles.layer} />
+          ))}
           {CLIP_HOPS.map((h) => (
             <Fragment key={h}>
-              {h > 0 ? <div ref={layer(`first-${h}`)} className={styles.layer} /> : null}
+              <div
+                ref={layer(`first-${h}`)}
+                className={styles.layer}
+                style={OPENING_KEY === `first-${h}` ? OPENING_STYLE : undefined}
+              />
               <div ref={layer(`last-${h}`)} className={styles.layer} />
               <video
                 ref={layer(`video-${h}`)}
@@ -625,41 +889,36 @@ export default function FilmScroll() {
         </div>
 
         <div ref={veilRef} className={styles.veil} aria-hidden="true" />
+
+        {/* The CubeSat, live over the first frame. It can be clicked. */}
+        <div ref={orbitRef} className={styles.orbit}>
+          <OrbitIntro active={orbitOn} earth={false} />
+        </div>
+
         <div className={styles.shade} aria-hidden="true" />
 
         <div ref={captionRef} className={styles.caption}>
           <p className={styles.place}>{here.place}</p>
           <p className={styles.text}>{here.text}</p>
-          {here.link ? (
-            <Link className={styles.open} href={here.link.href}>
-              {here.link.label}
-            </Link>
+          {here.link || here.more?.length ? (
+            <div className={styles.links}>
+              {here.link ? (
+                <Link className={styles.open} href={here.link.href}>
+                  {here.link.label}
+                </Link>
+              ) : null}
+              {here.more?.map((m) => (
+                <Link key={m.href} className={styles.more} href={m.href}>
+                  {m.label}
+                </Link>
+              ))}
+            </div>
           ) : null}
         </div>
 
-        <nav className={styles.stops} aria-label="Stops in the film">
-          <span className={styles.rail} aria-hidden="true">
-            <span ref={railRef} />
-          </span>
-          <ol>
-            {STOPS.map((s, i) => (
-              <li key={s.still}>
-                <button type="button" onClick={() => goTo(i)} aria-current={i === stop ? "true" : undefined}>
-                  {s.place}
-                </button>
-              </li>
-            ))}
-          </ol>
-        </nav>
-
-        <button
-          ref={tourBtnRef}
-          type="button"
-          className={styles.tour}
-          onClick={() => (touring ? stopTour() : startTour())}
-        >
-          {touring ? "Stop the tour" : "Play the tour"}
-        </button>
+        <div ref={loadRef} className={styles.load} aria-hidden="true">
+          <span ref={loadFillRef} />
+        </div>
       </div>
     </div>
   );

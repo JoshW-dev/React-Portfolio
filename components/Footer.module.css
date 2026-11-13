@@ -28,8 +28,7 @@
   border-bottom: 1px solid var(--line);
   font-size: 1.25rem;
   font-weight: 600;
-  letter-spacing: -0.015em;
-  font-variation-settings: "wdth" 90;
+  letter-spacing: -0.025em;
   text-decoration: none;
   transition: padding 0.25s var(--ease);
 }

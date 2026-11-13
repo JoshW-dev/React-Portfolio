@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import OrbitIntro from "@/components/orbit/OrbitIntro";
 import styles from "./FilmStoryboard.module.css";
 
 /*
@@ -248,18 +249,32 @@ export default function FilmStoryboard() {
       style={{ height: `${STOPS.length * 115}vh` }}
     >
       <div className={styles.screen}>
-        {STOPS.map((s, i) => (
-          <div
-            key={s.src}
-            ref={(el) => {
-              layerRefs.current[i] = el;
-            }}
-            className={styles.layer}
-            style={{ backgroundImage: `url(${s.src})`, opacity: i === 0 ? 1 : 0 }}
-            role={i === active ? "img" : undefined}
-            aria-label={i === active ? s.place : undefined}
-          />
-        ))}
+        {STOPS.map((s, i) =>
+          i === 0 ? (
+            // The first stop is live: a real-time Earth with the CubeSat, which can be clicked.
+            <div
+              key={s.src}
+              ref={(el) => {
+                layerRefs.current[i] = el;
+              }}
+              className={styles.layer}
+              style={{ opacity: 1 }}
+            >
+              <OrbitIntro active={active <= 1} poster="/film/00-orbit-live.webp" />
+            </div>
+          ) : (
+            <div
+              key={s.src}
+              ref={(el) => {
+                layerRefs.current[i] = el;
+              }}
+              className={styles.layer}
+              style={{ backgroundImage: `url(${s.src})`, opacity: 0 }}
+              role={i === active ? "img" : undefined}
+              aria-label={i === active ? s.place : undefined}
+            />
+          ),
+        )}
         <div ref={veilRef} className={styles.veil} aria-hidden="true" />
         <div ref={scanRef} className={styles.scan} aria-hidden="true" />
         <div className={styles.shade} aria-hidden="true" />

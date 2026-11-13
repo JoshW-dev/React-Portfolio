@@ -7,6 +7,7 @@ import { site } from "@/lib/site";
 import { mediaFor } from "@/lib/media";
 import CallReplay from "@/components/CallReplay";
 import TwinCompare from "@/components/TwinCompare";
+import CubeSatViewer from "@/components/orbit/CubeSatViewer";
 import styles from "./project.module.css";
 
 /** The figure under the title. Returns the project image, or null when there isn't one. */
@@ -18,6 +19,17 @@ function Figure({ item }: { item: Work }) {
         <figcaption className="small muted">
           A made-up caller with made-up details, replayed to show how a call runs. The real
           agents run on Twilio and ElevenLabs.
+        </figcaption>
+      </figure>
+    );
+  }
+  if (item.slug === "cubesat") {
+    return (
+      <figure className={styles.figure}>
+        <CubeSatViewer />
+        <figcaption className="small muted">
+          Drag to turn it, and use the slider to take it apart. It&rsquo;s a simplified model
+          drawn for this page.
         </figcaption>
       </figure>
     );

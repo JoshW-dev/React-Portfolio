@@ -1,0 +1,163 @@
+.figure {
+  container-type: inline-size;
+  width: 100%;
+  margin: 0;
+}
+
+.stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  max-height: 70vh;
+}
+
+.canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 0.6s var(--ease);
+  cursor: grab;
+  touch-action: pan-y;
+}
+
+.canvas[data-dragging] {
+  cursor: grabbing;
+}
+
+.stage[data-mode="live"] .canvas {
+  opacity: 1;
+}
+
+.leaders {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+  opacity: 0;
+  transition: opacity 0.5s var(--ease);
+}
+
+.leaders line {
+  stroke: var(--ink);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.leaders circle {
+  fill: var(--ink);
+}
+
+.tag {
+  position: absolute;
+  left: 0;
+  top: 0;
+  white-space: nowrap;
+  font-size: 0.9rem;
+  line-height: 1.3;
+  color: var(--ink);
+  background: var(--bg);
+  padding: 2px 6px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.5s var(--ease);
+  will-change: transform;
+}
+
+.tag strong {
+  font-weight: 600;
+}
+
+.stage[data-labels="on"] .tag,
+.stage[data-labels="on"] .leaders {
+  opacity: 1;
+}
+
+.fallback {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  color: var(--muted);
+  text-align: center;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.controls label {
+  color: var(--ink);
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+
+.controls input[type="range"] {
+  flex: 1;
+  max-width: 320px;
+  accent-color: var(--agent);
+  cursor: pointer;
+}
+
+/* Wide: the labels sit on the drawing, and the list is for screen readers only. */
+.list {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  margin: 0;
+  padding: 0;
+}
+
+/* Narrow: the labels stack under the canvas as a plain list. */
+@container (max-width: 699px) {
+  .tag,
+  .leaders {
+    display: none;
+  }
+
+  .list {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip: auto;
+    clip-path: none;
+    white-space: normal;
+    list-style: none;
+    margin-top: 14px;
+    display: grid;
+    gap: 6px;
+    color: var(--ink);
+    font-size: 0.95rem;
+  }
+
+  .list li {
+    padding-left: 14px;
+    position: relative;
+  }
+
+  .list li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0.62em;
+    width: 6px;
+    height: 1px;
+    background: var(--muted);
+  }
+}

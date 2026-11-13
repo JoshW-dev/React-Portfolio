@@ -1,0 +1,66 @@
+.compare {
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+  aspect-ratio: 1344 / 752;
+  background: #05070b;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.08);
+}
+
+.compare img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.model {
+  clip-path: inset(0 calc(100% - var(--split)) 0 0);
+}
+
+.edge {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--split);
+  width: 2px;
+  margin-left: -1px;
+  background: #cfe3ff;
+  box-shadow: 0 0 22px 5px rgb(120 170 255 / 0.5);
+}
+
+.tag {
+  position: absolute;
+  bottom: 14px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: rgb(0 0 0 / 0.55);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.left {
+  left: 14px;
+}
+
+.right {
+  right: 14px;
+}
+
+/* The whole figure is the slider, so a drag anywhere moves the edge. */
+.range {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: ew-resize;
+}
+
+.compare:has(.range:focus-visible) {
+  outline: 2px solid var(--agent);
+  outline-offset: 3px;
+}

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import styles from "./FilmStoryboard.module.css";
 
@@ -20,11 +21,14 @@ type Stop = {
   /** What the camera passes through to get here. */
   via: Via;
   how: string;
+  /** The project this stop opens. */
+  link?: { href: string; label: string };
 };
 
 const STOPS: Stop[] = [
   {
     src: "/film/01-orbit.webp",
+    link: { href: "/projects/cubesat", label: "Open the CubeSat project" },
     place: "Low Earth orbit",
     text: "Hi, I’m Josh. I’m an AI engineer, and I’ve built things in a lot of places. Scroll and I’ll take you to them.",
     via: "start",
@@ -39,6 +43,7 @@ const STOPS: Stop[] = [
   },
   {
     src: "/film/03-plant.webp",
+    link: { href: "/projects/hydrogen-plant", label: "Open the hydrogen plant project" },
     place: "Hydrogen plant, Alberta",
     text: "On a clean hydrogen plant, the design sessions I led cut more than $300M from the capital budget.",
     via: "fade",
@@ -46,6 +51,7 @@ const STOPS: Stop[] = [
   },
   {
     src: "/film/04-line.webp",
+    link: { href: "/projects/production-lines", label: "Open the production lines project" },
     place: "Production lines, Texas and California",
     text: "On two production lines we cut downtime 35% in 8 weeks.",
     via: "steam",
@@ -53,6 +59,7 @@ const STOPS: Stop[] = [
   },
   {
     src: "/film/05-twin.webp",
+    link: { href: "/projects/disco", label: "Open the Disco project" },
     place: "The same line, as software",
     text: "Then I moved to the software side. At Disco I built AI features and the automation behind sales and marketing, across more than 80,000 contacts.",
     via: "wipe",
@@ -60,6 +67,7 @@ const STOPS: Stop[] = [
   },
   {
     src: "/film/06-sf.webp",
+    link: { href: "/projects/alltus", label: "Open the Alltus project" },
     place: "San Francisco Bay",
     text: "Now I work at Alltus, which makes AI for local government.",
     via: "fog",
@@ -67,6 +75,7 @@ const STOPS: Stop[] = [
   },
   {
     src: "/film/07-towns.webp",
+    link: { href: "/projects/alltus", label: "Open the Alltus project" },
     place: "Counties across the U.S.",
     text: "Our agents answer phone lines that take more than 100,000 calls a year, and one deployment helped run elections in North Carolina.",
     via: "fade",
@@ -74,6 +83,7 @@ const STOPS: Stop[] = [
   },
   {
     src: "/film/08-nyc.webp",
+    link: { href: "/projects", label: "See all my projects" },
     place: "New York, at night",
     text: "Nights are for my own projects: products, research, games and art.",
     via: "fade",
@@ -81,6 +91,7 @@ const STOPS: Stop[] = [
   },
   {
     src: "/film/09-doha.webp",
+    link: { href: "/about", label: "More about me" },
     place: "Doha, November 2026",
     text: "I’m writing this from Doha. I’m based in Toronto and usually somewhere else.",
     via: "dark",
@@ -256,6 +267,11 @@ export default function FilmStoryboard() {
         <div className={styles.caption} key={active}>
           <p className={styles.place}>{stop.place}</p>
           <p className={styles.text}>{stop.text}</p>
+          {stop.link ? (
+            <Link className={styles.open} href={stop.link.href}>
+              {stop.link.label}
+            </Link>
+          ) : null}
           {stop.how ? <p className={styles.how}>How we get here: {stop.how}</p> : null}
         </div>
 

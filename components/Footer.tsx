@@ -33,6 +33,7 @@ export default function Footer() {
       </div>
       <div className={`wrap ${styles.base}`}>
         <span>{site.name}</span>
+        <span>Earth imagery: NASA Visible Earth</span>
         <span>{site.location}</span>
       </div>
     </footer>

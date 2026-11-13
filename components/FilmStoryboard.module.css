@@ -86,6 +86,25 @@
   text-wrap: balance;
 }
 
+.open {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  margin-top: 18px;
+  padding: 0 1.2em;
+  border-radius: var(--radius);
+  background: #fff;
+  color: #000;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.2s var(--ease), color 0.2s var(--ease);
+}
+
+.open:hover {
+  background: var(--agent);
+  color: #fff;
+}
+
 .how {
   margin-top: 14px;
   font-size: 0.95rem;

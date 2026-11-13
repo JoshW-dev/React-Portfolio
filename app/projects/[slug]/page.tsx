@@ -6,6 +6,7 @@ import { getWork, work, type Work } from "@/lib/work";
 import { site } from "@/lib/site";
 import { mediaFor } from "@/lib/media";
 import CallReplay from "@/components/CallReplay";
+import TwinCompare from "@/components/TwinCompare";
 import styles from "./project.module.css";
 
 /** The figure under the title. Returns the project image, or null when there isn't one. */
@@ -17,6 +18,17 @@ function Figure({ item }: { item: Work }) {
         <figcaption className="small muted">
           A made-up caller with made-up details, replayed to show how a call runs. The real
           agents run on Twilio and ElevenLabs.
+        </figcaption>
+      </figure>
+    );
+  }
+  if (item.slug === "production-lines") {
+    return (
+      <figure className={styles.figure}>
+        <TwinCompare />
+        <figcaption className="small muted">
+          An illustration, not the real plant. Drag across it to move between the line and
+          its model.
         </figcaption>
       </figure>
     );

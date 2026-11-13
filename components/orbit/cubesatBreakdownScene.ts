@@ -1,5 +1,5 @@
 import type * as THREE from "three";
-import { buildCubeSat, SET, type PointName, type Role, type SetIndex } from "./cubesat";
+import { buildCubeSat, CAMERA, SET, type PointName, type Role, type SetIndex } from "./cubesat";
 import {
   createProjector,
   createRenderer,
@@ -21,13 +21,15 @@ import {
 import type { BreakdownScene, SceneContext } from "@/components/breakdown/ScrollBreakdown";
 
 /*
-  The CubeSat breakdown. Scroll position (0 to 4, one per step) drives everything:
+  The CubeSat breakdown. Scroll position (0 to 5, one per step) drives everything:
 
   0  the task: the whole satellite over Earth, a radio uplink to the antennas
   1  power: the wings fold and open flat, the nine cells turn blue, the array faces the sun
   2  pointing: the units slide apart, drawing look, the wheels and magnetorquers in blue
   3  computer: focus moves to the top unit, charged particles cross it
   4  the photo: back together, slewed so the camera holds on a target
+  5  the camera: still on target, focus closes in on the end unit, its skin goes see-through,
+     the lens and image sensor in blue, light from the target through the lens onto the sensor
 
   Blue marks the part each step is about. Overlays (Earth, sun, particles, sight line) are
   SVG over the canvas, placed from projected 3D points every frame.
@@ -35,7 +37,7 @@ import type { BreakdownScene, SceneContext } from "@/components/breakdown/Scroll
 
 type Three = typeof THREE;
 
-export type CalloutKey = "antenna" | "camera" | "array" | "wheels" | "torquers" | "computer";
+export type CalloutKey = "antenna" | "camera" | "array" | "wheels" | "torquers" | "computer" | "lens" | "sensor";
 export type NoteKey = "station" | "sun" | "angle10" | "particles" | "target" | "angle65";
 
 export type CubeSatDom = {
@@ -50,6 +52,7 @@ export type CubeSatDom = {
   sight: SVGPathElement;
   cone: SVGPathElement;
   target: SVGGElement;
+  light: SVGPathElement;
   callouts: Record<CalloutKey, Callout>;
   notes: Record<NoteKey, HTMLElement>;
 };
@@ -67,6 +70,9 @@ const POSES_TALL: Pose[] = [
   { L: [0.1, 1, 0.34], N: [-0.9, 0, 0.42], primary: "L" },
   { L: [-0.08, 1, 0.34], N: [0.25, 0, 1], primary: "L" },
   { L: [0.3, 0.92, -0.3], N: [0.62, -0.2, 0.75], primary: "L" },
+  // Still pointing down at the target, rolled so a plain side faces the viewer: the rails
+  // sit at the edges of the unit, clear of the lens, and the wings turn edge-on.
+  { L: [0.22, 0.97, -0.12], N: [1, 0, 0.05], primary: "L" },
 ];
 // Short, wide stages (phones) lay the taken-apart stack on its side.
 const POSES_WIDE: Pose[] = [
@@ -75,12 +81,14 @@ const POSES_WIDE: Pose[] = [
   { L: [1, 0.12, 0.3], N: [-0.25, 0.75, 0.6], primary: "L" },
   { L: [1, -0.1, 0.32], N: [0.1, 0.35, 1], primary: "L" },
   POSES_TALL[4],
+  POSES_TALL[5],
 ];
 const FRAMES_TALL: Frame[] = [
   [0.2, 0.05, 0.8, 0.7],
   [0.3, 0.24, 0.9, 0.9],
   [0.27, 0.03, 0.73, 0.97],
   [0.27, 0.03, 0.73, 0.97],
+  [0.2, 0.08, 0.8, 0.64],
   [0.2, 0.08, 0.8, 0.64],
 ];
 const FRAMES_WIDE: Frame[] = [
@@ -89,10 +97,19 @@ const FRAMES_WIDE: Frame[] = [
   [0.05, 0.22, 0.95, 0.8],
   [0.05, 0.22, 0.95, 0.8],
   [0.27, 0.04, 0.73, 0.68],
+  [0.27, 0.04, 0.73, 0.68],
 ];
+/** The last step's position. */
+const LAST = POSES_TALL.length - 1;
 /** Steps 2 and 3 close in on one unit; this is where that unit sits. */
 const FOCUS_TALL: Frame = [0.3, 0.25, 0.7, 0.71];
 const FOCUS_WIDE: Frame = [0.3, 0.2, 0.7, 0.8];
+/** Step 5 closes in on the camera unit higher up, leaving room for the light below it. */
+const CLOSE_UPS: { unit: number; step: number; tall: Frame; wide: Frame }[] = [
+  { unit: 1, step: 2, tall: FOCUS_TALL, wide: FOCUS_WIDE },
+  { unit: 2, step: 3, tall: FOCUS_TALL, wide: FOCUS_WIDE },
+  { unit: 0, step: 5, tall: [0.27, 0.07, 0.73, 0.62], wide: [0.3, 0.04, 0.7, 0.63] },
+];
 
 type CalloutSpec = { key: CalloutKey; point: PointName; weight: (p: number) => number; tall: Side; wide: Side };
 const CALLOUTS: CalloutSpec[] = [
@@ -102,10 +119,14 @@ const CALLOUTS: CalloutSpec[] = [
   { key: "wheels", point: "wheels", weight: (p) => near(p, 2), tall: "left", wide: "top" },
   { key: "torquers", point: "torquers", weight: (p) => near(p, 2), tall: "right", wide: "bottom" },
   { key: "computer", point: "computer", weight: (p) => near(p, 3), tall: "left", wide: "top" },
+  { key: "lens", point: "barrel", weight: (p) => near(p, 5), tall: "left", wide: "left" },
+  { key: "sensor", point: "sensor", weight: (p) => near(p, 5), tall: "right", wide: "right" },
 ];
 
 const ADCS_PARTS: Role[] = ["rotor", "copper", "black", "gold"];
 const COMPUTER_PARTS: Role[] = ["pcb", "chip", "gold"];
+/** In the payload set, "black" is the lens housing and barrel and "glass" its front element. */
+const CAMERA_PARTS: Role[] = ["black", "glass", "sensor"];
 const ALL_SETS: SetIndex[] = [SET.payload, SET.adcs, SET.power, SET.wings];
 
 export function createCubeSatBreakdown(T: Three, ctx: SceneContext, dom: CubeSatDom): BreakdownScene {
@@ -241,27 +262,30 @@ export function createCubeSatBreakdown(T: Three, ctx: SceneContext, dom: CubeSat
 
   // ---- State from scroll position -----------------------------------------------------
   function apply(p: number) {
-    // Into the drawing look while the satellite turns to the sun, and back for the photo.
-    const schematic = p < 1 ? ramp(p, 0.12, 0.45) : track([1, 1, 1, 0], p - 1);
-    const explode = track([0, 0, 1, 1, 0], p);
+    // Into the drawing look while the satellite turns to the sun, back for the photo, and
+    // into it again for the camera.
+    const schematic = p < 1 ? ramp(p, 0.12, 0.45) : track([1, 1, 1, 0, 1], p - 1);
+    const explode = track([0, 0, 1, 1, 0, 0], p);
     // The wings fold in against the sides and open out flat again on the way to step 1.
     const deploy = p < 1.5 ? 1 - ramp(p, 0.28, 0.5) + ramp(p, 0.58, 0.92) : 1;
     sat.setSchematic(schematic);
     sat.setExplode(explode);
     sat.setDeploy(deploy);
-    const skins = track([0, 0, 1, 1, 0], p);
-    sat.setGhost(SET.payload, skins);
+    // At step 5 only the camera unit's skin goes see-through; the other units stay closed.
+    const skins = track([0, 0, 1, 1, 0, 0], p);
+    sat.setGhost(SET.payload, track([0, 0, 1, 1, 0, 1], p));
     sat.setGhost(SET.adcs, skins);
     sat.setGhost(SET.power, skins);
-    sat.setGhost(SET.wings, track([0, 0, 1, 1, 0], p));
-    sat.setFocus(SET.payload, track([1, 0.4, 0.3, 0.3, 1], p));
-    sat.setFocus(SET.adcs, track([1, 0.4, 1, 0.3, 1], p));
-    sat.setFocus(SET.power, track([1, 0.4, 0.3, 1, 1], p));
-    sat.setFocus(SET.wings, track([1, 1, 0.6, 0.6, 1], p));
+    sat.setGhost(SET.wings, track([0, 0, 1, 1, 0, 1], p));
+    sat.setFocus(SET.payload, track([1, 0.4, 0.3, 0.3, 1, 1], p));
+    sat.setFocus(SET.adcs, track([1, 0.4, 1, 0.3, 1, 0.3], p));
+    sat.setFocus(SET.power, track([1, 0.4, 0.3, 1, 1, 0.3], p));
+    sat.setFocus(SET.wings, track([1, 1, 0.6, 0.6, 1, 0.6], p));
     const cells = ramp(p, 0.7, 0.95) * (1 - ramp(p, 1.2, 1.6));
     for (const s of ALL_SETS) sat.setTint(s, ["cell"], cells);
     sat.setTint(SET.adcs, ADCS_PARTS, near(p, 2, 0.25, 0.6));
     sat.setTint(SET.power, COMPUTER_PARTS, near(p, 3, 0.25, 0.6));
+    sat.setTint(SET.payload, CAMERA_PARTS, near(p, 5, 0.25, 0.6));
     // Flatter, brighter light for the drawing; modelled light for the real thing.
     hemi.intensity = 1.0 + 1.9 * schematic;
     key.intensity = 2.2 - 1.3 * schematic;
@@ -358,16 +382,13 @@ export function createCubeSatBreakdown(T: Three, ctx: SceneContext, dom: CubeSat
     if (!whole.n) return;
     solve(whole, frameAt(p), fitWhole);
     for (const k of keys) goal[k] = fitWhole[k];
-    // Close in on the ADCS at step 2 and the computer at step 3.
-    for (const [unit, step] of [
-      [1, 2],
-      [2, 3],
-    ] as const) {
+    // Close in on the ADCS at step 2, the computer at step 3 and the camera at step 5.
+    for (const { unit, step, tall, wide: frameWide } of CLOSE_UPS) {
       const w = near(p, step, 0.25, 0.6);
       if (w <= 0) continue;
       gather(part, units[unit], true);
       if (!part.n) continue;
-      solve(part, wide ? FOCUS_WIDE : FOCUS_TALL, fitPart);
+      solve(part, wide ? frameWide : tall, fitPart);
       for (const k of keys) goal[k] += (fitPart[k] - fitWhole[k]) * w;
       if (w > 0.5) closeUp = unit;
     }
@@ -408,6 +429,16 @@ export function createCubeSatBreakdown(T: Three, ctx: SceneContext, dom: CubeSat
   const pts = {} as Record<PointName, ScreenPoint>;
   for (const k of Object.keys(sat.points) as PointName[]) pts[k] = { x: 0, y: 0, behind: false };
   const tipPts: ScreenPoint[] = sat.antennaTips.map(() => ({ x: 0, y: 0, behind: false }));
+  // Scratch for the step 5 light path and label anchors.
+  const wLens = new T.Vector3();
+  const wAxis = new T.Vector3();
+  const wSide = new T.Vector3();
+  const wTmp = new T.Vector3();
+  const edgePt: ScreenPoint = { x: 0, y: 0, behind: false };
+  const sideA: ScreenPoint = { x: 0, y: 0, behind: false };
+  const sideB: ScreenPoint = { x: 0, y: 0, behind: false };
+  const lensAnchor: ScreenPoint = { x: 0, y: 0, behind: false };
+  const sensorAnchor: ScreenPoint = { x: 0, y: 0, behind: false };
   const placements: CalloutPlacement[] = CALLOUTS.map((c) => ({
     callout: dom.callouts[c.key],
     x: 0,
@@ -456,8 +487,8 @@ export function createCubeSatBreakdown(T: Three, ctx: SceneContext, dom: CubeSat
     const W = width;
     const H = height;
 
-    // Earth: a wide arc across the bottom, for the task and the photo.
-    const wEarth = Math.max(near(p, 0), near(p, 4));
+    // Earth: a wide arc across the bottom, for the task, the photo and the camera.
+    const wEarth = p >= 4 ? 1 : Math.max(near(p, 0), near(p, 4));
     const R = Math.max(W, H) * 2.4;
     const yTop = H * (wide ? 0.86 : 0.85);
     const ex = W / 2;
@@ -561,8 +592,10 @@ export function createCubeSatBreakdown(T: Three, ctx: SceneContext, dom: CubeSat
     setOpacity(dom.tracks, w3 * 0.55);
     note(dom.notes.particles, entry.x + 12, 22, w3, "left");
 
-    // Step 4: the camera's line of sight to the target, inside a 6.5 degree cone.
+    // Step 4: the camera's line of sight to the target, inside a 6.5 degree cone. The sight
+    // line and target stay for step 5.
     const w4 = near(p, 4, 0.18, 0.42);
+    const wSight = p >= 4 ? 1 : w4;
     const L = pts.lens;
     let ux4 = pts.lensAhead.x - L.x;
     let uy4 = pts.lensAhead.y - L.y;
@@ -570,7 +603,7 @@ export function createCubeSatBreakdown(T: Three, ctx: SceneContext, dom: CubeSat
     ux4 /= ul;
     uy4 /= ul;
     const hit = hitCircle(L.x, L.y, ux4, uy4, ex, ey - rise, R);
-    if (hit && w4 > 0.01) {
+    if (hit && wSight > 0.01) {
       const tx = hit.x;
       const ty = hit.y;
       dom.sight.setAttribute("d", `M ${f1(L.x)} ${f1(L.y)} L ${f1(tx)} ${f1(ty)}`);
@@ -586,20 +619,54 @@ export function createCubeSatBreakdown(T: Three, ctx: SceneContext, dom: CubeSat
       dom.target.setAttribute("transform", `translate(${f1(tx)} ${f1(ty)})`);
       const right = e2.x > e1.x ? e2 : e1;
       note(dom.notes.angle65, right.x * 0.55 + L.x * 0.45 + 10, right.y * 0.55 + L.y * 0.45, w4, "left");
-      note(dom.notes.target, tx + 16, ty + 16, w4, "left");
+      note(dom.notes.target, tx + 16, ty + 16, wSight, "left");
     } else {
       setOpacity(dom.notes.angle65, 0);
       setOpacity(dom.notes.target, 0);
     }
-    const shown = hit ? w4 : 0;
-    setOpacity(dom.sight, shown);
-    setOpacity(dom.cone, shown * 0.7);
-    setOpacity(dom.target, shown);
+    setOpacity(dom.sight, hit ? wSight : 0);
+    setOpacity(dom.cone, hit ? w4 * 0.7 : 0);
+    setOpacity(dom.target, hit ? wSight : 0);
+
+    // Step 5: light from the target comes up the sight line to both edges of the lens and
+    // meets on the sensor. The lens and sensor labels anchor on the sides of their parts.
+    const w5 = near(p, 5, 0.18, 0.42);
+    sat.points.lens.getWorldPosition(wLens);
+    sat.points.lensAhead.getWorldPosition(wAxis).sub(wLens).normalize();
+    wSide.subVectors(camera.position, wLens).cross(wAxis).normalize();
+    const S = pts.sensor;
+    let light = "";
+    for (const s of [-1, 1]) {
+      const e = project(wTmp.copy(wLens).addScaledVector(wSide, s * CAMERA.aperture), camera, W, H, edgePt);
+      const fx = hit ? hit.x : e.x + ux4 * H * 0.3;
+      const fy = hit ? hit.y : e.y + uy4 * H * 0.3;
+      light += `M ${f1(fx)} ${f1(fy)} L ${f1(e.x)} ${f1(e.y)} L ${f1(S.x)} ${f1(S.y)} `;
+    }
+    dom.light.setAttribute("d", light);
+    dom.light.style.strokeDashoffset = reducedMotion ? "0" : f1(-time * 22);
+    setOpacity(dom.light, w5);
+    const sideAnchor = (spec: CalloutSpec, half: number, out: ScreenPoint) => {
+      sat.points[spec.point].getWorldPosition(wTmp);
+      project(wTmp.addScaledVector(wSide, half), camera, W, H, sideA);
+      project(wTmp.addScaledVector(wSide, -2 * half), camera, W, H, sideB);
+      const side = wide ? spec.wide : spec.tall;
+      const a = side === "left" || side === "right" ? sideA.x - sideB.x : sideA.y - sideB.y;
+      const pick = (side === "left" || side === "top") === a < 0 ? sideA : sideB;
+      out.x = pick.x;
+      out.y = pick.y;
+      out.behind = pick.behind;
+      return out;
+    };
 
     // Labels on parts.
     CALLOUTS.forEach((spec, i) => {
       const pl = placements[i];
-      const pt = pts[spec.point];
+      const pt =
+        spec.key === "lens"
+          ? sideAnchor(spec, CAMERA.barrel * 0.8, lensAnchor)
+          : spec.key === "sensor"
+            ? sideAnchor(spec, CAMERA.sensorHalf * 0.6, sensorAnchor)
+            : pts[spec.point];
       pl.x = pt.x;
       pl.y = pt.y;
       pl.side = wide ? spec.wide : spec.tall;
@@ -616,7 +683,7 @@ export function createCubeSatBreakdown(T: Three, ctx: SceneContext, dom: CubeSat
 
   function frame(dt: number) {
     time += dt;
-    const p = Math.min(4, Math.max(0, position.current ?? 0));
+    const p = Math.min(LAST, Math.max(0, position.current ?? 0));
 
     // Scrolling eases any drag back to the story's view.
     if (lastP >= 0 && !dragging) {

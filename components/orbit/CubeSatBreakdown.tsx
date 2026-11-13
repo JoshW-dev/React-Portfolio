@@ -79,6 +79,19 @@ const STEPS: BreakdownStep[] = [
       </p>
     ),
   },
+  {
+    id: "camera",
+    title: "The camera, looking straight down the body",
+    body: (
+      <p>
+        The camera is the payload, and the team built it for this satellite. It sits in the end
+        unit that faces Earth, with the lens looking out through the end plate and an image sensor
+        on a board behind it. Nothing on it moves. Light from the ground comes up through the lens
+        and falls on the sensor, the computer saves the frame, and the radio sends it down on a
+        later pass over the ground station.
+      </p>
+    ),
+  },
 ];
 
 const CALLOUTS: { key: CalloutKey; text: string }[] = [
@@ -88,6 +101,8 @@ const CALLOUTS: { key: CalloutKey; text: string }[] = [
   { key: "wheels", text: "4 reaction wheels" },
   { key: "torquers", text: "3 magnetorquers" },
   { key: "computer", text: "Flight computer" },
+  { key: "lens", text: "Lens" },
+  { key: "sensor", text: "Image sensor" },
 ];
 
 const NOTES: { key: NoteKey; text: string }[] = [
@@ -100,7 +115,7 @@ const NOTES: { key: NoteKey; text: string }[] = [
 ];
 
 type Refs = {
-  svg: Partial<Record<"earth" | "station" | "uplink" | "rays" | "wedge" | "tracks" | "sight" | "cone", SVGPathElement>> & {
+  svg: Partial<Record<"earth" | "station" | "uplink" | "rays" | "wedge" | "tracks" | "sight" | "cone" | "light", SVGPathElement>> & {
     sun?: SVGGElement;
     target?: SVGGElement;
   };
@@ -133,6 +148,7 @@ function collect(r: Refs): CubeSatDom {
     sight: need(r.svg.sight, "sight"),
     cone: need(r.svg.cone, "cone"),
     target: need(r.svg.target, "target"),
+    light: need(r.svg.light, "light"),
     callouts,
     notes,
   };
@@ -197,6 +213,7 @@ function Visual({ api }: { api: BreakdownApi }) {
           <circle r={8} />
           <circle r={2} className={styles.targetDot} />
         </g>
+        <path ref={path("light")} className={styles.light} />
         {CALLOUTS.map((c) => (
           <g key={c.key} className={styles.leader}>
             <line
@@ -241,7 +258,7 @@ function Visual({ api }: { api: BreakdownApi }) {
   );
 }
 
-/** The CubeSat project's scroll breakdown: the model on the left, the five steps on the right. */
+/** The CubeSat project's scroll breakdown: the model on the left, the six steps on the right. */
 export default function CubeSatBreakdown({ className }: { className?: string }) {
   return (
     <ScrollBreakdown

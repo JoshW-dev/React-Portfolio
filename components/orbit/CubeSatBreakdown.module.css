@@ -125,6 +125,16 @@
   stroke: none;
 }
 
+/* Light from the target through the edges of the lens onto the sensor. */
+.light {
+  fill: none;
+  stroke: var(--agent);
+  stroke-width: 1.25;
+  stroke-dasharray: 4 5;
+  stroke-linejoin: round;
+  opacity: 0;
+}
+
 .leader line {
   stroke: var(--ink);
   stroke-width: 1;

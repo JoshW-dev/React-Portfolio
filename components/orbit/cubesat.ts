@@ -57,7 +57,8 @@ export type Role =
   | "gold"
   | "copper"
   | "rotor"
-  | "battery";
+  | "battery"
+  | "sensor";
 
 type Spec = {
   color: number;
@@ -89,7 +90,18 @@ const SPEC: Record<Role, Spec> = {
   copper: { color: 0xb9703f, metal: 1, rough: 0.36 },
   rotor: { color: 0xc9ccd2, metal: 1, rough: 0.22 },
   battery: { color: 0x3d5d57, metal: 0.15, rough: 0.45 },
+  sensor: { color: 0x1a1c22, metal: 0.25, rough: 0.35 },
 };
+
+/**
+ * The camera's sizes in metres, for overlays drawn on it: the lens aperture (the glass on
+ * the end plate), the barrel inside the unit, and half the width of the image sensor.
+ */
+export const CAMERA = { aperture: 0.0152, barrel: 0.0185, sensorHalf: 0.013 } as const;
+/** Heights above the payload unit's Earth-facing end: barrel top, sensor face, sensor board. */
+const BARREL_TOP = 0.048;
+const SENSOR_FACE = 0.0537;
+const SENSOR_BOARD = 0.058;
 
 export type CubeSatOptions = {
   /** Build the parts inside each unit (the breakdown only). */
@@ -103,7 +115,18 @@ export type CubeSatOptions = {
   anisotropy?: number;
 };
 
-export type PointName = "lens" | "antenna" | "wheels" | "torquers" | "computer" | "array" | "arrayNormal" | "lensAhead" | "hinge";
+export type PointName =
+  | "lens"
+  | "antenna"
+  | "wheels"
+  | "torquers"
+  | "computer"
+  | "array"
+  | "arrayNormal"
+  | "lensAhead"
+  | "hinge"
+  | "barrel"
+  | "sensor";
 
 export type CubeSat = {
   root: THREE.Group;
@@ -123,7 +146,10 @@ export type CubeSat = {
   setSchematic(s: number): void;
   /** 0 wings folded against the sides, 1 flat (the default). */
   setDeploy(d: number): void;
-  /** Fades a set's skins (or the whole of the wings) toward 10% opacity. Drawing look only. */
+  /**
+   * Fades a set's skins (or the whole of the wings) toward 10% opacity, and shows the parts
+   * inside that unit. Drawing look only.
+   */
   setGhost(set: SetIndex, g: number): void;
   /** Edge weight for a set in the drawing look, 0 to 1. Lower pushes it back. */
   setFocus(set: SetIndex, f: number): void;
@@ -435,6 +461,9 @@ export function buildCubeSat(T: Three, opts: CubeSatOptions = {}): CubeSat {
       points.lensAhead = point(end, 0, -UNIT / 2 - 0.4, 0);
       unit.add(end);
       addMover(end, new T.Vector3(0, -1, 0), LIFT * 0.7);
+      // On the lens axis inside the unit: halfway up the barrel, and the sensor's face.
+      points.barrel = point(unit, 0, -UNIT / 2 + BARREL_TOP / 2, 0);
+      points.sensor = point(unit, 0, -UNIT / 2 + SENSOR_FACE, 0);
     }
 
     if (i === 1) {
@@ -525,12 +554,36 @@ export function buildCubeSat(T: Three, opts: CubeSatOptions = {}): CubeSat {
   }
 
   function buildPayload(g: THREE.Group, set: number) {
-    // Camera: a lens barrel with two rings, and the sensor board behind it.
+    // Camera: a lens barrel with two rings, and the sensor board behind it with the image
+    // sensor on its underside, facing the lens across a small gap.
     const y0 = -UNIT / 2;
-    g.add(mesh(merge(T, [cyl(0.0185, 0.05, 0, y0 + 0.027, 0), cyl(0.021, 0.005, 0, y0 + 0.014, 0), cyl(0.021, 0.005, 0, y0 + 0.036, 0)]), set, "black"));
-    const board = y0 + 0.058;
+    const barrelLen = BARREL_TOP - 0.002;
+    g.add(
+      mesh(
+        merge(T, [
+          cyl(CAMERA.barrel, barrelLen, 0, y0 + 0.002 + barrelLen / 2, 0),
+          cyl(0.021, 0.005, 0, y0 + 0.014, 0),
+          cyl(0.021, 0.005, 0, y0 + 0.034, 0),
+        ]),
+        set,
+        "black",
+      ),
+    );
+    const board = y0 + SENSOR_BOARD;
     g.add(mesh(box(0.08, 0.0016, 0.08, 0, board, 0), set, "pcb"));
-    g.add(mesh(box(0.024, 0.003, 0.024, 0, board - 0.0023, 0), set, "chip"));
+    // The sensor package, with the window over the die on the face toward the lens.
+    const face = y0 + SENSOR_FACE;
+    const pack = board - 0.0008 - face;
+    g.add(
+      mesh(
+        merge(T, [
+          box(2 * CAMERA.sensorHalf, pack, 2 * CAMERA.sensorHalf, 0, face + pack / 2, 0),
+          box(0.015, 0.0006, 0.012, 0, face - 0.0003, 0),
+        ]),
+        set,
+        "sensor",
+      ),
+    );
     g.add(
       mesh(
         merge(T, [box(0.012, 0.002, 0.016, 0.022, board + 0.0018, -0.018), box(0.016, 0.002, 0.01, -0.02, board + 0.0018, 0.02), box(0.008, 0.002, 0.008, 0.024, board + 0.0018, 0.022)]),
@@ -660,12 +713,19 @@ export function buildCubeSat(T: Three, opts: CubeSatOptions = {}): CubeSat {
   }
 
   let explodeNow = -1;
+  /** A unit's insides draw while the units are apart or while its own skin is see-through. */
+  function showInteriors() {
+    interiors.forEach((g, i) => {
+      g.visible = explodeNow > 0.004 || state.ghost[i] > 0.004;
+    });
+  }
+
   function setExplode(e: number) {
     e = clamp01(e);
     if (e === explodeNow) return;
     explodeNow = e;
     for (const m of movers) m.obj.position.copy(m.base).addScaledVector(m.dir, m.dist * e);
-    for (const g of interiors) g.visible = e > 0.004;
+    showInteriors();
   }
 
   let deployNow = -1;
@@ -713,6 +773,7 @@ export function buildCubeSat(T: Three, opts: CubeSatOptions = {}): CubeSat {
       g = clamp01(g);
       if (g === state.ghost[set]) return;
       state.ghost[set] = g;
+      showInteriors();
       refresh();
     },
     setFocus(set, f) {

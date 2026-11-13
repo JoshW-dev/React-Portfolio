@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/TransitionLink";
 import FilmScroll from "@/components/FilmScroll";
 import Portrait from "@/components/Portrait";
 import ProjectGrid from "@/components/ProjectGrid";

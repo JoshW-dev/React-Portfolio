@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/components/TransitionLink";
 import { formatRange, spans } from "@/components/CareerTrace";
 import { site } from "@/lib/site";
 import styles from "./resume.module.css";

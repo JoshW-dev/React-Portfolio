@@ -8,11 +8,14 @@
     2. On that hop below, set kind "video" and clip "<name>".
   A hop with no clip, or whose files are missing, falls back to a still cross-fade.
 
-  The first stop has no picture of its own in the film: it is the first frame of the first
-  clip, with the live CubeSat drawn over it. Its still is used by reduced motion.
+  The first stop is the live planet with the CubeSat, framed exactly as the first clip's
+  first frame. Its still is that frame, used by reduced motion and when WebGL can't run.
 
   A pass stop is a place the film flies through without resting: a short hold that blends
-  one clip's last frame into the next clip's first frame, with no words.
+  one clip's last frame into the next clip's first frame. Its words ride along on the flight.
+
+  Hotspots (spots) are rings on things in a stop's picture that open a project. x and y are
+  shares of the picture's width and height, read off the frame the hold shows.
 */
 
 export type Stop = {
@@ -21,12 +24,20 @@ export type Stop = {
   place: string;
   /** The caption. A pass stop has none. */
   text?: string;
-  /** The project this stop opens. */
+  /** The project this stop opens, as the caption's button. */
   link?: { href: string; label: string };
-  /** Up to two more projects that belong to the same place. */
-  more?: { href: string; label: string }[];
-  /** Flown through without a rest, a caption or a push-in. */
+  /** Up to two hotspots on things in the picture, each opening a project. */
+  spots?: Spot[];
+  /** Flown through without a rest or a push-in; its words show during the flight. */
   pass?: boolean;
+};
+
+export type Spot = {
+  /** Where the thing is, as shares of the picture's width and height. */
+  x: number;
+  y: number;
+  label: string;
+  href: string;
 };
 
 export type Veil = "cloud" | "steam" | "fog" | "dark";
@@ -53,46 +64,54 @@ export const STOPS: Stop[] = [
   },
   {
     still: "/film/02-rockies.webp",
-    place: "Alberta Rockies",
+    place: "Alberta, Canada",
+    text: "After school I moved west and spent two years here as an engineering consultant.",
     pass: true,
   },
   {
     still: "/film/03-plant.webp",
     link: { href: "/projects/hydrogen-plant", label: "Open the hydrogen plant project" },
+    spots: [{ x: 0.458, y: 0.25, label: "Clean hydrogen plant", href: "/projects/hydrogen-plant" }],
     place: "Hydrogen plant, Alberta",
-    text: "After school I moved to Alberta as an engineering consultant. On a clean hydrogen plant there, the design sessions I led cut more than $300M from the capital budget.",
+    text: "On a clean hydrogen plant, the design sessions I led cut more than $300M from the capital budget.",
   },
   {
     still: "/film/04-line.webp",
     link: { href: "/projects/production-lines", label: "Open the production lines project" },
+    spots: [{ x: 0.46, y: 0.15, label: "Two production lines", href: "/projects/production-lines" }],
     place: "Production lines, Texas and California",
     text: "On two production lines we cut downtime 35% in 8 weeks.",
   },
   {
     still: "/film/05-twin.webp",
     link: { href: "/projects/disco", label: "Open the Disco project" },
+    spots: [{ x: 0.457, y: 0.14, label: "Disco", href: "/projects/disco" }],
     place: "The same line, as software",
     text: "Then I moved to the software side. At Disco I built AI features and the automation behind sales and marketing, across more than 80,000 contacts.",
   },
   {
     still: "/film/06-sf.webp",
     link: { href: "/projects/alltus", label: "Open the Alltus project" },
+    spots: [{ x: 0.612, y: 0.35, label: "Alltus", href: "/projects/alltus" }],
     place: "San Francisco Bay",
     text: "Now I work at Alltus, which makes AI for local government.",
   },
   {
     still: "/film/07-towns.webp",
     link: { href: "/projects/alltus", label: "Open the Alltus project" },
-    more: [{ href: "/projects/crimsonlead", label: "Crimsonlead, built on public records" }],
+    spots: [
+      { x: 0.868, y: 0.665, label: "Alltus", href: "/projects/alltus" },
+      { x: 0.597, y: 0.582, label: "Crimsonlead", href: "/projects/crimsonlead" },
+    ],
     place: "Counties across the U.S.",
     text: "Our agents answer phone lines that take more than 100,000 calls a year, and one deployment helped run elections in North Carolina.",
   },
   {
     still: "/film/08-nyc.webp",
     link: { href: "/projects", label: "See all my projects" },
-    more: [
-      { href: "/projects/bottleneck-radar", label: "Bottleneck Radar" },
-      { href: "/projects/insider-signal", label: "Insider Signal" },
+    spots: [
+      { x: 0.57, y: 0.205, label: "Bottleneck Radar", href: "/projects/bottleneck-radar" },
+      { x: 0.414, y: 0.4, label: "Insider Signal", href: "/projects/insider-signal" },
     ],
     place: "New York, at night",
     text: "Nights are for my own projects: products, research, games and art.",
@@ -100,6 +119,7 @@ export const STOPS: Stop[] = [
   {
     still: "/film/09-doha.webp",
     link: { href: "/about", label: "More about me" },
+    spots: [{ x: 0.54, y: 0.37, label: "About me", href: "/about" }],
     place: "Doha, November 2026",
     text: "I’m writing this from Doha. I’m based in Toronto and usually somewhere else.",
   },

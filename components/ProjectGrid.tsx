@@ -1,7 +1,7 @@
 import Image from "next/image";
-import Link from "next/link";
 import CallFlow from "@/components/CallFlow";
 import HoverClip from "@/components/HoverClip";
+import TransitionLink from "@/components/TransitionLink";
 import { mediaFor } from "@/lib/media";
 import type { Work } from "@/lib/work";
 import styles from "./ProjectGrid.module.css";
@@ -14,7 +14,7 @@ export default function ProjectGrid({ items, eager = 0 }: { items: Work[]; eager
         const media = mediaFor(item.slug);
         return (
         <li key={item.slug}>
-          <Link href={`/projects/${item.slug}`} className={styles.tile}>
+          <TransitionLink href={`/projects/${item.slug}`} className={styles.tile}>
             <span className={styles.media}>
               {item.image ? (
                 <Image
@@ -37,7 +37,7 @@ export default function ProjectGrid({ items, eager = 0 }: { items: Work[]; eager
               <span className={styles.kind}>{item.kind}</span>
             </span>
             <span className={styles.summary}>{item.summary}</span>
-          </Link>
+          </TransitionLink>
         </li>
         );
       })}

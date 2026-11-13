@@ -33,3 +33,4 @@ Server/config.js
 next-env.d.ts
 *.tsbuildinfo
 .vercel
+scripts/film-interp

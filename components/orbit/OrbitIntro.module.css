@@ -8,6 +8,20 @@
   background-repeat: no-repeat;
 }
 
+/* The poster stands in when the planet can't be drawn, or is slow to arrive. Until then the
+   layer is black, so the planet fades up out of the dark. */
+.wrap[data-mode="fallback"],
+.wrap[data-late="true"] {
+  background-image: var(--poster);
+}
+
+/* Reduced motion goes straight to the poster, before any script runs. */
+@media (prefers-reduced-motion: reduce) {
+  .wrap[data-mode="loading"] {
+    background-image: var(--poster);
+  }
+}
+
 /* Satellite only: the picture behind shows through. */
 .wrap[data-earth="false"] {
   background: none;
@@ -19,49 +33,125 @@
   width: 100%;
   height: 100%;
   opacity: 0;
-  transition: opacity 0.6s var(--ease);
+  transition: opacity 0.9s var(--ease);
 }
 
 .wrap[data-mode="live"] .canvas {
   opacity: 1;
 }
 
+/* The target: a thin ring on the satellite, a 1px leader and the label. Hidden until the
+   satellite settles, then the ring pulses outward twice and stays, quietly. */
+.ring,
+.leader,
 .label {
   position: absolute;
   left: 0;
   top: 0;
+  opacity: 0;
+  will-change: transform;
+}
+
+.ring {
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.5);
+  pointer-events: none;
+  transition: opacity 0.6s var(--ease), box-shadow 0.25s var(--ease);
+}
+
+.pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.85);
+  opacity: 0;
+}
+
+.leader {
+  width: 1px;
+  height: 1px;
+  background: rgb(255 255 255 / 0.7);
+  transform-origin: 0 50%;
+  pointer-events: none;
+  transition: opacity 0.6s var(--ease) 0.25s;
+}
+
+.label {
   display: flex;
   flex-direction: column;
-  gap: 1px;
-  padding: 6px 8px;
-  border-radius: var(--radius);
+  gap: 2px;
+  padding: 4px 6px;
+  margin: -4px -6px;
+  border-radius: 4px;
   color: #fff;
   text-decoration: none;
   line-height: 1.25;
   text-shadow:
-    0 1px 2px rgba(0, 0, 0, 0.7),
-    0 0 12px rgba(0, 0, 0, 0.55);
+    0 1px 2px rgb(0 0 0 / 0.75),
+    0 0 14px rgb(0 0 0 / 0.6);
   white-space: nowrap;
-  opacity: 0;
-  transition: opacity 0.9s var(--ease);
-  will-change: transform;
+  transition: opacity 0.6s var(--ease) 0.35s;
 }
 
 .name {
-  font-size: 0.95rem;
+  font-size: 1.0625rem;
   font-weight: 600;
 }
 
 .open {
-  font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: rgb(255 255 255 / 0.86);
+  text-decoration: underline;
+  text-decoration-color: rgb(255 255 255 / 0);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  transition: text-decoration-color 0.2s var(--ease), color 0.2s var(--ease);
 }
 
+.wrap[data-mode="live"][data-settled="true"] .ring {
+  opacity: 1;
+}
+
+.wrap[data-mode="live"][data-settled="true"] .pulse {
+  animation: pulse 1.5s cubic-bezier(0.2, 0.7, 0.2, 1) 0.15s 2;
+}
+
+.wrap[data-mode="live"][data-settled="true"] .leader,
+.wrap[data-mode="live"][data-settled="true"] .label {
+  opacity: 1;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.5);
+  }
+}
+
+/* Hover on the satellite or the label, or focus on the label. */
+.wrap[data-hover="true"] .ring,
+.wrap:has(.label:hover) .ring,
+.wrap:has(.label:focus-visible) .ring {
+  box-shadow:
+    inset 0 0 0 1.5px rgb(255 255 255 / 0.95),
+    0 0 18px rgb(160 200 255 / 0.35);
+}
+
+.wrap[data-hover="true"] .leader,
+.wrap:has(.label:hover) .leader {
+  background: #fff;
+}
+
+.wrap[data-hover="true"] .open,
 .label:hover .open,
 .label:focus-visible .open {
   color: #fff;
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  text-decoration-color: #fff;
 }
 
 .label:focus-visible {
@@ -70,16 +160,13 @@
   outline-offset: 2px;
 }
 
-.wrap[data-mode="live"] .label[data-settled="true"] {
-  opacity: 1;
-}
-
 /* No WebGL, a failed shader, a lost context or reduced motion: the poster stays and the
    link sits where the satellite would hold. */
 .wrap[data-mode="fallback"] .label,
 .wrap[data-mode="loading"] .label {
   left: 64%;
   top: 30%;
+  margin: 0;
   transform: none !important;
 }
 

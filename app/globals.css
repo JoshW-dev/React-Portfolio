@@ -283,3 +283,137 @@ body:has([data-film]) > header {
   text-shadow: 0 1px 10px rgb(0 0 0 / 0.6);
 }
 
+/* ---------- page transitions ---------- */
+
+/*
+  TransitionLink sets data-vt on <html> while a view transition runs.
+  open:  any project page. The new page wipes in from the top over 700ms while the old page
+         holds still under it and dims a little. A 1px white line rides the wipe's edge.
+  close: back to the home page or the projects list from a project. The same wipe from the
+         bottom, over 550ms.
+  fade:  every other page, a 250ms cross-fade.
+  The line is .vt-edge, a white sheet rendered by PageTransition. data-vt-edge is set after
+  the old page is captured, so the sheet is only in the new picture. Its picture is clipped to
+  a 1px row by a clip-path animation with the wipe's timing, so the row and the wipe run on
+  the same thread and stay together. On open the row is the incoming page's leading row, on
+  close it is the row just ahead of it. Live, the sheet sits under the body's background, so
+  it never shows outside a transition.
+  The dim uses the site's ease-out, so the old page answers the click at once while the wipe
+  is still gathering speed.
+*/
+:root {
+  --vt-ease: cubic-bezier(0.7, 0, 0.2, 1);
+}
+
+.vt-edge {
+  display: none;
+}
+
+/* One pixel taller than the viewport, so the row can sit on either side of the wipe's edge. */
+html[data-vt-edge] .vt-edge {
+  display: block;
+  position: fixed;
+  z-index: -1;
+  top: -1px;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #fff;
+  pointer-events: none;
+  view-transition-name: vt-edge;
+}
+
+html[data-vt="open"]::view-transition-old(root),
+html[data-vt="close"]::view-transition-old(root) {
+  mix-blend-mode: normal;
+  animation: vt-dim 700ms var(--ease) both;
+}
+
+html[data-vt="close"]::view-transition-old(root) {
+  animation-duration: 550ms;
+}
+
+html[data-vt="open"]::view-transition-new(root) {
+  mix-blend-mode: normal;
+  animation: vt-wipe-down 700ms var(--vt-ease) both;
+}
+
+html[data-vt="close"]::view-transition-new(root) {
+  mix-blend-mode: normal;
+  animation: vt-wipe-up 550ms var(--vt-ease) both;
+}
+
+html[data-vt]::view-transition-group(vt-edge) {
+  z-index: 1;
+}
+
+html[data-vt="open"]::view-transition-new(vt-edge) {
+  mix-blend-mode: normal;
+  animation: vt-edge-down 700ms var(--vt-ease) both;
+}
+
+html[data-vt="close"]::view-transition-new(vt-edge) {
+  mix-blend-mode: normal;
+  animation: vt-edge-up 550ms var(--vt-ease) both;
+}
+
+html[data-vt="fade"]::view-transition-old(root),
+html[data-vt="fade"]::view-transition-new(root) {
+  animation-duration: 250ms;
+  animation-timing-function: ease;
+}
+
+/* The wipe and the line share one property, duration and ease, so the line stays on the edge. */
+@keyframes vt-wipe-down {
+  from {
+    clip-path: inset(0 0 100% 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes vt-wipe-up {
+  from {
+    clip-path: inset(100% 0 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes vt-edge-down {
+  from {
+    clip-path: inset(0 0 calc(100% - 1px) 0);
+  }
+  to {
+    clip-path: inset(calc(100% - 1px) 0 0 0);
+  }
+}
+
+@keyframes vt-edge-up {
+  from {
+    clip-path: inset(calc(100% - 1px) 0 0 0);
+  }
+  to {
+    clip-path: inset(0 0 calc(100% - 1px) 0);
+  }
+}
+
+@keyframes vt-dim {
+  from {
+    filter: brightness(1);
+  }
+  to {
+    filter: brightness(0.8);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
+

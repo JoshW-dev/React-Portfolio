@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import Image from "next/image";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getWork, work, type Work } from "@/lib/work";
 import { site } from "@/lib/site";
 import { mediaFor } from "@/lib/media";
 import CallReplay from "@/components/CallReplay";
 import TwinCompare from "@/components/TwinCompare";
+import TransitionLink from "@/components/TransitionLink";
 import { breakdowns } from "@/components/breakdown/registry";
 import styles from "./project.module.css";
 
@@ -123,18 +123,18 @@ export default async function ProjectPage({ params }: Props) {
         <header className={styles.hero} data-film>
           <Image src={frame.src} alt={frame.alt} fill preload sizes="100vw" className={styles.heroImage} />
           <div className={`wrap ${styles.heroText}`}>
-            <Link href="/projects" className={`link small ${styles.back}`}>
+            <TransitionLink href="/projects" className={`link small ${styles.back}`}>
               All projects
-            </Link>
+            </TransitionLink>
             <h1 className={`title ${styles.heroTitle}`}>{item.title}</h1>
             <p className={`lede ${styles.summary}`}>{item.summary}</p>
           </div>
         </header>
       ) : (
         <div className="wrap">
-          <Link href="/projects" className={`link small ${styles.back}`}>
+          <TransitionLink href="/projects" className={`link small ${styles.back}`}>
             All projects
-          </Link>
+          </TransitionLink>
           <header className={styles.head}>
             <h1 className="title">{item.title}</h1>
             <p className={`lede ${styles.summary}`}>{item.summary}</p>
@@ -184,10 +184,10 @@ export default async function ProjectPage({ params }: Props) {
           </aside>
         </div>
 
-        <Link href={`/projects/${next.slug}`} className={styles.next}>
+        <TransitionLink href={`/projects/${next.slug}`} className={styles.next}>
           <span className="small muted">Next</span>
           <span className="h2">{next.title}</span>
-        </Link>
+        </TransitionLink>
       </div>
     </article>
   );

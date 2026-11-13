@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
-import { Fragment, useEffect, useRef, useState, type CSSProperties } from "react";
-import OrbitIntro from "@/components/orbit/OrbitIntro";
+import { Fragment, useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import TransitionLink from "@/components/TransitionLink";
+import OrbitIntro, { type OrbitControl } from "@/components/orbit/OrbitIntro";
 import { HOPS, SCROLL, STOPS, VEILS, clipFile, type ClipPart, type Hop } from "@/lib/film";
 import styles from "./FilmScroll.module.css";
 
@@ -22,9 +22,19 @@ import styles from "./FilmScroll.module.css";
   neighbours are attached to their video elements. The first fetch measures the connection
   and sets the quality tier for the rest of the visit.
 
-  The first stop is the first frame of the first clip, with the live CubeSat drawn over it.
+  The first stop is the live scene: Earth turning slowly with the CubeSat flying in. It is
+  framed exactly as the first clip, and as the first flight starts the planet rolls into the
+  clip's first frame and the live layer cross-fades to the clip, all driven by the playhead.
+
+  On a first visit at the top of the page the film opens with a short intro: black, the
+  planet fades up, the words come in, then the CubeSat. Scrolling is held for its first
+  three seconds, then a small scroll cue shows until the visitor scrolls.
+
   A pass stop is flown through: its short hold blends the clip before it into the clip after
-  it, with no caption, so the two clips play as one flight.
+  it, so the two clips play as one flight. Its words ride along on the flight.
+
+  Each stop can carry up to two hotspots, rings on things in the picture that open a
+  project. They show only while the playhead rests in the stop's hold.
 */
 
 type Kind = "video" | "wipe" | "fade";
@@ -39,13 +49,6 @@ const HOP_LIST: Hop[] = STOPS.slice(1).map(
 const kindOf = (h: Hop): Kind => (h.kind === "video" ? (h.clip ? "video" : "fade") : h.kind);
 
 const isPass = (k: number) => STOPS[k]?.pass === true;
-
-/** The stop whose caption belongs to stop k: a pass stop lends the slot to the stop after it. */
-const captionStop = (k: number) => {
-  let i = k;
-  while (i < LAST && isPass(i)) i++;
-  return i;
-};
 
 /** A hold (resting on a stop) or a hop (flying to the next stop), in viewport heights. */
 type Seg = { start: number; len: number; stop: number; hop: number | null };
@@ -105,8 +108,51 @@ const PUSH = 0.035; // push-in across a hold
 const DRIFT = 0.012; // a slow breath while resting, so a held frame is never frozen
 const DRIFT_MS = 16000;
 const CAPTION_FADE = 22; // vh of film the caption takes to fade at each end of a hop
-const SAT_FADE = 0.08; // share of hop 0 over which the CubeSat fades out
 const STILL_NEAR = 1.5 * (SCROLL.video + SCROLL.hold);
+
+// The hand-over from the live planet to the first clip, as shares of hop 0. The planet rolls
+// into the clip's first pose, then the live layer cross-fades to the clip, which holds its
+// first frame until the live layer is gone.
+const ROLL_END = 0.06;
+const LIVE_END = 0.12;
+/** Top playhead speeds through the roll and the cross-fade, in vh/s: about 0.85 s and 0.45 s. */
+const ROLL_SPEED = 12;
+const LIVE_SPEED = 24;
+
+// A pass stop's words: they come in from this share before the end of the hop into it, stay
+// through the pass, and are gone by this share of the hop out of it.
+const PASS_LEAD = 0.34;
+const PASS_TAIL = 0.34;
+const PASS_FADE = 0.08;
+
+/** vh at each end of a hold's hops over which its hotspots fade. */
+const SPOT_FADE = 4;
+
+/** A pass stop's words slow the flight under them to this share of its speed, so they can be read. */
+const PASS_PACE = 0.82;
+
+/**
+ * Stretches of film where the playhead goes slower than the part's own top speed: under a
+ * fixed speed in vh/s, or a share of the part's speed.
+ */
+const SLOW: { from: number; to: number; speed?: number; share?: number }[] = [
+  { from: HOP_SEG[0].start, to: HOP_SEG[0].start + ROLL_END * HOP_SEG[0].len, speed: ROLL_SPEED },
+  { from: HOP_SEG[0].start + ROLL_END * HOP_SEG[0].len, to: HOP_SEG[0].start + LIVE_END * HOP_SEG[0].len, speed: LIVE_SPEED },
+  ...STOPS.flatMap((s, k) =>
+    s.pass && k > 0 && k < LAST
+      ? [{ from: HOP_SEG[k - 1].start + (1 - PASS_LEAD) * HOP_SEG[k - 1].len, to: HOP_SEG[k].start + PASS_TAIL * HOP_SEG[k].len, share: PASS_PACE }]
+      : [],
+  ),
+];
+
+// The intro, in seconds from the moment the planet is on screen.
+const INTRO_CAPTION = 1.0; // the words start to ease in
+const INTRO_CAPTION_SECS = 0.9;
+const INTRO_RELEASE = 3.0; // scrolling is let go
+const INTRO_MAX_HOLD = 3500; // ms from mount: scrolling is never held longer than this
+const INTRO_DONE = 7; // the CubeSat has settled
+const EARTH_FIRST_MS = 1200; // clip fetching waits this long for the planet's textures
+const SCROLL_KEYS = new Set([" ", "Spacebar", "PageDown", "PageUp", "ArrowDown", "ArrowUp", "End", "Home"]);
 
 // The playhead.
 const FOLLOW = 6; // per second: speed is the gap to the scroll times this, before the caps below
@@ -121,7 +167,9 @@ const SNAP = 0.01; // vh: closer than this, the playhead lands on the scroll
 const LOADER_DELAY = 250; // ms of waiting before the hairline shows
 
 const SEEK_EPS = 0.005;
-const HALF_FRAME = 0.5 / 24;
+// How far short of a clip's end the last seek lands, so it shows the last frame: a quarter
+// of a frame at 60 fps, which is inside the last frame at 24, 30 and 60 fps alike.
+const END_GUARD = 0.25 / 60;
 const PHONE = "(max-width: 800px)";
 
 // The quality tier, measured on the first fetch.
@@ -135,6 +183,11 @@ const ease = (t: number) => t * t * (3 - 2 * t);
 const distance = (x: number, from: number, to: number) => (x < from ? from - x : x > to ? x - to : 0);
 const locate = (x: number) => SEGS.find((s) => x < s.start + s.len) ?? SEGS[SEGS.length - 1];
 const hopProgress = (h: number, x: number) => clamp01((x - HOP_SEG[h].start) / HOP_SEG[h].len);
+/** How far into its clip a hop is: the first clip waits on its first frame for the hand-over. */
+const clipProgress = (h: number, x: number) => {
+  const f = hopProgress(h, x);
+  return h === 0 ? clamp01((f - LIVE_END) / (1 - LIVE_END)) : f;
+};
 
 /** The part of the film the playhead is in or about to enter, moving in direction d. */
 const segToward = (at: number, d: number) =>
@@ -177,9 +230,15 @@ type Shot = {
   /** 0 to 1: how much of the resting breath applies. */
   rest: number;
   caption: number;
+  /** The stop whose words are on screen. */
   stop: number;
-  /** Opacity of the CubeSat layer. */
+  /** Opacity of the live layer (the planet and the CubeSat). */
   sat: number;
+  /** 0 to 1: how far the planet has been rolled into the first clip's pose. */
+  handover: number;
+  /** Opacity of the hotspots, and the stop they belong to. */
+  spots: number;
+  spotStop: number;
 };
 
 function compose(p: number, ready: (h: number) => boolean, reduced: boolean): Shot {
@@ -200,8 +259,23 @@ function compose(p: number, ready: (h: number) => boolean, reduced: boolean): Sh
   const push = (k: number) => (reduced || k === 0 || isPass(k) ? 0 : PUSH);
 
   const seg = locate(p);
-  const sat = p <= HOP_SEG[0].start ? 1 : 1 - ease(clamp01(hopProgress(0, p) / SAT_FADE));
-  const shot: Shot = { base: still(0), top: null, alpha: 0, wipe: null, veil: null, veilAlpha: 0, scale: 1, rest: 0, caption: 1, stop: captionStop(seg.stop), sat };
+  const h0 = p <= HOP_SEG[0].start ? 0 : hopProgress(0, p);
+  const shot: Shot = {
+    base: still(0),
+    top: null,
+    alpha: 0,
+    wipe: null,
+    veil: null,
+    veilAlpha: 0,
+    scale: 1,
+    rest: 0,
+    caption: 1,
+    stop: seg.stop,
+    sat: 1 - ease(clamp01((h0 - ROLL_END) / (LIVE_END - ROLL_END))),
+    handover: ease(clamp01(h0 / ROLL_END)),
+    spots: 0,
+    spotStop: seg.stop,
+  };
 
   if (seg.hop === null) {
     const k = seg.stop;
@@ -209,10 +283,10 @@ function compose(p: number, ready: (h: number) => boolean, reduced: boolean): Sh
     shot.base = arrive(k);
     shot.top = depart(k);
     if (isPass(k)) {
-      // Flown through: the whole hold is the blend, with no words, push or breath.
+      // Flown through: the whole hold is the blend, with no push or breath. Its words stay.
       shot.alpha = ease(u);
-      shot.caption = 0;
     } else {
+      shot.spots = 1;
       shot.alpha = ease(clamp01((u - 0.25) / 0.5));
       shot.scale = 1 + push(k) * u;
       // The breath eases in and out at the ends of a hold, except where the film starts and ends.
@@ -225,10 +299,18 @@ function compose(p: number, ready: (h: number) => boolean, reduced: boolean): Sh
     const f = clamp01((p - seg.start) / seg.len);
     const near = f < 0.5 ? h : h + 1;
     shot.scale = 1 + push(h) * (1 - f);
-    shot.stop = captionStop(near);
-    // The words leave as the flight starts and come back as it lands, never mid-flight. A
-    // pass stop has none, so they stay away across it.
-    shot.caption = isPass(near) ? 0 : 1 - clamp01((f < 0.5 ? p - seg.start : seg.start + seg.len - p) / CAPTION_FADE);
+    shot.stop = near;
+    shot.spotStop = near;
+    // The words leave as the flight starts and come back as it lands. A pass stop's words
+    // ride the flight instead: in over the end of the hop before it, out over the start of
+    // the hop after it.
+    const fromEnd = f < 0.5 ? p - seg.start : seg.start + seg.len - p;
+    if (isPass(near)) {
+      shot.caption = f < 0.5 ? 1 - clamp01((f - (PASS_TAIL - PASS_FADE)) / PASS_FADE) : clamp01((f - (1 - PASS_LEAD)) / PASS_FADE);
+    } else {
+      shot.caption = 1 - clamp01(fromEnd / CAPTION_FADE);
+      shot.spots = 1 - clamp01(fromEnd / SPOT_FADE);
+    }
     const k = kind(h);
     if (k === "video" && ready(h)) {
       shot.base = `video-${h}`;
@@ -269,19 +351,46 @@ function compose(p: number, ready: (h: number) => boolean, reduced: boolean): Sh
 
 type StyleProp = "opacity" | "visibility" | "zIndex" | "clipPath" | "transform" | "background" | "left" | "pointerEvents";
 
+/** Intro state, shared between the film's loop and the scene's first-frame callback. */
+type Intro = {
+  phase: "off" | "waiting" | "playing" | "done";
+  holding: boolean;
+  /** performance.now() at mount, when the planet showed, and when scrolling was let go. */
+  mount: number;
+  shown: number;
+  released: number;
+  /** The scroll cue is showing. */
+  cue: boolean;
+};
+
 export default function FilmScroll() {
   const wrapRef = useRef<HTMLDivElement>(null);
+  const screenRef = useRef<HTMLDivElement>(null);
   const orbitRef = useRef<HTMLDivElement>(null);
   const mediaRef = useRef<HTMLDivElement>(null);
   const veilRef = useRef<HTMLDivElement>(null);
   const scanRef = useRef<HTMLDivElement>(null);
+  const spotsRef = useRef<HTMLDivElement>(null);
   const captionRef = useRef<HTMLDivElement>(null);
+  const cueRef = useRef<HTMLDivElement>(null);
   const loadRef = useRef<HTMLDivElement>(null);
   const loadFillRef = useRef<HTMLSpanElement>(null);
   const layers = useRef(new Map<string, HTMLElement>());
   const refFns = useRef(new Map<string, (el: HTMLElement | null) => void>());
+  const orbitControl = useRef<OrbitControl | null>(null);
+  // When the planet first showed, kept here because the scene can report it before the
+  // film's effect has run.
+  const shownAt = useRef(0);
+  const shownHandler = useRef<(() => void) | null>(null);
   const [stop, setStop] = useState(0);
+  const [spotStop, setSpotStop] = useState(0);
   const [orbitOn, setOrbitOn] = useState(true);
+
+  const onShown = useCallback(() => {
+    if (shownAt.current) return;
+    shownAt.current = performance.now();
+    shownHandler.current?.();
+  }, []);
 
   // Stable ref callbacks, so React attaches each layer once.
   const layer = (key: string) => {
@@ -348,7 +457,92 @@ export default function FilmScroll() {
     let waitSince = 0;
     let lastShot: Shot | null = null;
 
-    const targetOf = (c: Clip) => Math.min(Math.max(0, c.dur - HALF_FRAME), hopProgress(c.hop, p) * c.dur);
+    const targetOf = (c: Clip) => Math.min(Math.max(0, c.dur - END_GUARD), clipProgress(c.hop, p) * c.dur);
+
+    // ---- Intro ---------------------------------------------------------------------------
+
+    const intro: Intro = { phase: "off", holding: false, mount: performance.now(), shown: 0, released: 0, cue: false };
+    // Only on a visit that starts at the top, with motion allowed and the page in view.
+    if (!reduced && window.scrollY < 8 && !document.hidden) {
+      intro.phase = "waiting";
+      intro.holding = true;
+    }
+    // The caption's no-script entrance gives way to the playhead.
+    if (captionRef.current) captionRef.current.style.animation = "none";
+    const timers: number[] = [];
+
+    const release = () => {
+      if (!intro.holding) return;
+      intro.holding = false;
+      intro.released = performance.now();
+      intro.cue = intro.phase !== "off" && x < 0.5;
+      kick();
+    };
+    /** Ends the intro at once: words up, scrolling free, no cue. */
+    const skipIntro = () => {
+      if (intro.phase === "off" || intro.phase === "done") return;
+      intro.phase = "done";
+      intro.holding = false;
+      intro.cue = false;
+      kick();
+    };
+    const introCaption = (now: number) => {
+      if (intro.phase === "off" || intro.phase === "done") return 1;
+      if (intro.phase === "waiting") return 0;
+      return ease(clamp01((now - intro.shown - INTRO_CAPTION * 1000) / (INTRO_CAPTION_SECS * 1000)));
+    };
+    const planetShown = () => {
+      if (intro.phase !== "waiting") return;
+      intro.phase = "playing";
+      intro.shown = shownAt.current || performance.now();
+      const at = Math.min(intro.shown + INTRO_RELEASE * 1000, intro.mount + INTRO_MAX_HOLD);
+      timers.push(window.setTimeout(release, Math.max(0, at - performance.now())));
+      timers.push(
+        window.setTimeout(() => {
+          if (intro.phase === "playing") intro.phase = "done";
+        }, Math.max(0, intro.shown + INTRO_DONE * 1000 - performance.now())),
+      );
+      kick();
+    };
+    if (intro.phase === "waiting") {
+      timers.push(window.setTimeout(release, INTRO_MAX_HOLD));
+      // Clip fetching waits a moment for the planet's textures, then goes ahead regardless.
+      timers.push(window.setTimeout(() => kick(), EARTH_FIRST_MS));
+      shownHandler.current = planetShown;
+    }
+
+    // Holding the scroll: wheel, touch and scroll keys do nothing over the film while the
+    // intro holds. The listeners sit on the window because the nav floats over the film's top
+    // edge, and they only act while the film fills the screen. Overflow is never touched, so
+    // nothing shifts. Escape lets go at once.
+    const filmOnScreen = () => {
+      const r = wrap.getBoundingClientRect();
+      return r.top <= 1 && r.bottom >= window.innerHeight - 1;
+    };
+    const blockScroll = (e: Event) => {
+      if (intro.holding && filmOnScreen() && e.cancelable) e.preventDefault();
+    };
+    const onKeyHold = (e: KeyboardEvent) => {
+      if (!intro.holding) return;
+      if (e.key === "Escape") {
+        release();
+        return;
+      }
+      const t = e.target as HTMLElement | null;
+      const typing = !!t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName));
+      if (!typing && SCROLL_KEYS.has(e.key) && filmOnScreen()) e.preventDefault();
+    };
+    // Anything that moves the page while scrolling is held (restoring a scroll position, a
+    // link to a fragment) ends the intro: the visit did not start at the top after all.
+    const onScrollHold = () => {
+      if (intro.holding && window.scrollY > 40) skipIntro();
+    };
+    if (intro.holding) {
+      window.addEventListener("wheel", blockScroll, { passive: false });
+      window.addEventListener("touchmove", blockScroll, { passive: false });
+      window.addEventListener("keydown", onKeyHold);
+      window.addEventListener("scroll", onScrollHold, { passive: true });
+    }
 
     // ---- Playhead ------------------------------------------------------------------------
 
@@ -404,15 +598,27 @@ export default function FilmScroll() {
         }
         const d = gap > 0 ? 1 : -1;
         const seg = segToward(p, d);
-        const room = d > 0 ? seg.start + seg.len - p : p - seg.start;
-        const top = speedIn(seg, d);
+        let bound = d > 0 ? seg.start + seg.len : seg.start;
+        let top = speedIn(seg, d);
+        // A slow stretch caps the speed inside it, and its edges split the step like a part's.
+        for (const z of SLOW) {
+          const inside = d > 0 ? p >= z.from && p < z.to : p > z.from && p <= z.to;
+          if (inside) {
+            top = Math.min(top, z.speed ?? Infinity, z.share ? z.share * speedIn(seg, d) : Infinity);
+            bound = d > 0 ? Math.min(bound, z.to) : Math.max(bound, z.from);
+          } else {
+            const edge = d > 0 ? z.from : z.to;
+            if (d > 0 ? edge > p && edge < bound : edge < p && edge > bound) bound = edge;
+          }
+        }
+        const room = Math.abs(bound - p);
         const step = Math.min(Math.abs(gap) * (1 - Math.exp(-FOLLOW * left)), top * left);
         if (step < room) {
           p += d * step;
           break;
         }
         left -= room / Math.max(1e-6, Math.min(Math.abs(gap) * FOLLOW, top));
-        p = d > 0 ? seg.start + seg.len : seg.start;
+        p = bound;
       }
       waitHop = gate && p === gate.edge ? gate.hop : null;
     };
@@ -567,6 +773,8 @@ export default function FilmScroll() {
 
     const pump = () => {
       if (fetching || disposed || videoOff()) return;
+      // The intro's planet gets the line first, briefly.
+      if (intro.phase === "waiting" && performance.now() - intro.mount < EARTH_FIRST_MS) return;
       const next = pickNext();
       if (next) void fetchClip(next);
     };
@@ -675,7 +883,9 @@ export default function FilmScroll() {
     };
 
     let lastStop = -1;
+    let lastSpotStop = -1;
     let lastSat = true;
+    let lastHandover = -1;
     const apply = (s: Shot, now: number) => {
       paintStill(s.base);
       if (s.top) paintStill(s.top);
@@ -708,9 +918,25 @@ export default function FilmScroll() {
         lastSat = sat;
         setOrbitOn(sat);
       }
+      if (s.handover !== lastHandover && orbitControl.current) {
+        lastHandover = s.handover;
+        orbitControl.current.setHandover(s.handover);
+      }
 
       const breath = s.rest * DRIFT * (0.5 - 0.5 * Math.cos((2 * Math.PI * now) / DRIFT_MS));
-      put(media, "transform", `scale(${(s.scale + breath).toFixed(4)})`);
+      const scale = `scale(${(s.scale + breath).toFixed(4)})`;
+      put(media, "transform", scale);
+
+      // The hotspots ride the same push-in as the picture, so they stay on their things.
+      const spots = spotsRef.current;
+      const so = STOPS[s.spotStop]?.spots?.length ? s.spots : 0;
+      put(spots, "transform", scale);
+      put(spots, "opacity", so.toFixed(3));
+      put(spots, "visibility", so > 0.01 ? "visible" : "hidden");
+      if (so > 0.001 && s.spotStop !== lastSpotStop) {
+        lastSpotStop = s.spotStop;
+        setSpotStop(s.spotStop);
+      }
 
       put(veilRef.current, "background", s.veil ?? "transparent");
       put(veilRef.current, "opacity", s.veil ? s.veilAlpha.toFixed(3) : "0");
@@ -718,7 +944,7 @@ export default function FilmScroll() {
       put(scanRef.current, "opacity", scanOn ? "1" : "0");
       if (scanOn) put(scanRef.current, "left", `${((s.wipe ?? 0) * 100).toFixed(2)}%`);
 
-      const c = s.caption;
+      const c = s.caption * introCaption(now);
       put(captionRef.current, "opacity", c.toFixed(3));
       put(captionRef.current, "transform", `translateY(${((1 - c) * 12).toFixed(1)}px)`);
       put(captionRef.current, "visibility", c > 0.01 ? "visible" : "hidden");
@@ -726,6 +952,10 @@ export default function FilmScroll() {
         lastStop = s.stop;
         setStop(s.stop);
       }
+
+      // The scroll cue shows once the intro lets go, until the visitor first scrolls.
+      if (intro.cue && x > 0.5) intro.cue = false;
+      put(cueRef.current, "opacity", intro.cue ? "1" : "0");
 
       // The hairline: bytes of the clip the playhead is waiting for.
       const wait = waitHop === null ? undefined : clipOf[waitHop];
@@ -784,8 +1014,9 @@ export default function FilmScroll() {
       const shot = compose(p, ready, reduced);
       lastShot = shot;
       apply(shot, now);
-      // The breath animates for as long as a hold is in view.
+      // The breath animates for as long as a hold is in view, and the intro's words until up.
       if (shot.rest > 0) busy = true;
+      if (intro.phase === "playing" && introCaption(now) < 1) busy = true;
       if (busy && inView && !document.hidden) raf = requestAnimationFrame(frame);
     };
     const kick = (force = false) => {
@@ -812,11 +1043,25 @@ export default function FilmScroll() {
     window.addEventListener("scroll", onKick, { passive: true });
     window.addEventListener("resize", onKick);
     kick();
+    // The planet may have shown before this effect ran.
+    if (intro.phase === "waiting" && shownAt.current) planetShown();
 
     if (process.env.NODE_ENV !== "production") {
       (window as unknown as { __film?: unknown }).__film = {
         get x() {
           return x;
+        },
+        get intro() {
+          const now = performance.now();
+          return {
+            phase: intro.phase,
+            holding: intro.holding,
+            cue: intro.cue,
+            shownMs: intro.shown ? Math.round(intro.shown - intro.mount) : null,
+            releasedMs: intro.released ? Math.round(intro.released - intro.mount) : null,
+            sinceMountMs: Math.round(now - intro.mount),
+            caption: +introCaption(now).toFixed(3),
+          };
         },
         get p() {
           return p;
@@ -839,6 +1084,12 @@ export default function FilmScroll() {
     return () => {
       disposed = true;
       if (raf) cancelAnimationFrame(raf);
+      timers.forEach((t) => clearTimeout(t));
+      shownHandler.current = null;
+      window.removeEventListener("wheel", blockScroll);
+      window.removeEventListener("touchmove", blockScroll);
+      window.removeEventListener("keydown", onKeyHold);
+      window.removeEventListener("scroll", onScrollHold);
       io.disconnect();
       reduceQuery.removeEventListener("change", onReduce);
       document.removeEventListener("visibilitychange", onKick);
@@ -856,11 +1107,70 @@ export default function FilmScroll() {
     };
   }, []);
 
+  // Each hotspot's label goes on the side with room. A hotspot that would sit off screen,
+  // under the nav, on the words or on another hotspot is left out, so a phone may keep one.
+  useEffect(() => {
+    const layer = spotsRef.current;
+    const screen = screenRef.current;
+    if (!layer || !screen) return;
+    let raf = 0;
+    const PAD = 10;
+    const hits = (a: DOMRect, b: DOMRect) =>
+      a.left < b.right + PAD && a.right > b.left - PAD && a.top < b.bottom + PAD && a.bottom > b.top - PAD;
+    const fit = () => {
+      raf = 0;
+      const box = screen.getBoundingClientRect();
+      const nav = document.querySelector("body > header")?.getBoundingClientRect();
+      const top = Math.max(box.top, nav && nav.bottom > box.top ? nav.bottom : box.top) + 4;
+      const words = captionRef.current?.getBoundingClientRect();
+      const kept: DOMRect[] = [];
+      // What shows of a spot: its ring and its label, without the link's padding.
+      const shown = (el: HTMLElement) => {
+        const a = (el.firstElementChild as HTMLElement).getBoundingClientRect();
+        const b = (el.lastElementChild as HTMLElement).getBoundingClientRect();
+        const l = Math.min(a.left, b.left);
+        const t = Math.min(a.top, b.top);
+        return { ring: a, all: new DOMRect(l, t, Math.max(a.right, b.right) - l, Math.max(a.bottom, b.bottom) - t) };
+      };
+      const outside = (r: DOMRect) => r.left < box.left + 6 || r.right > box.right - 6;
+      for (const el of layer.querySelectorAll<HTMLElement>("[data-spot]")) {
+        el.dataset.off = "false";
+        el.dataset.side = el.dataset.prefer ?? "right";
+        let s = shown(el);
+        if (outside(s.all)) {
+          el.dataset.side = el.dataset.side === "right" ? "left" : "right";
+          s = shown(el);
+        }
+        const cx = s.ring.left + s.ring.width / 2;
+        const off =
+          cx < box.left + 16 ||
+          cx > box.right - 16 ||
+          s.ring.top < top ||
+          s.ring.bottom > box.bottom - 8 ||
+          outside(s.all) ||
+          (!!words && words.height > 0 && hits(s.all, words)) ||
+          kept.some((k) => hits(s.all, k));
+        if (off) el.dataset.off = "true";
+        else kept.push(s.all);
+      }
+    };
+    const schedule = () => {
+      if (!raf) raf = requestAnimationFrame(fit);
+    };
+    schedule();
+    window.addEventListener("resize", schedule);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", schedule);
+    };
+  }, [spotStop, stop]);
+
   const here = STOPS[stop];
+  const spots = STOPS[spotStop].spots ?? [];
 
   return (
     <div className={styles.film} data-film ref={wrapRef} style={{ height: `${TOTAL + 100}vh` }}>
-      <div className={styles.screen}>
+      <div ref={screenRef} className={styles.screen}>
         <div ref={mediaRef} className={styles.media} aria-hidden="true">
           {STOPS.map((s, i) => (
             <div key={`stop-${i}`} ref={layer(`stop-${i}`)} className={styles.layer} />
@@ -890,30 +1200,48 @@ export default function FilmScroll() {
 
         <div ref={veilRef} className={styles.veil} aria-hidden="true" />
 
-        {/* The CubeSat, live over the first frame. It can be clicked. */}
+        {/* The live planet with the CubeSat. The CubeSat can be clicked. */}
         <div ref={orbitRef} className={styles.orbit}>
-          <OrbitIntro active={orbitOn} earth={false} />
+          <OrbitIntro active={orbitOn} poster={STOPS[0].still} control={orbitControl} onShown={onShown} />
         </div>
 
         <div className={styles.shade} aria-hidden="true" />
 
+        {/* Hotspots on things in the picture, framed like the picture under object-fit: cover. */}
+        <div ref={spotsRef} className={styles.spots}>
+          <div className={styles.frame}>
+            {spots.map((s) => (
+              <TransitionLink
+                key={`${spotStop}-${s.href}-${s.x}`}
+                href={s.href}
+                className={styles.spot}
+                data-spot=""
+                data-prefer={s.x > 0.6 ? "left" : "right"}
+                style={{ left: `${(s.x * 100).toFixed(2)}%`, top: `${(s.y * 100).toFixed(2)}%` }}
+              >
+                <span className={styles.ring} aria-hidden="true" />
+                <span className={styles.leader} aria-hidden="true" />
+                <span className={styles.spotLabel}>{s.label}</span>
+              </TransitionLink>
+            ))}
+          </div>
+        </div>
+
         <div ref={captionRef} className={styles.caption}>
           <p className={styles.place}>{here.place}</p>
           <p className={styles.text}>{here.text}</p>
-          {here.link || here.more?.length ? (
+          {here.link ? (
             <div className={styles.links}>
-              {here.link ? (
-                <Link className={styles.open} href={here.link.href}>
-                  {here.link.label}
-                </Link>
-              ) : null}
-              {here.more?.map((m) => (
-                <Link key={m.href} className={styles.more} href={m.href}>
-                  {m.label}
-                </Link>
-              ))}
+              <TransitionLink className={styles.open} href={here.link.href}>
+                {here.link.label}
+              </TransitionLink>
             </div>
           ) : null}
+        </div>
+
+        <div ref={cueRef} className={styles.cue} aria-hidden="true">
+          <span>Scroll</span>
+          <i />
         </div>
 
         <div ref={loadRef} className={styles.load} aria-hidden="true">

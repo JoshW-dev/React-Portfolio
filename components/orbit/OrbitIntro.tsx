@@ -1,10 +1,15 @@
 "use client";
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
+import TransitionLink from "@/components/TransitionLink";
 import type { OrbitScene, SatFrame } from "./orbitScene";
 import styles from "./OrbitIntro.module.css";
+
+/** What the film can do to the live scene while it runs. */
+export type OrbitControl = {
+  /** 0 to 1: rolls the planet from its own clock into the pose the first clip starts from. */
+  setHandover(h: number): void;
+};
 
 type Props = {
   /** False pauses the render loop (the film hides this layer after the first stop). */
@@ -15,32 +20,45 @@ type Props = {
    * sits over whatever is under this layer. Read once, at mount.
    */
   earth?: boolean;
-  /** Shown until the first real frame, and kept when WebGL can't run. Not used without the Earth. */
+  /** Shown when WebGL can't run, with reduced motion, or when the planet is slow to load. */
   poster?: string;
+  /** Filled with the scene's controls once it exists. */
+  control?: { current: OrbitControl | null };
+  /** Called once, when the planet (or the poster standing in for it) is first on screen. */
+  onShown?: (live: boolean) => void;
 };
 
 type Mode = "loading" | "live" | "fallback";
 
 const HREF = "/projects/cubesat";
+/** After this long without a planet, the poster stands in and the planet joins it later. */
+const LATE_MS = 2600;
+/** Gap between the ring and the leader line, the leader's length, and the gap to the label. */
+const GAP = 6;
+const LEADER = 30;
+const LABEL_GAP = 8;
+const EDGE = 14;
 
 /**
  * The film's opening shot: Earth from low orbit with Josh's CubeSat drifting in. three.js
  * loads inside the effect, so it stays out of the first bundle.
  */
-export default function OrbitIntro({ active = true, className, earth = true, poster = "/film/01-orbit.webp" }: Props) {
+export default function OrbitIntro({ active = true, className, earth = true, poster = "/film/00-orbit-live.webp", control, onShown }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const labelRef = useRef<HTMLAnchorElement>(null);
-  const sceneRef = useRef<OrbitScene | null>(null);
+  const ringRef = useRef<HTMLSpanElement>(null);
+  const leaderRef = useRef<HTMLSpanElement>(null);
   const activeRef = useRef(active);
   const syncRef = useRef<() => void>(() => {});
-  const router = useRouter();
-  const routerRef = useRef(router);
+  const shownRef = useRef(onShown);
   const [mode, setMode] = useState<Mode>("loading");
+  const [late, setLate] = useState(false);
   const [settled, setSettled] = useState(false);
+  const [hover, setHover] = useState(false);
 
   useEffect(() => {
-    routerRef.current = router;
-  }, [router]);
+    shownRef.current = onShown;
+  }, [onShown]);
 
   useEffect(() => {
     activeRef.current = active;
@@ -50,8 +68,15 @@ export default function OrbitIntro({ active = true, className, earth = true, pos
   useEffect(() => {
     const wrap = wrapRef.current;
     if (!wrap) return;
+    let told = false;
+    const tell = (live: boolean) => {
+      if (told) return;
+      told = true;
+      shownRef.current?.(live);
+    };
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       setMode("fallback");
+      tell(false);
       return;
     }
 
@@ -64,7 +89,22 @@ export default function OrbitIntro({ active = true, className, earth = true, pos
     let labelW = 0;
     let labelH = 0;
     let wasSettled = false;
+    let side: "right" | "left" | "below" = "right";
+    let isLate = false;
+    let isLive = false;
+    const last = { cx: 0, cy: 0, radius: 0, settled: false };
     const cleanups: (() => void)[] = [];
+
+    const lateTimer = window.setTimeout(() => {
+      if (cancelled || isLive) return;
+      // The planet is slow: show the poster now, and start the planet on the poster's pose
+      // when it comes, so it joins without a jump.
+      isLate = true;
+      setLate(true);
+      scene?.holdCapture();
+      tell(false);
+    }, LATE_MS);
+    cleanups.push(() => clearTimeout(lateTimer));
 
     const toFallback = () => {
       if (cancelled) return;
@@ -73,22 +113,53 @@ export default function OrbitIntro({ active = true, className, earth = true, pos
       if (label) label.style.transform = "";
       if (canvas) canvas.style.cursor = "";
       scene?.setActive(false);
+      if (control) control.current = null;
+      tell(false);
     };
 
-    // The label follows the satellite: beside it on the right, or on the left when the
-    // right edge is too close.
+    // The ring sits on the satellite, with the label beside it on a short leader: to the
+    // right, to the left when the right is too close to the edge, or below on narrow screens.
     const place = (f: SatFrame) => {
       const label = labelRef.current;
-      if (!label) return;
+      const ring = ringRef.current;
+      const leader = leaderRef.current;
+      if (!label || !ring || !leader) return;
       if (!labelW) {
         labelW = label.offsetWidth;
         labelH = label.offsetHeight;
       }
-      const gap = 10;
-      let x = f.right + gap;
-      if (x + labelW > wrap.clientWidth - 12) x = f.left - gap - labelW;
-      const y = Math.min(Math.max(f.cy - labelH / 2, 8), wrap.clientHeight - labelH - 8);
-      label.style.transform = `translate3d(${x.toFixed(1)}px, ${y.toFixed(1)}px, 0)`;
+      last.cx = f.cx;
+      last.cy = f.cy;
+      last.radius = f.radius;
+      last.settled = f.settled;
+      const W = wrap.clientWidth;
+      const r = f.radius;
+      const reach = r + GAP + LEADER + LABEL_GAP;
+      const fitsRight = f.cx + reach + labelW <= W - EDGE;
+      const fitsLeft = f.cx - reach - labelW >= EDGE;
+      if (!(side === "right" && fitsRight) && !(side === "left" && fitsLeft)) {
+        side = fitsRight ? "right" : fitsLeft ? "left" : "below";
+      }
+      ring.style.transform = `translate3d(${(f.cx - r).toFixed(1)}px, ${(f.cy - r).toFixed(1)}px, 0)`;
+      const d = `${(2 * r).toFixed(1)}px`;
+      if (ring.style.width !== d) {
+        ring.style.width = d;
+        ring.style.height = d;
+      }
+      let lx: number;
+      let ly: number;
+      if (side === "below") {
+        lx = Math.min(Math.max(f.cx - labelW / 2, EDGE), W - EDGE - labelW);
+        ly = f.cy + r + GAP + LEADER * 0.75 + LABEL_GAP * 0.5;
+        leader.style.transform = `translate3d(${f.cx.toFixed(1)}px, ${(f.cy + r + GAP).toFixed(1)}px, 0) rotate(90deg) scaleX(${(LEADER * 0.75).toFixed(1)})`;
+      } else {
+        const dir = side === "right" ? 1 : -1;
+        const start = f.cx + dir * (r + GAP);
+        lx = side === "right" ? f.cx + reach : f.cx - reach - labelW;
+        ly = f.cy - labelH / 2;
+        leader.style.transform = `translate3d(${start.toFixed(1)}px, ${f.cy.toFixed(1)}px, 0) rotate(${dir > 0 ? 0 : 180}deg) scaleX(${LEADER})`;
+      }
+      label.style.transform = `translate3d(${lx.toFixed(1)}px, ${ly.toFixed(1)}px, 0)`;
       if (f.settled && !wasSettled) {
         wasSettled = true;
         setSettled(true);
@@ -116,8 +187,12 @@ export default function OrbitIntro({ active = true, className, earth = true, pos
         scene = mod.createOrbitScene(T, {
           canvas,
           earth,
+          lead: !isLate,
           onReady: () => {
-            if (!cancelled) setMode("live");
+            if (cancelled) return;
+            isLive = true;
+            setMode("live");
+            tell(true);
           },
           onFail: toFallback,
           onFrame: place,
@@ -129,9 +204,9 @@ export default function OrbitIntro({ active = true, className, earth = true, pos
         toFallback();
         return;
       }
-      sceneRef.current = scene;
       const s = scene;
       const c = canvas;
+      if (control) control.current = { setHandover: (h) => s.setHandover(h) };
 
       let onScreen = true;
       let shown = document.visibilityState === "visible";
@@ -155,26 +230,41 @@ export default function OrbitIntro({ active = true, className, earth = true, pos
       ro.observe(wrap);
       sync();
 
-      // Hover brightens the satellite; a click on it opens the project.
+      // Over the satellite, or inside its ring once it has settled.
+      const hit = (x: number, y: number) => {
+        if (s.hitTest(x, y)) return true;
+        if (!last.settled) return false;
+        const r = c.getBoundingClientRect();
+        return Math.hypot(x - r.left - last.cx, y - r.top - last.cy) < last.radius;
+      };
+
+      // Hover brightens the satellite and its ring; a click opens the project through the
+      // label's own link, so the page transition is the same.
       let px = 0;
       let py = 0;
+      let over = false;
       const onMove = (e: PointerEvent) => {
         px = e.clientX;
         py = e.clientY;
         if (hoverFrame) return;
         hoverFrame = requestAnimationFrame(() => {
           hoverFrame = 0;
-          const hit = s.hitTest(px, py);
-          s.setHover(hit);
-          c.style.cursor = hit ? "pointer" : "";
+          const on = hit(px, py);
+          if (on === over) return;
+          over = on;
+          s.setHover(on);
+          setHover(on);
+          c.style.cursor = on ? "pointer" : "";
         });
       };
       const onLeave = () => {
+        over = false;
         s.setHover(false);
+        setHover(false);
         c.style.cursor = "";
       };
       const onClick = (e: MouseEvent) => {
-        if (s.hitTest(e.clientX, e.clientY)) routerRef.current.push(HREF);
+        if (hit(e.clientX, e.clientY)) labelRef.current?.click();
       };
       c.addEventListener("pointermove", onMove);
       c.addEventListener("pointerleave", onLeave);
@@ -186,35 +276,49 @@ export default function OrbitIntro({ active = true, className, earth = true, pos
       });
 
       if (process.env.NODE_ENV !== "production") {
-        (window as unknown as { __orbitFrameMs?: () => number }).__orbitFrameMs = () => s.frameMs();
+        const w = window as unknown as { __orbitFrameMs?: () => number; __orbit?: unknown };
+        w.__orbitFrameMs = () => s.frameMs();
+        w.__orbit = { ...s.debug, setHandover: s.setHandover, canvas: c, last };
+        cleanups.push(() => {
+          delete w.__orbit;
+          delete w.__orbitFrameMs;
+        });
       }
     })();
 
     return () => {
       cancelled = true;
       syncRef.current = () => {};
+      if (control) control.current = null;
       if (hoverFrame) cancelAnimationFrame(hoverFrame);
       io?.disconnect();
       ro?.disconnect();
       cleanups.forEach((f) => f());
       scene?.dispose();
-      sceneRef.current = null;
       canvas?.remove();
     };
+    // earth, poster and control are read once, at mount.
   }, []);
 
   return (
     <div
       ref={wrapRef}
       className={className ? `${styles.wrap} ${className}` : styles.wrap}
-      style={earth ? { backgroundImage: `url(${poster})` } : undefined}
+      style={earth ? ({ "--poster": `url(${poster})` } as CSSProperties) : undefined}
       data-earth={earth ? undefined : "false"}
       data-mode={mode}
+      data-late={late ? "true" : undefined}
+      data-settled={settled ? "true" : "false"}
+      data-hover={hover ? "true" : undefined}
     >
-      <Link ref={labelRef} href={HREF} className={styles.label} data-settled={settled ? "true" : "false"}>
+      <span ref={ringRef} className={styles.ring} aria-hidden="true">
+        <span className={styles.pulse} />
+      </span>
+      <span ref={leaderRef} className={styles.leader} aria-hidden="true" />
+      <TransitionLink ref={labelRef} href={HREF} className={styles.label}>
         <span className={styles.name}>Queen&rsquo;s CubeSat</span>
         <span className={styles.open}>Open the project</span>
-      </Link>
+      </TransitionLink>
     </div>
   );
 }

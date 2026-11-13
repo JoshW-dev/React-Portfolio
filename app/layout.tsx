@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Instrument_Serif } from "next/font/google";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
+import PageTransition from "@/components/PageTransition";
 import { site } from "@/lib/site";
 import "./globals.css";
 
@@ -65,6 +66,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Nav />
         <main id="main">{children}</main>
         <Footer />
+        <PageTransition />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(person) }}

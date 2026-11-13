@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/TransitionLink";
 import Portrait from "@/components/Portrait";
 import CareerTrace from "@/components/CareerTrace";
 import styles from "./about.module.css";

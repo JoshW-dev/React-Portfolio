@@ -12,6 +12,11 @@ import { TEXTURES, earthFragment, earthVertex, latLon, loadImage, makeTexture, t
 
   With earth set to false only the satellite is drawn, on a transparent canvas, so it can
   sit over a picture of the planet. The Earth textures are then never loaded.
+
+  The planet and the satellite keep separate clocks. The planet starts a little behind the
+  pose it has in the film's first frame and turns toward it, slower and slower, never past
+  it; the film can then roll it the rest of the way (setHandover) as the first flight
+  starts, so the live frame and the clip's first frame are the same picture.
 */
 
 type Three = typeof THREE;
@@ -23,27 +28,50 @@ const START = { lat: 38.5, lon: -116.5, heading: 10 };
 /** Sun azimuth (degrees from north, toward east) and elevation at the start point. */
 const SUN_AZ = 281;
 const SUN_EL = 6;
-/** Ground drift in radians a second: about one frame-width every 75 seconds. */
+/** The old steady ground drift in radians a second: about one frame-width every 75 seconds. */
 const SPIN = 0.007;
+/**
+ * The planet's turn in public/film/00-orbit-live.webp, the frame clip 0 starts from, in
+ * radians about the spin axis: 1.5 s of the old drift. Found by rendering this scene at
+ * 1440 x 810 with turns from -20 s to 60 s of drift, scaling each canvas and the target to
+ * 160 x 90 and keeping the least mean difference. The still is closest at 1.43 s (0.96 of
+ * 255) and the clip's first frame at 1.53 s (1.91); 1.5 s is within 0.03 of both minimums.
+ */
+export const CAPTURE_SPIN = SPIN * 1.5;
+/** Output gain that brings the planet to the clip's colour (the clip came back bluer). */
+const GRADE: [number, number, number] = [1, 0.97, 1.09];
+/** The planet starts this far behind the capture pose: 12 s of the old drift. A longer head start made the planet whip round when the flight began. */
+const LEAD = SPIN * 12;
+/** Seconds for the remaining turn to fall to 37%: fast enough to see at once, then a creep. */
+const LEAD_TAU = 12;
 /** Where the top of the horizon sits, in normalised device coordinates (0.2 = 40% down). */
 const HORIZON_Y = 0.2;
+/**
+ * How the still and clip 0 were made from this scene. The still is the top 810 rows of a
+ * 1440 x 900 frame (vertical field of view 46 degrees); the clip keeps its full height and
+ * crops its sides to the clip's 1920 x 1088 shape. Measured by fitting the still to frames
+ * rendered here and the clip's first frame to the still.
+ */
+const CAPTURE = { width: 1440, height: 900, fov: 46, clipRows: 810, clipAspect: 1920 / 1088 };
 
-/** Choreography, in seconds from the first frame. */
-const T_ENTER = 2;
-const T_CROSS = 10.5;
-const T_DETUMBLE = T_ENTER + 3.4;
-const T_SETTLED = T_ENTER + 10.2;
+/** Choreography, in seconds from the first frame (the planet's fade-up starts there). */
+const T_ENTER = 2.6;
+const T_CROSS = 3.4;
+const T_DETUMBLE = T_ENTER + 0.35;
+const T_SETTLED = T_ENTER + 3.2;
 /** Satellite path in device coordinates. */
-const START_NDC: [number, number] = [-1.5, 0.5];
+const START_NDC: [number, number] = [-1.6, 0.52];
 const HOLD_NDC: [number, number] = [0.1, 0.34];
+/** Portrait screens hold it a little lower and left of centre, clear of the nav. */
+const HOLD_NDC_NARROW: [number, number] = [-0.02, 0.3];
 /**
  * Where the satellite's camera settles: a little ahead of and left of straight down, in
  * the world frame (up +Y, ahead -Z). Close to nadir, so the long body shows side-on.
  */
 const LOOK_DIR: [number, number, number] = [-0.2, -1, -0.34];
 /** Share of the viewport height the satellite fills at the hold; cap on width share. */
-const SIZE = 0.18;
-const MAX_WIDTH = 0.4;
+const SIZE = 0.27;
+const MAX_WIDTH = 0.62;
 /** Turn about the long axis at the hold, in radians, away from facing the camera. */
 const ROLL = 0.85;
 
@@ -60,7 +88,10 @@ export type SatFrame = {
   right: number;
   top: number;
   bottom: number;
+  cx: number;
   cy: number;
+  /** Radius of a circle that holds the body and wings, in CSS pixels. */
+  radius: number;
   shown: boolean;
   settled: boolean;
 };
@@ -69,6 +100,8 @@ export type OrbitSceneOptions = {
   canvas: HTMLCanvasElement;
   /** False draws only the satellite, on a transparent background. Defaults to true. */
   earth?: boolean;
+  /** False starts the planet at the capture pose, still. Defaults to true. */
+  lead?: boolean;
   onReady?: () => void;
   onFail?: () => void;
   onFrame?: (f: SatFrame) => void;
@@ -80,8 +113,29 @@ export type OrbitScene = {
   /** True when a viewport point is over the satellite. */
   hitTest(clientX: number, clientY: number): boolean;
   setHover(on: boolean): void;
+  /**
+   * 0 to 1: how far the planet has been rolled from its own clock into the capture pose.
+   * At 1 the lead is spent for good, so coming back shows the capture pose.
+   */
+  setHandover(h: number): void;
+  /** Puts the planet on the capture pose and stops its turn (a picture of it is already up). */
+  holdCapture(): void;
   /** Average milliseconds between frames over the last second (0 before that). */
   frameMs(): number;
+  /** For tests in development. */
+  debug: {
+    /** Overrides the planet's turn (radians), or null to hand it back to the clock. */
+    setSpin(angle: number | null): void;
+    setSatellite(on: boolean): void;
+    /** Draws a frame now and returns the canvas as a PNG data URL. */
+    snapshot(): string;
+    spin(): number;
+    /** Angle in radians between the satellite's attitude and its target. */
+    attitudeError(): number;
+    time(): number;
+    /** The texture set on screen. */
+    tier(): string;
+  };
   dispose(): void;
 };
 
@@ -94,7 +148,7 @@ function fovFor(aspect: number) {
 }
 
 export function createOrbitScene(T: Three, opts: OrbitSceneOptions): OrbitScene {
-  const { canvas, onReady, onFail, onFrame, earth = true } = opts;
+  const { canvas, onReady, onFail, onFrame, earth = true, lead = true } = opts;
   const gl = canvas.getContext("webgl2", {
     antialias: true,
     alpha: !earth,
@@ -135,7 +189,9 @@ export function createOrbitScene(T: Three, opts: OrbitSceneOptions): OrbitScene 
   const sun = new T.Vector3(Math.sin(sunAz) * Math.cos(sunEl), Math.sin(sunEl), -Math.cos(sunAz) * Math.cos(sunEl)).normalize();
   const earthMat = new T.ShaderMaterial({
     vertexShader: earthVertex,
-    fragmentShader: earthFragment,
+    fragmentShader: earthFragment
+      .replace("uniform vec3 uSun;", "uniform vec3 uSun;\n  uniform vec3 uGrade;")
+      .replace("#include <colorspace_fragment>", "#include <colorspace_fragment>\n    gl_FragColor.rgb *= uGrade;"),
     depthTest: false,
     depthWrite: false,
     uniforms: {
@@ -144,6 +200,7 @@ export function createOrbitScene(T: Three, opts: OrbitSceneOptions): OrbitScene 
       uWater: { value: null },
       uDaySize: { value: 4096 },
       uSun: { value: sun },
+      uGrade: { value: new T.Vector3(...GRADE) },
       uCamPos: { value: earthCam.position },
       uToEarth: { value: toEarth },
       uPixel: { value: 0.001 },
@@ -179,12 +236,35 @@ export function createOrbitScene(T: Three, opts: OrbitSceneOptions): OrbitScene 
   satScene.add(sat.root);
   sat.root.visible = false;
 
-  const sunLight = new T.DirectionalLight(0xfff0dc, 4.2);
+  // Lit so the shape separates from black space: the sun as a strong key from the left, a
+  // second warm key from the sun's side of the camera so the faces we see are lit, a cool
+  // rim from the planet below and behind that traces the far edges, and blue earthshine.
+  const SUN_I = 5.6;
+  const KEY_I = 2.4;
+  const RIM_I = 5;
+  const EARTH_I = 2.2;
+  const sunLight = new T.DirectionalLight(0xfff0dc, SUN_I);
   sunLight.position.copy(sun).multiplyScalar(10);
   satScene.add(sunLight);
-  // Earthshine: soft blue from below.
-  const earthLight = new T.HemisphereLight(0x0b0f18, 0x4a6fa3, 1.9);
+  const keyLight = new T.DirectionalLight(0xfff4e6, KEY_I);
+  keyLight.position.set(sun.x, 0.45, 0.9).normalize().multiplyScalar(10);
+  satScene.add(keyLight);
+  const rimLight = new T.DirectionalLight(0x9cc4ff, RIM_I);
+  rimLight.position.set(0.35, -0.55, -1).normalize().multiplyScalar(10);
+  satScene.add(rimLight);
+  const earthLight = new T.HemisphereLight(0x0b0f18, 0x4a6fa3, EARTH_I);
   satScene.add(earthLight);
+  // The cells catch a blue-white sheen at the angles they turn through, like the coating
+  // on real cells. Only this scene's copy is changed; the project page builds its own.
+  sat.root.traverse((o) => {
+    const m = (o as THREE.Mesh).material as THREE.MeshPhysicalMaterial | undefined;
+    if (!m || o.userData.role !== "cell" || !("sheen" in m)) return;
+    m.sheen = 1;
+    m.sheenColor = new T.Color(0x9fc2ff);
+    m.sheenRoughness = 0.42;
+    m.clearcoatRoughness = 0.12;
+    m.envMapIntensity = 2.2;
+  });
 
   // Reflections for the metal: black space above, the planet below, the sun to the side.
   const pmrem = new T.PMREMGenerator(renderer);
@@ -292,13 +372,14 @@ export function createOrbitScene(T: Three, opts: OrbitSceneOptions): OrbitScene 
   const ndc = new T.Vector2();
 
   // ---- Attitude control ---------------------------------------------------------------
-  // A rigid body with a PD controller: free tumble, then a rate-limited detumble and slew
-  // to the target, with a slightly underdamped settle. Fixed 1/120 s steps, so the motion
-  // is the same at any frame rate.
+  // A rigid body with a PD controller: a brief free tumble, then a rate-limited detumble
+  // and slew to the target, with a slightly underdamped settle. Fixed 1/120 s steps, so the
+  // motion is the same at any frame rate.
   const STEP = 1 / 120;
-  const KP = 1.25 * 1.25;
-  const KD = 2 * 0.6 * 1.25;
-  const MAX_ACC = 1.3;
+  const OMEGA = 2.3;
+  const KP = OMEGA * OMEGA;
+  const KD = 2 * 0.72 * OMEGA;
+  const MAX_ACC = 3.2;
   const q = new T.Quaternion().setFromEuler(new T.Euler(0.7, 2.2, -0.5));
   const w = new T.Vector3(0.62, -0.88, 0.42);
   let simT = T_ENTER;
@@ -315,7 +396,7 @@ export function createOrbitScene(T: Three, opts: OrbitSceneOptions): OrbitScene 
     // Residual drift at the hold: the target itself wanders by about half a degree.
     eWob.set(0.009 * Math.sin(0.61 * t), 0.011 * Math.sin(0.47 * t + 1.3), 0.008 * Math.sin(0.83 * t + 2.1));
     qGoal.copy(qTarget).multiply(qWob.setFromEuler(eWob));
-    const gain = smooth(T_DETUMBLE, T_DETUMBLE + 0.8, t);
+    const gain = smooth(T_DETUMBLE, T_DETUMBLE + 0.5, t);
     if (gain > 0) {
       qErr.copy(qGoal).multiply(qDot.copy(q).invert());
       if (qErr.w < 0) qErr.set(-qErr.x, -qErr.y, -qErr.z, -qErr.w);
@@ -336,6 +417,7 @@ export function createOrbitScene(T: Three, opts: OrbitSceneOptions): OrbitScene 
   let width = 1;
   let height = 1;
   let dist = 2.4;
+  const hold: [number, number] = [HOLD_NDC[0], HOLD_NDC[1]];
   const holdPos = new T.Vector3();
   const startPos = new T.Vector3();
   const tmp = new T.Vector3();
@@ -386,37 +468,57 @@ export function createOrbitScene(T: Three, opts: OrbitSceneOptions): OrbitScene 
     renderer.setPixelRatio(Math.min(base, Math.sqrt(MAX_PIXELS / (w0 * h0))));
     renderer.setSize(w0, h0, false);
     const aspect = w0 / h0;
+
+    // The planet is framed exactly as the first clip is on this screen: the capture frame,
+    // cut to the clip's shape, then cropped the way object-fit: cover crops the video.
+    const capPitch = Math.acos(1 / (1 + ALT)) + Math.atan(HORIZON_Y * Math.tan((CAPTURE.fov * Math.PI) / 360));
+    const clipW = CAPTURE.clipRows * CAPTURE.clipAspect;
+    let viewW: number;
+    let viewH: number;
+    if (aspect <= CAPTURE.clipAspect) {
+      viewH = CAPTURE.clipRows;
+      viewW = viewH * aspect;
+    } else {
+      viewW = clipW;
+      viewH = viewW / aspect;
+    }
+    earthCam.position.set(0, 1 + ALT, 0);
+    earthCam.fov = CAPTURE.fov;
+    earthCam.aspect = CAPTURE.width / CAPTURE.height;
+    earthCam.rotation.set(-capPitch, 0, 0, "YXZ");
+    earthCam.setViewOffset(CAPTURE.width, CAPTURE.height, (CAPTURE.width - viewW) / 2, (CAPTURE.clipRows - viewH) / 2, viewW, viewH);
+    earthCam.updateProjectionMatrix();
+    earthCam.updateMatrixWorld(true);
+    const buffer = renderer.getDrawingBufferSize(new T.Vector2());
+    earthMat.uniforms.uPixel.value = (2 * Math.tan((CAPTURE.fov * Math.PI) / 360) * (viewH / CAPTURE.height)) / buffer.y;
+
+    // The satellite has its own camera, framed for this screen.
     const fov = fovFor(aspect);
-    // Portrait screens see a narrow slice, so the camera climbs (less magnified ground, more
-    // curve) and turns a little right to keep the terminator and city lights in frame.
+    // Portrait screens see a narrow slice, so the camera climbs and turns a little right.
     const narrow = Math.min(1, Math.max(0, (1.2 - aspect) / 0.74));
     const alt = ALT + 0.22 * narrow;
     const yaw = -0.2 * narrow;
-    earthCam.position.set(0, 1 + alt, 0);
-    const dipAngle = Math.acos(1 / (1 + alt));
-    const pitch = dipAngle + Math.atan(HORIZON_Y * Math.tan((fov * Math.PI) / 360));
-    for (const cam of [earthCam, satCam]) {
-      cam.fov = fov;
-      cam.aspect = aspect;
-      cam.rotation.set(-pitch, yaw, 0, "YXZ");
-      cam.updateProjectionMatrix();
-      cam.updateMatrixWorld(true);
-    }
-    const buffer = renderer.getDrawingBufferSize(new T.Vector2());
-    earthMat.uniforms.uPixel.value = (2 * Math.tan((fov * Math.PI) / 360)) / buffer.y;
+    const pitch = Math.acos(1 / (1 + alt)) + Math.atan(HORIZON_Y * Math.tan((fov * Math.PI) / 360));
+    satCam.fov = fov;
+    satCam.aspect = aspect;
+    satCam.rotation.set(-pitch, yaw, 0, "YXZ");
+    satCam.updateProjectionMatrix();
+    satCam.updateMatrixWorld(true);
 
     // Distance so the satellite at the hold fills SIZE of the height (and no more than
     // MAX_WIDTH of the width on narrow screens).
+    hold[0] = HOLD_NDC[0] + (HOLD_NDC_NARROW[0] - HOLD_NDC[0]) * narrow;
+    hold[1] = HOLD_NDC[1] + (HOLD_NDC_NARROW[1] - HOLD_NDC[1]) * narrow;
     let d = 2.4;
     for (let k = 0; k < 3; k++) {
-      cameraPoint(HOLD_NDC[0], HOLD_NDC[1], d, holdPos);
+      cameraPoint(hold[0], hold[1], d, holdPos);
       const e = extent(holdPos, aimAt(holdPos, qTarget));
       const hShare = (e.y1 - e.y0) / 2;
       const wShare = (e.x1 - e.x0) / 2;
       d *= Math.max(hShare / SIZE, wShare / MAX_WIDTH);
     }
     dist = d;
-    cameraPoint(HOLD_NDC[0], HOLD_NDC[1], dist, holdPos);
+    cameraPoint(hold[0], hold[1], dist, holdPos);
     cameraPoint(START_NDC[0], START_NDC[1], dist, startPos);
     aimAt(holdPos, qTarget);
   }
@@ -434,6 +536,7 @@ export function createOrbitScene(T: Three, opts: OrbitSceneOptions): OrbitScene 
   const textures: THREE.Texture[] = [];
   const abort = new AbortController();
 
+  let tierNow = "none";
   async function loadSet(tier: Tier) {
     const urls = TEXTURES[tier];
     const withWater = !earthMat.uniforms.uWater.value && !!urls.water;
@@ -456,6 +559,7 @@ export function createOrbitScene(T: Three, opts: OrbitSceneOptions): OrbitScene 
     earthMat.uniforms.uDaySize.value = daySize;
     if (set[2]) earthMat.uniforms.uWater.value = set[2];
     textures.push(...set);
+    tierNow = tier;
     old.forEach((t) => {
       if (!t) return;
       t.dispose();
@@ -476,25 +580,38 @@ export function createOrbitScene(T: Three, opts: OrbitSceneOptions): OrbitScene 
   let statT = 0;
   let statN = 0;
   let avgMs = 0;
+  // The planet's own clock: the turn still to make toward the capture pose decays from
+  // lead0, and the film's hand-over takes the rest of it away.
+  let earthT = 0;
+  let lead0 = lead ? LEAD : 0;
+  let handover = 0;
+  let spinOverride: number | null = null;
+  let satOn = true;
+  const spinNow = () => spinOverride ?? CAPTURE_SPIN - lead0 * Math.exp(-earthT / LEAD_TAU) * (1 - handover);
   const satPos = new T.Vector3();
-  const out: SatFrame = { left: 0, right: 0, top: 0, bottom: 0, cy: 0, shown: false, settled: false };
+  const out: SatFrame = { left: 0, right: 0, top: 0, bottom: 0, cx: 0, cy: 0, radius: 0, shown: false, settled: false };
+  // The silhouette's own centre and reach (antennas left out), for the ring drawn around it.
+  const ringPts = sat.keypoints.slice(0, 12).map((p) => p.clone());
+  const ringC = new T.Vector3();
+  const ringP = new T.Vector3();
 
   function draw(dt: number) {
     // Planet.
-    qSpin.setFromAxisAngle(spinAxis, SPIN * time);
+    qSpin.setFromAxisAngle(spinAxis, spinNow());
     qEarth.copy(qSpin).multiply(q0).invert();
     toEarth.setFromMatrix4(m4.makeRotationFromQuaternion(qEarth));
 
     // Satellite.
-    const shown = time >= T_ENTER;
+    const shown = satOn && time >= T_ENTER;
     sat.root.visible = shown;
-    if (shown) {
+    if (time >= T_ENTER) {
       while (simT + STEP <= time) {
         stepAttitude(simT);
         simT += STEP;
       }
       const s = Math.min(1, (time - T_ENTER) / T_CROSS);
-      const ease = 1 - Math.pow(1 - s, 1.9);
+      // Fast in, then a long glide into the hold.
+      const ease = 1 - Math.pow(1 - s, 3);
       satPos.lerpVectors(startPos, holdPos, ease);
       // A slight arc on the way in, then a few millimetres of drift at the hold.
       cameraPoint(0, 0.07 * Math.sin(Math.PI * ease), dist, tmp).sub(cameraPoint(0, 0, dist, tmp2));
@@ -508,9 +625,10 @@ export function createOrbitScene(T: Three, opts: OrbitSceneOptions): OrbitScene 
       fillOpacity.value = 0.1 * sight;
     }
     hover += (hoverTo - hover) * (1 - Math.exp(-dt * 10));
-    sunLight.intensity = 4.2 * (1 + 0.3 * hover);
-    earthLight.intensity = 1.9 * (1 + 1.2 * hover);
-    satScene.environmentIntensity = 1 + 0.9 * hover;
+    sunLight.intensity = SUN_I * (1 + 0.25 * hover);
+    keyLight.intensity = KEY_I * (1 + 0.6 * hover);
+    earthLight.intensity = EARTH_I * (1 + 0.8 * hover);
+    satScene.environmentIntensity = 1 + 0.7 * hover;
 
     renderer.clear();
     if (earth) renderer.render(earthScene, earthCam);
@@ -519,13 +637,22 @@ export function createOrbitScene(T: Three, opts: OrbitSceneOptions): OrbitScene 
       renderer.render(satScene, satCam);
     }
 
-    if (onFrame) {
+    if (onFrame && time >= T_ENTER) {
       const e = extent(satPos, q);
       out.left = ((e.x0 + 1) / 2) * width;
       out.right = ((e.x1 + 1) / 2) * width;
       out.top = ((1 - e.y1) / 2) * height;
       out.bottom = ((1 - e.y0) / 2) * height;
-      out.cy = (out.top + out.bottom) / 2;
+      // The ring centres on the body and reaches the wing tips, so the long antennas cross it.
+      ringC.copy(satPos).project(satCam);
+      out.cx = ((ringC.x + 1) / 2) * width;
+      out.cy = ((1 - ringC.y) / 2) * height;
+      let r = 0;
+      for (const p of ringPts) {
+        ringP.copy(p).applyQuaternion(q).add(satPos).project(satCam);
+        r = Math.max(r, Math.hypot(((ringP.x - ringC.x) / 2) * width, ((ringP.y - ringC.y) / 2) * height));
+      }
+      out.radius = r;
       out.shown = shown;
       out.settled = time >= T_SETTLED;
       onFrame(out);
@@ -535,7 +662,8 @@ export function createOrbitScene(T: Three, opts: OrbitSceneOptions): OrbitScene 
   function frame(now: number) {
     raf = 0;
     if (!running || disposed) return;
-    const dt = last ? Math.min((now - last) / 1000, 0.05) : 0;
+    // Long frames (texture uploads at the start) are capped, so nothing jumps far in one.
+    const dt = last ? Math.min((now - last) / 1000, 0.1) : 0;
     if (last) {
       statT += now - last;
       statN++;
@@ -547,6 +675,7 @@ export function createOrbitScene(T: Three, opts: OrbitSceneOptions): OrbitScene 
     }
     last = now;
     time += dt;
+    earthT += dt;
     draw(dt);
     raf = requestAnimationFrame(frame);
   }
@@ -614,7 +743,33 @@ export function createOrbitScene(T: Three, opts: OrbitSceneOptions): OrbitScene 
     setHover(on) {
       hoverTo = on ? 1 : 0;
     },
+    setHandover(h) {
+      handover = Math.min(1, Math.max(0, h));
+      if (handover >= 1) lead0 = 0;
+    },
+    holdCapture() {
+      lead0 = 0;
+    },
     frameMs: () => avgMs,
+    debug: {
+      setSpin(angle) {
+        spinOverride = angle;
+      },
+      setSatellite(on) {
+        satOn = on;
+      },
+      snapshot() {
+        draw(0);
+        return canvas.toDataURL("image/png");
+      },
+      spin: spinNow,
+      attitudeError() {
+        qErr.copy(qTarget).multiply(qDot.copy(q).invert());
+        return 2 * Math.acos(Math.min(1, Math.abs(qErr.w)));
+      },
+      time: () => time,
+      tier: () => tierNow,
+    },
     dispose() {
       disposed = true;
       abort.abort();

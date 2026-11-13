@@ -1,4 +1,4 @@
-import Link from "next/link";
+import TransitionLink from "@/components/TransitionLink";
 import { nav, site } from "@/lib/site";
 import styles from "./Nav.module.css";
 
@@ -6,14 +6,14 @@ export default function Nav() {
   return (
     <header className={styles.bar}>
       <div className={`wrap ${styles.row}`}>
-        <Link href="/" className={styles.mark} aria-label={`${site.name}, home`}>
+        <TransitionLink href="/" className={styles.mark} aria-label={`${site.name}, home`}>
           {site.name}
-        </Link>
+        </TransitionLink>
         <nav aria-label="Main">
           <ul className={styles.links}>
             {nav.map((item) => (
               <li key={item.href}>
-                <Link href={item.href}>{item.label}</Link>
+                <TransitionLink href={item.href}>{item.label}</TransitionLink>
               </li>
             ))}
           </ul>

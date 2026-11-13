@@ -10,11 +10,16 @@
 #   <name>-first.webp first frame, 1600 wide
 #   <name>-last.webp  last frame, 1600 wide
 #
-# All three mp4s are H.264, 24 fps, no audio, with a keyframe every 12 frames and no B-frames,
-# so a seek decodes 12 frames at most. All-intra files were 2 to 3 times larger, and on a
-# slow connection the download time mattered more than the seek time. A light denoise
-# removes grain that costs bits, and the first and last frames get extra quality because
-# the film rests on them.
+# All three mp4s are H.264 at the source's own frame rate, no audio, with a keyframe every
+# 12 frames and no B-frames, so a seek decodes 12 frames at most. A light denoise removes
+# grain that costs bits, and the first and last frames get extra quality because the film
+# rests on them.
+#
+# Give it a 60 fps source. The generated clips are 24 fps, and at 24 fps a flight stutters
+# whenever it starts, stops or follows a slow scroll, because there are fewer new frames than
+# display frames. scripts/film-interp (built from scripts/film-interp.swift) converts a clip
+# to 60 fps with the Mac's own frame interpolation, and the 60 fps files come out the same
+# size as the 24 fps ones.
 # Then set `kind: "video", clip: "<name>"` on the hop in lib/film.ts.
 
 set -euo pipefail
@@ -39,13 +44,13 @@ TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 
 GOP=12
-# Frames in the 24 fps output, for the quality zones on the first and last frames.
-FRAMES=$(ffprobe -v error -select_streams v:0 -show_entries format=duration -of csv=p=0 "$SRC" | awk '{printf "%d", $1 * 24 + 0.5}')
-[ "$FRAMES" -gt 4 ] || die "source is too short"
+# Frames in the source, for the quality zones on the first and last frames.
+FRAMES=$(ffprobe -v error -select_streams v:0 -count_packets -show_entries stream=nb_read_packets -of csv=p=0 "$SRC")
+[ "${FRAMES:-0}" -gt 4 ] || die "source is too short"
 
 encode() { # <width> <crf> <out>
   ffmpeg -hide_banner -loglevel error -y -i "$SRC" -an \
-    -vf "fps=24,hqdn3d=1.5:1.5:6:6,scale=$1:-2:flags=lanczos" \
+    -vf "hqdn3d=1.5:1.5:6:6,scale=$1:-2:flags=lanczos" \
     -c:v libx264 -preset slow -crf "$2" -pix_fmt yuv420p \
     -g "$GOP" -keyint_min "$GOP" -bf 0 \
     -x264-params "scenecut=0:zones=0,1,q=20/$((FRAMES - 3)),$((FRAMES + 2)),q=20" \

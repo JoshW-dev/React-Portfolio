@@ -153,6 +153,7 @@ const entries: Work[] = [
     slug: "crimsonlead",
     title: "Crimsonlead",
     summary: "Reads public records each morning and turns the new ones into graded leads.",
+    frame: { src: "/film/07-towns.webp", alt: "Small-town lights across the United States at night, seen from the air" },
     kind: "Product",
     industry: "Sales",
     image: {
@@ -173,6 +174,7 @@ const entries: Work[] = [
     slug: "insider-signal",
     title: "Insider Signal",
     summary: "A watchlist of insider stock purchases, built from SEC filings.",
+    frame: { src: "/film/08-nyc.webp", alt: "A Manhattan avenue at night, seen from above" },
     kind: "Product",
     industry: "Finance",
     image: {
@@ -219,6 +221,7 @@ const entries: Work[] = [
     slug: "bottleneck-radar",
     title: "Bottleneck Radar",
     summary: "Each month it finds the physical input in shortest supply for the AI buildout.",
+    frame: { src: "/film/08-nyc.webp", alt: "A Manhattan avenue at night, seen from above" },
     kind: "Research",
     image: {
       src: "/work/bottleneck-radar.webp",

@@ -1,0 +1,15 @@
+{
+  "note": "Storyboard keyframes for the scroll film, generated 2026-11-13 on Higgsfield with gpt_image_2_6 (16:9, 0.25 credits each). The ids are Higgsfield job ids and can be passed as start_image, end_image or image_references to a video model.",
+  "style": "Frame from a single continuous forward-moving one-take shot. Photorealistic documentary cinematography, large-format cinema camera, physically accurate materials and light, strong forward parallax, restrained natural color, fine film grain. No text, no logos, no watermark.",
+  "frames": [
+    { "file": "01-orbit.webp", "job": "42a6b838-c8d4-4e4d-aabb-35c3fa4d58ea", "what": "Low Earth orbit at dawn over the Alberta Rockies" },
+    { "file": "02-rockies.webp", "job": "0f40b726-4b28-4370-ac94-299b8f478c5b", "what": "Glacial valley at first light, prairie in the distance" },
+    { "file": "03-plant.webp", "job": "276b1423-aa14-4200-a243-a0f82b52fa44", "what": "Hydrogen plant at sunrise, camera along a pipe rack" },
+    { "file": "04-line.webp", "job": "0b395bdf-2db7-4cd0-bdc5-c0a45718ff4c", "what": "Carton line in a packaging plant, low along the conveyor" },
+    { "file": "05-twin.webp", "job": "f58b299f-30db-44b7-a027-5b93be95cdcd", "what": "The same frame redrawn as a digital twin (edit of frame 04)" },
+    { "file": "06-sf.webp", "job": "d509dff3-c60b-4c70-a910-78565e407b6f", "what": "Golden Gate above the fog at blue hour" },
+    { "file": "07-towns.webp", "job": "d047223c-d9e5-4abe-ac04-c7c59976b8ff", "what": "Small-town lights across the U.S. interior at night" },
+    { "file": "08-nyc.webp", "job": "85f70ecc-c669-45c3-829e-44c3ae69f5b9", "what": "Down a Manhattan avenue at night" },
+    { "file": "09-doha.webp", "job": "1d00cc9a-334c-48f4-bc2a-db8e8077861f", "what": "Doha's West Bay across the water at sunrise" }
+  ]
+}

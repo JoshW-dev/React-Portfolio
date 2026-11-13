@@ -274,3 +274,15 @@ button {
     scroll-behavior: auto !important;
   }
 }
+
+/* On the film page the navigation sits on top of the first frame. */
+body:has([data-film]) > header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  color: #fff;
+  text-shadow: 0 1px 10px rgb(0 0 0 / 0.6);
+}
+

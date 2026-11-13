@@ -1,0 +1,181 @@
+.film {
+  position: relative;
+  background: #05070b;
+}
+
+.screen {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  height: 100svh;
+  overflow: hidden;
+  color: #fff;
+}
+
+.layer {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  will-change: transform, opacity;
+}
+
+.veil {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* The edge of the real-to-model wipe. */
+.scan {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: #cfe3ff;
+  box-shadow: 0 0 24px 6px rgb(120 170 255 / 0.55);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Darkens the lower left so the words read on any frame. */
+.shade {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to top, rgb(0 0 0 / 0.62), rgb(0 0 0 / 0) 46%),
+    linear-gradient(to right, rgb(0 0 0 / 0.3), rgb(0 0 0 / 0) 55%);
+  pointer-events: none;
+}
+
+.caption {
+  position: absolute;
+  left: var(--gutter);
+  bottom: clamp(28px, 6vh, 72px);
+  width: min(40rem, calc(100% - 2 * var(--gutter)));
+  animation: arrive 0.6s var(--ease) both;
+}
+
+@keyframes arrive {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.place {
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  opacity: 0.85;
+}
+
+.text {
+  margin-top: 10px;
+  font-size: clamp(1.5rem, 3vw, 2.6rem);
+  line-height: 1.12;
+  font-weight: 650;
+  letter-spacing: -0.022em;
+  font-variation-settings: "wdth" 90;
+  text-wrap: balance;
+}
+
+.how {
+  margin-top: 14px;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  opacity: 0.75;
+}
+
+/* ---------- the list of stops ---------- */
+
+.stops {
+  position: absolute;
+  right: var(--gutter);
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  grid-template-columns: 2px auto;
+  gap: 14px;
+}
+
+.rail {
+  position: relative;
+  background: rgb(255 255 255 / 0.25);
+}
+
+.rail span {
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  transform: scaleY(0);
+  transform-origin: top;
+}
+
+.stops ol {
+  display: grid;
+  gap: 2px;
+}
+
+.stops button {
+  text-shadow: 0 1px 10px rgb(0 0 0 / 0.7);
+  display: block;
+  min-height: 34px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-align: left;
+  opacity: 0.55;
+  cursor: pointer;
+  transition: opacity 0.2s var(--ease);
+}
+
+.stops button:hover,
+.stops button[aria-current="true"] {
+  opacity: 1;
+}
+
+.tour {
+  position: absolute;
+  right: var(--gutter);
+  bottom: clamp(28px, 6vh, 72px);
+  min-height: 48px;
+  padding: 0 1.2em;
+  border: 1px solid rgb(255 255 255 / 0.7);
+  border-radius: var(--radius);
+  background: rgb(0 0 0 / 0.25);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s var(--ease), color 0.2s var(--ease);
+}
+
+.tour:hover {
+  background: #fff;
+  color: #000;
+}
+
+@media (max-width: 800px) {
+  .stops {
+    display: none;
+  }
+
+  .caption {
+    bottom: 96px;
+  }
+
+  .tour {
+    left: var(--gutter);
+    right: auto;
+    bottom: 28px;
+  }
+}

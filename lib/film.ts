@@ -87,7 +87,7 @@ export const STOPS: Stop[] = [
 
 /** One hop per pair of neighbouring stops, in order. */
 export const HOPS: Hop[] = [
-  { from: 0, to: 1, kind: "fade", veil: "cloud" },
+  { from: 0, to: 1, kind: "video", clip: "orbit-rockies" },
   { from: 1, to: 2, kind: "fade" },
   { from: 2, to: 3, kind: "fade", veil: "steam" },
   { from: 3, to: 4, kind: "wipe" }, // the real line turns into its model; stays a wipe

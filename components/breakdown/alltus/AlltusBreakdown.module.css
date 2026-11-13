@@ -1,0 +1,111 @@
+.host {
+  container-type: size;
+}
+
+/* The last step pulls back over a field of counties that runs off the stage; fade it out there. */
+.host canvas {
+  mask-image: linear-gradient(to right, transparent, #000 6%, #000 94%, transparent),
+    linear-gradient(to bottom, transparent, #000 5%, #000 95%, transparent);
+  mask-composite: intersect;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.overlay path,
+.overlay line,
+.overlay circle {
+  vector-effect: non-scaling-stroke;
+}
+
+/* Hidden until the first frame has placed everything, and gone without WebGL. */
+.host[data-mode="loading"] .overlay,
+.host[data-mode="loading"] .tag,
+.host[data-mode="loading"] .note,
+.host[data-mode="fallback"] .overlay,
+.host[data-mode="fallback"] .tag,
+.host[data-mode="fallback"] .note {
+  visibility: hidden;
+}
+
+.wave {
+  fill: none;
+  stroke: var(--agent);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  opacity: 0;
+}
+
+.leader line {
+  stroke: var(--ink);
+  stroke-width: 1;
+  opacity: 0;
+}
+
+.leader circle {
+  fill: var(--ink);
+  opacity: 0;
+}
+
+.tag,
+.note {
+  position: absolute;
+  left: 0;
+  top: 0;
+  white-space: nowrap;
+  font-size: 0.9rem;
+  line-height: 1.3;
+  color: var(--ink);
+  padding: 2px 6px;
+  pointer-events: none;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+.tag {
+  background: var(--bg);
+  font-weight: 550;
+}
+
+.note {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+/* The caller's words. */
+.quote {
+  color: var(--ink);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 3px 10px;
+}
+
+/* A figure in the last step, set like a label. */
+.stat {
+  color: var(--ink);
+  background: var(--bg);
+  font-size: 0.9rem;
+  font-weight: 550;
+}
+
+@container (max-width: 520px) {
+  .tag {
+    font-size: 0.78rem;
+    padding: 1px 4px;
+  }
+
+  .note {
+    font-size: 0.74rem;
+  }
+
+  .quote {
+    padding: 2px 8px;
+  }
+}

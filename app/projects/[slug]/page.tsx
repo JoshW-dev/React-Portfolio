@@ -10,7 +10,7 @@ import styles from "./project.module.css";
 
 /** The figure under the title. Returns the project image, or null when there isn't one. */
 function Figure({ item }: { item: Work }) {
-  if (item.slug === "voice-agents") {
+  if (item.slug === "alltus") {
     return (
       <figure className={styles.figure}>
         <CallReplay />

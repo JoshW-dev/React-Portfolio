@@ -10,7 +10,7 @@ const jobs = [
   {
     years: "2026 to now",
     role: "Senior software engineer, AI",
-    place: "GovTech startup, backed by Y Combinator",
+    place: "Alltus",
     note: "Voice and chat agents that answer residents\u2019 questions, on phone lines that take more than 100,000 calls a year.",
   },
   {
@@ -115,8 +115,8 @@ export default function Home() {
                 couple of factory lines, then moved into AI at Disco, an ed-tech startup.
               </p>
               <p>
-                These days I build voice and chat agents for local governments at a Y
-                Combinator-backed startup. Outside of work I&rsquo;m usually making something,
+                These days I build voice and chat agents for county governments at Alltus.
+                Outside of work I&rsquo;m usually making something,
                 and lately that&rsquo;s been games and a simulation of how societies form. I
                 also paint, mostly by pouring acrylics and seeing what gravity does.
               </p>

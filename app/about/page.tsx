@@ -50,8 +50,7 @@ export default function AboutPage() {
           <div className={`prose ${styles.copy}`}>
             <p>
               I&rsquo;m a customer-facing AI engineer from Toronto. Right now I
-              work in GovTech at a Y Combinator-backed startup, where I build
-              voice and chat agents that answer residents&rsquo; questions and
+              work at Alltus, a GovTech company, where I build voice and chat agents that answer residents&rsquo; questions and
               run launches with government teams in Texas and California.
             </p>
             <p>

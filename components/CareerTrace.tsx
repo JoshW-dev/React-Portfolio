@@ -65,7 +65,7 @@ export const spans: Span[] = [
       "Built the AI course builder that helped close enterprise deals. Cut chat response times 75% and cost 58%.",
   },
   {
-    name: "GovTech startup, backed by Y Combinator",
+    name: "Alltus",
     role: "Senior software engineer, AI",
     start: { year: 2026, month: 7 },
     end: "now",

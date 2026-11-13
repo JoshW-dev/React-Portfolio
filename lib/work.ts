@@ -24,16 +24,17 @@ export type Work = {
 
 const entries: Work[] = [
   {
-    slug: "voice-agents",
-    title: "AI for county governments",
-    summary: "Voice and chat agents that take routine work off county offices across the U.S.",
+    slug: "alltus",
+    title: "Alltus",
+    summary: "AI for county governments: voice and chat agents that take routine work off staff.",
     kind: "Work",
     industry: "Government",
     years: "2026 to now",
     stack: ["Twilio", "ElevenLabs", "Langfuse", "RAG", "Python", "TypeScript"],
-    links: [],
+    links: [{ label: "Open alltus.com", href: "https://www.alltus.com/" }],
     body: [
-      "County offices hear the same questions all day. When is the protest deadline, and did my exemption go through? At a Y Combinator-backed GovTech startup I build the agents that answer them, by phone first and by chat and email as well.",
+      "Alltus makes AI software for local government, and until 2026 it was called Just Appraised. Its site counts more than 300 governments in over 30 states.",
+      "County offices hear the same questions all day. When is the protest deadline, and did my exemption go through? At Alltus I build the agents that answer them, by phone first and by chat and email as well.",
       "I built the call routing system and the parallel voice agents behind it on Twilio and ElevenLabs, for deployments that take more than 100,000 calls a year.",
       "Every answer comes from the jurisdiction's own material: its knowledge base, its records data, and an FAQ bank mined from past conversations. Prompts are managed in Langfuse.",
       "I'm also the engineer on the launch. For government teams in Texas and California that has meant running kickoff, setting up the phone lines, building the knowledge base, making test calls and handling customer communication until go-live.",
@@ -550,7 +551,7 @@ const order = [
   "in-search-of-light",
   "eigenvirtue",
   "disco",
-  "voice-agents",
+  "alltus",
   "convert2epub",
   "somebody-built-this",
   "founderrise",

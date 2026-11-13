@@ -56,8 +56,8 @@
     },
     {
       "hop": "plant-line",
-      "job": "aca0de84-5e09-41f7-9863-58e917c7a099",
-      "what": "The pipe rack running into an open factory door"
+      "job": "331c7419-89cf-427e-8bfb-6c483f556bbe",
+      "what": "Closer along the pipe rack: the grey building from the plant frame, large, with its loading door open"
     },
     {
       "hop": "twin-sf",
@@ -84,8 +84,9 @@
     },
     {
       "clip": "plant-line",
-      "job": "b478c27e-6d9e-4bed-8297-599d203f609b",
-      "seconds": 8
+      "job": "3313a902-903a-4b78-aa70-ae638bed2ed6",
+      "seconds": 7,
+      "note": "Second take. The first (b478c27e, mid aca0de84) made a new building fade in. This one flies to the grey building already in the start frame."
     },
     {
       "clip": "twin-sf",

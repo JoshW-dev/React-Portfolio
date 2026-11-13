@@ -33,11 +33,9 @@ const entries: Work[] = [
     stack: ["Twilio", "ElevenLabs", "Langfuse", "RAG", "Python", "TypeScript"],
     links: [{ label: "Open alltus.com", href: "https://www.alltus.com/" }],
     body: [
-      "Alltus makes AI software for local government, and until 2026 it was called Just Appraised. Its site counts more than 300 governments in over 30 states.",
-      "County offices hear the same questions all day. When is the protest deadline, and did my exemption go through? At Alltus I build the agents that answer them, by phone first and by chat and email as well.",
-      "I built the call routing system and the parallel voice agents behind it on Twilio and ElevenLabs, for deployments that take more than 100,000 calls a year.",
-      "Every answer comes from the jurisdiction's own material: its knowledge base, its records data, and an FAQ bank mined from past conversations. Prompts are managed in Langfuse.",
-      "I'm also the engineer on the launch. For government teams in Texas and California that has meant running kickoff, setting up the phone lines, building the knowledge base, making test calls and handling customer communication until go-live.",
+      "Alltus makes AI software for local government, and until 2026 it was called Just Appraised.",
+      "The call routing and the voice agents run on Twilio and ElevenLabs, and prompts are managed in Langfuse.",
+      "For government teams in Texas and California, being the engineer on the launch has also meant building the knowledge base and handling customer communication until go-live.",
       "The work reaches past the phone line. A lot of it is setting up the systems that automate county paperwork, and one recent deployment helped run elections in North Carolina.",
     ],
   },
@@ -57,11 +55,8 @@ const entries: Work[] = [
     stack: ["Claude", "RAG", "MCP", "Make.com", "TypeScript", "Python"],
     links: [{ label: "Open disco.co", href: "https://www.disco.co/" }],
     body: [
-      "Disco is a Canadian ed-tech startup whose learning platform has more than 300,000 learners. I spent almost three years there as an AI growth engineer, working on the product and on the systems the sales and marketing teams ran on.",
-      "The biggest piece was AI curriculum generation. An organization describes the course it wants and builds it step by step on a canvas, with RAG pipelines and agent flows doing the drafting while the person keeps control of the edit. Enterprise deals picked up after it shipped, and it kept coming up in the ones that closed.",
-      "The chat agent was slow, so I ran its steps in parallel. Response times dropped 75% and cost dropped 58%, and the answers got better.",
-      "On the go-to-market side I set up deep research in Claude and connected it to the CRM and the other systems the team depended on, so a question about an account could draw on all of them at once. The same stack, built on Claude, Make.com and custom MCP integrations, handles lead enrichment, buyer-intent alerts and outbound sequencing across more than 80,000 contacts.",
-      "Two more things ran with nobody touching them. A payment recovery pipeline brings back tens of thousands of dollars a month in late payments, and a content system built for SEO and AI search got Disco cited in ChatGPT and Google AI Overviews while doubling site activity.",
+      "I worked on the product and on the systems the sales and marketing teams ran on.",
+      "One piece the steps above leave out is a content system I built for SEO and AI search. It got Disco cited in ChatGPT and Google AI Overviews while doubling site activity.",
     ],
   },
   {
@@ -79,8 +74,7 @@ const entries: Work[] = [
     },
     links: [],
     body: [
-      "As an engineering consultant I led the design working sessions that found and developed ways to tighten the scope of a blue hydrogen production project. They cut more than $300M from the capital budget.",
-      "The plant is designed to produce more than 300,000 tonnes of clean hydrogen a year and to capture over 90% of the emissions it generates.",
+      "I worked on this as an engineering consultant in Alberta, leading the design working sessions on a blue hydrogen production project.",
     ],
   },
   {
@@ -505,8 +499,7 @@ const entries: Work[] = [
     links: [],
     body: [
       "As an engineering consultant I led an improvement team on two production lines, in Texas and California.",
-      "In 8 weeks we cut downtime on both by 35%. The fixes were mechanical changes to the lines and written standard procedures for the crews who ran them.",
-      "The first talk I made for Sketch Deck, about putting AI on a business\u2019s bottleneck, comes out of this work.",
+      "The first talk I made for Sketch Deck, about putting AI on a business’s bottleneck, comes out of this work.",
     ],
   },
   {

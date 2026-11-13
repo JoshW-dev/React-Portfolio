@@ -2,14 +2,110 @@
   "note": "Storyboard keyframes for the scroll film, generated 2026-11-13 on Higgsfield with gpt_image_2_6 (16:9, 0.25 credits each). The ids are Higgsfield job ids and can be passed as start_image, end_image or image_references to a video model.",
   "style": "Frame from a single continuous forward-moving one-take shot. Photorealistic documentary cinematography, large-format cinema camera, physically accurate materials and light, strong forward parallax, restrained natural color, fine film grain. No text, no logos, no watermark.",
   "frames": [
-    { "file": "01-orbit.webp", "job": "42a6b838-c8d4-4e4d-aabb-35c3fa4d58ea", "what": "Low Earth orbit at dawn over the Alberta Rockies" },
-    { "file": "02-rockies.webp", "job": "0f40b726-4b28-4370-ac94-299b8f478c5b", "what": "Glacial valley at first light, prairie in the distance" },
-    { "file": "03-plant.webp", "job": "276b1423-aa14-4200-a243-a0f82b52fa44", "what": "Hydrogen plant at sunrise, camera along a pipe rack" },
-    { "file": "04-line.webp", "job": "0b395bdf-2db7-4cd0-bdc5-c0a45718ff4c", "what": "Carton line in a packaging plant, low along the conveyor" },
-    { "file": "05-twin.webp", "job": "f58b299f-30db-44b7-a027-5b93be95cdcd", "what": "The same frame redrawn as a digital twin (edit of frame 04)" },
-    { "file": "06-sf.webp", "job": "d509dff3-c60b-4c70-a910-78565e407b6f", "what": "Golden Gate above the fog at blue hour" },
-    { "file": "07-towns.webp", "job": "d047223c-d9e5-4abe-ac04-c7c59976b8ff", "what": "Small-town lights across the U.S. interior at night" },
-    { "file": "08-nyc.webp", "job": "85f70ecc-c669-45c3-829e-44c3ae69f5b9", "what": "Down a Manhattan avenue at night" },
-    { "file": "09-doha.webp", "job": "1d00cc9a-334c-48f4-bc2a-db8e8077861f", "what": "Doha's West Bay across the water at sunrise" }
+    {
+      "file": "01-orbit.webp",
+      "job": "42a6b838-c8d4-4e4d-aabb-35c3fa4d58ea",
+      "what": "Low Earth orbit at dawn over the Alberta Rockies"
+    },
+    {
+      "file": "02-rockies.webp",
+      "job": "0f40b726-4b28-4370-ac94-299b8f478c5b",
+      "what": "Glacial valley at first light, prairie in the distance"
+    },
+    {
+      "file": "03-plant.webp",
+      "job": "276b1423-aa14-4200-a243-a0f82b52fa44",
+      "what": "Hydrogen plant at sunrise, camera along a pipe rack"
+    },
+    {
+      "file": "04-line.webp",
+      "job": "0b395bdf-2db7-4cd0-bdc5-c0a45718ff4c",
+      "what": "Carton line in a packaging plant, low along the conveyor"
+    },
+    {
+      "file": "05-twin.webp",
+      "job": "f58b299f-30db-44b7-a027-5b93be95cdcd",
+      "what": "The same frame redrawn as a digital twin (edit of frame 04)"
+    },
+    {
+      "file": "06-sf.webp",
+      "job": "d509dff3-c60b-4c70-a910-78565e407b6f",
+      "what": "Golden Gate above the fog at blue hour"
+    },
+    {
+      "file": "07-towns.webp",
+      "job": "d047223c-d9e5-4abe-ac04-c7c59976b8ff",
+      "what": "Small-town lights across the U.S. interior at night"
+    },
+    {
+      "file": "08-nyc.webp",
+      "job": "85f70ecc-c669-45c3-829e-44c3ae69f5b9",
+      "what": "Down a Manhattan avenue at night"
+    },
+    {
+      "file": "09-doha.webp",
+      "job": "1d00cc9a-334c-48f4-bc2a-db8e8077861f",
+      "what": "Doha's West Bay across the water at sunrise"
+    }
+  ],
+  "mids": [
+    {
+      "hop": "orbit-rockies",
+      "job": "a89d511e-1f04-43f1-aac4-8016088921c5",
+      "what": "25 km up over the Rockies, curved horizon, the lake far below"
+    },
+    {
+      "hop": "plant-line",
+      "job": "aca0de84-5e09-41f7-9863-58e917c7a099",
+      "what": "The pipe rack running into an open factory door"
+    },
+    {
+      "hop": "twin-sf",
+      "job": "c6789bee-f04a-4ccc-b28f-48e40fc7cfd7",
+      "what": "The wireframe conveyor turning into the bridge deck"
+    },
+    {
+      "hop": "nyc-doha",
+      "job": "814f9d9b-cf63-4bba-857b-b20685fc4c3a",
+      "what": "Low over open sea before dawn, skyline on the horizon"
+    }
+  ],
+  "clips_note": "Hop clips generated 2026-11-13 with flux_3_video at 1080p, no audio, 8 credits a second. Each takes the stop before it as start_image, the stop after it as end_image, and the mid frame (when there is one) as image_references. The orbit start frame is public/film/00-orbit-live.webp imported as media ef03665d-4816-450b-bb95-acd1f0d54505.",
+  "clips": [
+    {
+      "clip": "orbit-rockies",
+      "job": "ed42e2ab-61dd-42a9-8bb1-116e67b94d56",
+      "seconds": 10
+    },
+    {
+      "clip": "rockies-plant",
+      "job": "0d91764d-fdcc-4035-b505-ffee3b1aecf6",
+      "seconds": 8
+    },
+    {
+      "clip": "plant-line",
+      "job": "b478c27e-6d9e-4bed-8297-599d203f609b",
+      "seconds": 8
+    },
+    {
+      "clip": "twin-sf",
+      "job": "66792d85-922f-4650-a03c-98be1c0d925c",
+      "seconds": 8
+    },
+    {
+      "clip": "sf-towns",
+      "job": "9b730213-8708-4967-97fb-d134e5a09e85",
+      "seconds": 8
+    },
+    {
+      "clip": "towns-nyc",
+      "job": "74455f0f-412a-4950-922f-eb564758b679",
+      "seconds": 8
+    },
+    {
+      "clip": "nyc-doha",
+      "job": "3bd3392c-52ca-4c9b-af15-4f9bb07339e0",
+      "seconds": 8
+    }
   ]
 }

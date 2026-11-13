@@ -88,13 +88,13 @@ export const STOPS: Stop[] = [
 /** One hop per pair of neighbouring stops, in order. */
 export const HOPS: Hop[] = [
   { from: 0, to: 1, kind: "video", clip: "orbit-rockies" },
-  { from: 1, to: 2, kind: "fade" },
-  { from: 2, to: 3, kind: "fade", veil: "steam" },
+  { from: 1, to: 2, kind: "video", clip: "rockies-plant" },
+  { from: 2, to: 3, kind: "video", clip: "plant-line", veil: "steam" },
   { from: 3, to: 4, kind: "wipe" }, // the real line turns into its model; stays a wipe
-  { from: 4, to: 5, kind: "fade", veil: "fog" },
-  { from: 5, to: 6, kind: "fade" },
-  { from: 6, to: 7, kind: "fade" },
-  { from: 7, to: 8, kind: "fade", veil: "dark" },
+  { from: 4, to: 5, kind: "video", clip: "twin-sf", veil: "fog" },
+  { from: 5, to: 6, kind: "video", clip: "sf-towns" },
+  { from: 6, to: 7, kind: "video", clip: "towns-nyc" },
+  { from: 7, to: 8, kind: "video", clip: "nyc-doha", veil: "dark" },
 ];
 
 export const VEILS: Record<Veil, string> = {

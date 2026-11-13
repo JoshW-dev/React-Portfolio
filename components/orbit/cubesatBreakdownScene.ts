@@ -1,9 +1,11 @@
 import type * as THREE from "three";
-import { buildCubeSat, CAMERA, SET, type PointName, type Role, type SetIndex } from "./cubesat";
+import type { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js";
+import { buildCubeSat, CAMERA, SET, type EdgeLines, type PointName, type Role, type SetIndex } from "./cubesat";
 import {
   createProjector,
   createRenderer,
   disposeRenderer,
+  isWideStage,
   lerp,
   near,
   placeCallouts,
@@ -31,11 +33,23 @@ import type { BreakdownScene, SceneContext } from "@/components/breakdown/Scroll
   5  the camera: still on target, focus closes in on the end unit, its skin goes see-through,
      the lens and image sensor in blue, light from the target through the lens onto the sensor
 
-  Blue marks the part each step is about. Overlays (Earth, sun, particles, sight line) are
-  SVG over the canvas, placed from projected 3D points every frame.
+  Blue marks the part each step is about. Overlays (sun, particles, sight line) are SVG over
+  the canvas, placed from projected 3D points every frame. Earth's limb is one faint arc low
+  on the stage, behind the canvas, the same in every step, so the satellite is always in orbit
+  over it; the ground station and the target sit on it.
+
+  The drawing look keeps the parts solid: light grey faces under modelled light, the cells
+  their own dark blue, and ink edges a little over a pixel wide, heavier on the subject.
 */
 
 type Three = typeof THREE;
+
+/** The three.js line addons, loaded by the caller next to three.js, for edges wider than 1px. */
+export type LineModules = {
+  LineSegments2: typeof import("three/examples/jsm/lines/LineSegments2.js").LineSegments2;
+  LineSegmentsGeometry: typeof import("three/examples/jsm/lines/LineSegmentsGeometry.js").LineSegmentsGeometry;
+  LineMaterial: typeof import("three/examples/jsm/lines/LineMaterial.js").LineMaterial;
+};
 
 export type CalloutKey = "antenna" | "camera" | "array" | "wheels" | "torquers" | "computer" | "lens" | "sensor";
 export type NoteKey = "station" | "sun" | "angle10" | "particles" | "target" | "angle65";
@@ -83,32 +97,37 @@ const POSES_WIDE: Pose[] = [
   POSES_TALL[4],
   POSES_TALL[5],
 ];
+// The model fills about 70% of the stage's height, centred on the step text beside it. The
+// steps with something on the ground (0, 4, 5) sit higher, to leave room for the line down
+// to Earth's limb at LIMB.
 const FRAMES_TALL: Frame[] = [
-  [0.2, 0.05, 0.8, 0.7],
-  [0.3, 0.24, 0.9, 0.9],
-  [0.27, 0.03, 0.73, 0.97],
-  [0.27, 0.03, 0.73, 0.97],
-  [0.2, 0.08, 0.8, 0.64],
-  [0.2, 0.08, 0.8, 0.64],
+  [0.12, 0.08, 0.88, 0.79],
+  [0.24, 0.1, 0.98, 0.84],
+  [0.27, 0.0, 0.73, 1.0],
+  [0.27, 0.0, 0.73, 1.0],
+  [0.2, 0.05, 0.8, 0.66],
+  [0.2, 0.05, 0.8, 0.66],
 ];
 const FRAMES_WIDE: Frame[] = [
-  [0.27, 0.04, 0.73, 0.72],
-  [0.36, 0.2, 0.9, 0.8],
-  [0.05, 0.22, 0.95, 0.8],
-  [0.05, 0.22, 0.95, 0.8],
-  [0.27, 0.04, 0.73, 0.68],
-  [0.27, 0.04, 0.73, 0.68],
+  [0.12, 0.05, 0.88, 0.74],
+  [0.22, 0.1, 0.97, 0.8],
+  [0.04, 0.18, 0.96, 0.82],
+  [0.04, 0.18, 0.96, 0.82],
+  [0.18, 0.04, 0.82, 0.64],
+  [0.18, 0.04, 0.82, 0.64],
 ];
+/** The top of Earth's limb, as a fraction of the stage height. */
+const LIMB = { tall: 0.885, wide: 0.86 };
 /** The last step's position. */
 const LAST = POSES_TALL.length - 1;
 /** Steps 2 and 3 close in on one unit; this is where that unit sits. */
-const FOCUS_TALL: Frame = [0.3, 0.25, 0.7, 0.71];
-const FOCUS_WIDE: Frame = [0.3, 0.2, 0.7, 0.8];
+const FOCUS_TALL: Frame = [0.25, 0.14, 0.75, 0.8];
+const FOCUS_WIDE: Frame = [0.2, 0.08, 0.8, 0.82];
 /** Step 5 closes in on the camera unit higher up, leaving room for the light below it. */
 const CLOSE_UPS: { unit: number; step: number; tall: Frame; wide: Frame }[] = [
   { unit: 1, step: 2, tall: FOCUS_TALL, wide: FOCUS_WIDE },
   { unit: 2, step: 3, tall: FOCUS_TALL, wide: FOCUS_WIDE },
-  { unit: 0, step: 5, tall: [0.27, 0.07, 0.73, 0.62], wide: [0.3, 0.04, 0.7, 0.63] },
+  { unit: 0, step: 5, tall: [0.25, 0.04, 0.75, 0.6], wide: [0.24, 0.03, 0.76, 0.6] },
 ];
 
 type CalloutSpec = { key: CalloutKey; point: PointName; weight: (p: number) => number; tall: Side; wide: Side };
@@ -129,7 +148,7 @@ const COMPUTER_PARTS: Role[] = ["pcb", "chip", "gold"];
 const CAMERA_PARTS: Role[] = ["black", "glass", "sensor"];
 const ALL_SETS: SetIndex[] = [SET.payload, SET.adcs, SET.power, SET.wings];
 
-export function createCubeSatBreakdown(T: Three, ctx: SceneContext, dom: CubeSatDom): BreakdownScene {
+export function createCubeSatBreakdown(T: Three, ctx: SceneContext, dom: CubeSatDom, fat?: LineModules): BreakdownScene {
   const { canvas, host, position, reducedMotion, invalidate } = ctx;
   const palette = readPalette(host);
   const renderer = createRenderer(T, canvas, { toneMapping: "neutral" });
@@ -171,7 +190,20 @@ export function createCubeSatBreakdown(T: Three, ctx: SceneContext, dom: CubeSat
   scene.add(hemi, key, rim);
 
   const anisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), 8);
-  const sat = buildCubeSat(T, { interior: true, edges: true, ink: palette.ink, accent: palette.agent, anisotropy });
+  // Edges in CSS pixels: plain WebGL lines are one device pixel, a hairline on a retina screen.
+  const lineMats: LineMaterial[] = [];
+  const lines: EdgeLines | undefined = fat && {
+    material() {
+      const m = new fat.LineMaterial({ color: palette.ink, linewidth: 1, transparent: true, opacity: 0, depthWrite: false });
+      m.toneMapped = false;
+      lineMats.push(m);
+      return m;
+    },
+    object(edges, material) {
+      return new fat.LineSegments2(new fat.LineSegmentsGeometry().fromEdgesGeometry(edges), material as LineMaterial);
+    },
+  };
+  const sat = buildCubeSat(T, { interior: true, edges: true, lines, ink: palette.ink, accent: palette.agent, anisotropy });
   // pivot (drag) > sway > story attitude > satellite
   const pivot = new T.Group();
   const sway = new T.Group();
@@ -255,7 +287,8 @@ export function createCubeSatBreakdown(T: Three, ctx: SceneContext, dom: CubeSat
     if (!size) return;
     width = size.width;
     height = size.height;
-    wide = width / height > 0.95;
+    wide = isWideStage(width, height);
+    for (const m of lineMats) m.resolution.set(width, height);
     remeasureCallouts(callouts);
     noteSizes.clear();
   }
@@ -286,10 +319,11 @@ export function createCubeSatBreakdown(T: Three, ctx: SceneContext, dom: CubeSat
     sat.setTint(SET.adcs, ADCS_PARTS, near(p, 2, 0.25, 0.6));
     sat.setTint(SET.power, COMPUTER_PARTS, near(p, 3, 0.25, 0.6));
     sat.setTint(SET.payload, CAMERA_PARTS, near(p, 5, 0.25, 0.6));
-    // Flatter, brighter light for the drawing; modelled light for the real thing.
-    hemi.intensity = 1.0 + 1.9 * schematic;
-    key.intensity = 2.2 - 1.3 * schematic;
-    rim.intensity = 0.9 - 0.6 * schematic;
+    // Softer, brighter light for the drawing, still directional so each face reads as a
+    // plane; modelled light for the real thing.
+    hemi.intensity = 1.0 + 0.9 * schematic;
+    key.intensity = 2.2 - 0.6 * schematic;
+    rim.intensity = 0.9 - 0.45 * schematic;
     return explode;
   }
 
@@ -317,7 +351,7 @@ export function createCubeSatBreakdown(T: Three, ctx: SceneContext, dom: CubeSat
     into.n = 0;
     obj.traverseVisible((o) => {
       const m = o as THREE.Mesh;
-      if (!m.isMesh) return;
+      if (!m.isMesh || m.userData.edge) return;
       if (skipAntennas && m.userData.role === "tape") return;
       const mat = m.material as THREE.Material;
       if (mat.transparent && mat.opacity < 0.5) return;
@@ -447,6 +481,9 @@ export function createCubeSatBreakdown(T: Three, ctx: SceneContext, dom: CubeSat
     opacity: 0,
   }));
   const noteSizes = new Map<HTMLElement, { w: number; h: number }>();
+  /** The stage width and limb height the limb was last drawn for. */
+  let limbW = 0;
+  let limbTop = 0;
   const f1 = (n: number) => n.toFixed(1);
   const setOpacity = (el: Element, o: number) => {
     (el as HTMLElement | SVGElement).style.opacity = o > 0.01 ? o.toFixed(3) : "0";
@@ -487,17 +524,19 @@ export function createCubeSatBreakdown(T: Three, ctx: SceneContext, dom: CubeSat
     const W = width;
     const H = height;
 
-    // Earth: a wide arc across the bottom, for the task, the photo and the camera.
-    const wEarth = p >= 4 ? 1 : Math.max(near(p, 0), near(p, 4));
+    // Earth's limb: one wide arc low on the stage, the same in every step. It sits behind the
+    // canvas, so the satellite passes in front of it.
     const R = Math.max(W, H) * 2.4;
-    const yTop = H * (wide ? 0.86 : 0.85);
+    const yTop = H * (wide ? LIMB.wide : LIMB.tall);
     const ex = W / 2;
     const ey = yTop + R;
     const yAt = (x: number) => ey - Math.sqrt(R * R - (x - ex) * (x - ex));
-    const rise = (1 - wEarth) * 24;
-    dom.earth.setAttribute("d", `M -2 ${f1(yAt(-2))} A ${f1(R)} ${f1(R)} 0 0 1 ${f1(W + 2)} ${f1(yAt(W + 2))} L ${f1(W + 2)} ${f1(H + 2)} L -2 ${f1(H + 2)} Z`);
-    dom.earth.setAttribute("transform", `translate(0 ${f1(rise)})`);
-    setOpacity(dom.earth, wEarth);
+    const rise = 0;
+    if (W !== limbW || yTop !== limbTop) {
+      limbW = W;
+      limbTop = yTop;
+      dom.earth.setAttribute("d", `M -2 ${f1(yAt(-2))} A ${f1(R)} ${f1(R)} 0 0 1 ${f1(W + 2)} ${f1(yAt(W + 2))} L ${f1(W + 2)} ${f1(H + 2)} L -2 ${f1(H + 2)} Z`);
+    }
 
     // Step 0: a ground station radios the coordinates up to the antennas.
     const w0 = near(p, 0, 0.25, 0.5);

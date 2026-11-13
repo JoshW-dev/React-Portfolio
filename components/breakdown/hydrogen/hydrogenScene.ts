@@ -1,5 +1,6 @@
 import type * as THREE from "three";
 import {
+  isWideStage,
   createProjector,
   createRenderer,
   disposeRenderer,
@@ -187,7 +188,7 @@ export function createHydrogenScene(T: Three, ctx: SceneContext, dom: HydrogenDo
     if (!size) return;
     width = size.width;
     height = size.height;
-    wide = width / height > 0.95;
+    wide = isWideStage(width, height);
     sizes.clear();
   }
   const measure = (el: HTMLElement) => {

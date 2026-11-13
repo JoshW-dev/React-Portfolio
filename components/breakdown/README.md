@@ -1,6 +1,6 @@
 # Scroll breakdowns
 
-A pinned 3D visual on the left, steps on the right; scrolling drives the visual. Worked example: `components/orbit/CubeSatBreakdown.tsx` with `cubesatBreakdownScene.ts`.
+A pinned 3D visual on the left (about 60% of the screen, running to its left edge), steps on the right (about 34%); scrolling drives the visual. Under the visual sit the caption and a step marker ("2 / 6" and a hairline that fills as the steps go by). Worked example: `components/orbit/CubeSatBreakdown.tsx` with `cubesatBreakdownScene.ts`.
 
 ## Build one
 
@@ -8,7 +8,8 @@ A pinned 3D visual on the left, steps on the right; scrolling drives the visual.
 2. `Visual` renders `<BreakdownCanvas api={api} load={async () => { const m = await import("./myScene"); return (T, ctx) => m.createMyScene(T, ctx, overlayRefs) }}>`, with SVG and HTML label overlays as children.
 3. The scene module returns `{ frame(dt), resize(), dispose() }`. In `frame`, read `ctx.position.current`: 0 at step 0, 1 at step 1, fractional between. With reduced motion it is whole numbers and `frame(0)` runs only on change, so don't animate between states.
 4. Drive values with `track([v0, v1, ...], p)` (holds at each step, eases between) and fade overlays with `near(p, i)`.
-5. Page: render it full width inside the `wrap` article, like the `cubesat` case in `app/projects/[slug]/page.tsx`.
+5. Page: render it outside the page's `wrap`, so it runs the full width of the screen, as `app/projects/[slug]/page.tsx` does.
+6. Pick layouts with `isWideStage(width, height)` from `kit.ts`. The desktop stage is about square, so a plain aspect test can't tell it from a phone.
 
 ## kit.ts
 

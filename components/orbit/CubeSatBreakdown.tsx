@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useId, useRef } from "react";
 import ScrollBreakdown, {
   BreakdownCanvas,
   type BreakdownApi,
@@ -170,14 +170,31 @@ function Visual({ api }: { api: BreakdownApi }) {
   };
 
   const load = async (): Promise<SceneFactory> => {
-    const mod = await import("./cubesatBreakdownScene");
-    return (T, ctx) => mod.createCubeSatBreakdown(T, ctx, collect(refs.current));
+    const [mod, seg, geo, mat] = await Promise.all([
+      import("./cubesatBreakdownScene"),
+      import("three/examples/jsm/lines/LineSegments2.js"),
+      import("three/examples/jsm/lines/LineSegmentsGeometry.js"),
+      import("three/examples/jsm/lines/LineMaterial.js"),
+    ]);
+    const fat = { LineSegments2: seg.LineSegments2, LineSegmentsGeometry: geo.LineSegmentsGeometry, LineMaterial: mat.LineMaterial };
+    return (T, ctx) => mod.createCubeSatBreakdown(T, ctx, collect(refs.current), fat);
   };
+  // Ids in url() references must be plain.
+  const tintId = `limb-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
 
   return (
     <BreakdownCanvas api={api} load={load} fallback="The 3D drawing of the satellite needs WebGL." className={styles.host}>
+      {/* Earth's limb, behind the canvas. */}
+      <svg className={styles.ground} aria-hidden="true">
+        <defs>
+          <linearGradient id={tintId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" className={styles.tintTop} />
+            <stop offset="0.6" className={styles.tintBottom} />
+          </linearGradient>
+        </defs>
+        <path ref={path("earth")} className={styles.earth} fill={`url(#${tintId})`} />
+      </svg>
       <svg className={styles.overlay} aria-hidden="true">
-        <path ref={path("earth")} className={styles.earth} />
         <path ref={path("station")} className={styles.station} />
         <path ref={path("uplink")} className={styles.uplink} />
         <path ref={path("rays")} className={styles.rays} />

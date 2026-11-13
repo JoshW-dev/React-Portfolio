@@ -1,13 +1,19 @@
 /*
-  Wide: the visual pins on the left at full screen height while the steps scroll past on
-  the right. Narrow: the visual pins across the top and the steps scroll under it.
+  Wide: the section runs the full width of the screen. The visual pins on the left at full
+  screen height, about 60% of the width and running to the left edge; the steps scroll past
+  on the right in about 34%, each one's text centred on the screen when it is current.
+  Narrow: the visual pins across the top and the steps scroll under it.
 */
 
 .root {
+  /* The page grid's left edge, for the caption and marker under the visual. */
+  --page-left: max(var(--gutter), calc((100vw - var(--wrap)) / 2 + var(--gutter)));
+
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
-  column-gap: clamp(32px, 4.4vw, 72px);
+  grid-template-columns: minmax(0, 60fr) minmax(0, 34fr);
+  column-gap: clamp(32px, 4vw, 64px);
+  padding-right: var(--gutter);
 }
 
 .stage {
@@ -18,7 +24,7 @@
   height: 100svh;
   display: flex;
   flex-direction: column;
-  padding-block: 20px;
+  padding-block: 16px 18px;
 }
 
 .visual {
@@ -27,15 +33,64 @@
   min-height: 0;
 }
 
-.caption {
+/* Under the visual: the caption on the left, the step marker on the right. */
+.foot {
   flex: none;
-  padding-top: 10px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 24px;
+  padding-top: 12px;
+  padding-left: var(--page-left);
+}
+
+.caption {
+  min-width: 0;
   max-width: 34em;
 }
 
+.marker {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+  font-size: 0.8125rem;
+  line-height: 1;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.now {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.track {
+  position: relative;
+  width: 88px;
+  height: 1px;
+  overflow: hidden;
+  background: var(--line);
+}
+
+.fill {
+  position: absolute;
+  inset: 0;
+  background: var(--ink);
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+
+/*
+  Padding on the list puts the first step's text in the middle of the screen just as the
+  visual pins, and keeps the visual pinned while the last step is in the middle.
+*/
 .steps {
   margin: 0;
-  padding: 0;
+  padding: 7.5vh 0;
+  padding: 7.5svh 0;
   list-style: none;
 }
 
@@ -49,7 +104,7 @@
 }
 
 .copy {
-  max-width: 27em;
+  max-width: 30em;
   opacity: 0.28;
   transition: opacity 0.35s var(--ease);
 }
@@ -58,12 +113,17 @@
   opacity: 1;
 }
 
-.title {
+.copy .title {
+  font-size: clamp(1.5rem, 2.3vw, 2.125rem);
+  line-height: 1.08;
+  letter-spacing: -0.022em;
   text-wrap: balance;
 }
 
 .body {
-  margin-top: 16px;
+  margin-top: 18px;
+  font-size: clamp(1.0625rem, 1.25vw, 1.1875rem);
+  line-height: 1.5;
 }
 
 .body p {
@@ -118,23 +178,39 @@
 @media (max-width: 799px) {
   .root {
     grid-template-columns: minmax(0, 1fr);
+    padding-right: 0;
   }
 
   .stage {
     z-index: 2;
-    height: 46vh;
-    height: 46svh;
+    height: 50vh;
+    height: 50svh;
     padding-block: 8px 0;
-    margin-inline: calc(-1 * var(--gutter));
-    padding-inline: var(--gutter);
     background: var(--bg);
     border-bottom: 1px solid var(--line);
   }
 
+  .foot {
+    gap: 16px;
+    padding: 6px var(--gutter) 8px;
+  }
+
   .caption {
-    padding-top: 4px;
-    padding-bottom: 6px;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
+    line-height: 1.35;
+  }
+
+  .marker {
+    gap: 8px;
+    font-size: 0.75rem;
+  }
+
+  .track {
+    width: 36px;
+  }
+
+  .steps {
+    padding: 0 var(--gutter);
   }
 
   .step {
@@ -143,8 +219,12 @@
     padding-block: 24px;
   }
 
+  .copy .title {
+    font-size: 1.375rem;
+  }
+
   .body {
     margin-top: 12px;
-    font-size: 1rem;
+    font-size: 1.0625rem;
   }
 }

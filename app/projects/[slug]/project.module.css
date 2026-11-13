@@ -1,3 +1,11 @@
+/*
+  The article. A page that opens on a film frame has no top padding, so the frame starts at
+  the top. Every page ends on the Next link, whose own padding sets the gap to the footer.
+*/
+.page {
+  padding-bottom: 0;
+}
+
 /* Small text link, padded to a 44px tap target. */
 .back {
   display: inline-flex;
@@ -13,6 +21,62 @@
   margin-top: clamp(20px, 2.4vw, 32px);
 }
 
+/* ---------- the opening frame ---------- */
+
+/*
+  The film's frame for the project, full-bleed, with the title and summary on the page grid
+  at the bottom left: the picture and caption position the visitor clicked on in the film.
+*/
+.hero {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  height: 86vh;
+  height: 86svh;
+  min-height: 460px;
+  overflow: hidden;
+  background: #05070b;
+  color: #fff;
+}
+
+.heroImage {
+  object-fit: cover;
+}
+
+/* Darkens the bottom and left so white words read on any frame, and the top for the nav. */
+.hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to top, rgb(0 0 0 / 0.66), rgb(0 0 0 / 0.3) 30%, rgb(0 0 0 / 0) 58%),
+    linear-gradient(to right, rgb(0 0 0 / 0.28), rgb(0 0 0 / 0) 60%),
+    linear-gradient(to bottom, rgb(0 0 0 / 0.32), rgb(0 0 0 / 0) 18%);
+  pointer-events: none;
+}
+
+.heroText {
+  position: relative;
+  z-index: 1;
+  padding-bottom: clamp(28px, 6vh, 72px);
+  text-shadow: 0 1px 18px rgb(0 0 0 / 0.3);
+}
+
+.heroText .back {
+  margin-bottom: clamp(4px, 1vw, 12px);
+  opacity: 0.9;
+}
+
+.heroTitle {
+  max-width: 14em;
+}
+
+.heroText .summary {
+  margin-top: clamp(14px, 1.8vw, 24px);
+}
+
+/* ---------- figure ---------- */
+
 .figure {
   max-width: 1040px;
   margin-top: clamp(40px, 6vw, 80px);
@@ -25,12 +89,51 @@
   border-radius: 6px;
 }
 
+.figure figcaption {
+  margin-top: 14px;
+  max-width: 34em;
+}
+
+.diagram {
+  max-width: 700px;
+  padding-block: clamp(8px, 2vw, 24px);
+}
+
+/* ---------- breakdown ---------- */
+
+/* A scroll breakdown runs the full width of the screen. */
+.breakdown {
+  margin-top: clamp(32px, 5vw, 64px);
+}
+
+.breakdownAfterHero {
+  margin-top: 0;
+}
+
+/* ---------- about the project: the story on the left, the facts on the right ---------- */
+
 .cols {
+  --cols-gap: clamp(40px, 6vw, 96px);
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
-  gap: clamp(40px, 6vw, 96px);
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  gap: var(--cols-gap);
   align-items: start;
-  margin-top: clamp(48px, 7vw, 104px);
+  margin-top: clamp(56px, 7vw, 104px);
+}
+
+/*
+  After a breakdown, the facts start where the steps column above them started (see
+  ScrollBreakdown.module.css: 60fr and 34fr after the right gutter and the gap), so the
+  step text and the facts share one left edge.
+*/
+.colsAfterBreakdown {
+  --steps-left: calc((100vw - var(--gutter) - clamp(32px, 4vw, 64px)) * 60 / 94 + clamp(32px, 4vw, 64px));
+  --page-left: max(var(--gutter), calc((100vw - var(--wrap)) / 2 + var(--gutter)));
+  grid-template-columns: minmax(0, min(calc(var(--steps-left) - var(--page-left) - var(--cols-gap)), 62%)) minmax(0, 1fr);
+}
+
+.body {
+  max-width: 38em;
 }
 
 .fact {
@@ -63,9 +166,8 @@
   flex-direction: column;
   justify-content: center;
   gap: 10px;
-  min-height: 120px;
-  margin-top: clamp(72px, 10vw, 140px);
-  padding-block: 28px;
+  margin-top: clamp(64px, 8vw, 120px);
+  padding-block: clamp(28px, 3vw, 40px);
   border-top: 1px solid var(--line);
   text-decoration: none;
   transition: padding-left 0.25s var(--ease);
@@ -82,6 +184,12 @@
 }
 
 @media (max-width: 799px) {
+  .hero {
+    height: 70vh;
+    height: 70svh;
+    min-height: 420px;
+  }
+
   .cols {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -93,19 +201,4 @@
   .actions a {
     width: 100%;
   }
-}
-
-.diagram {
-  max-width: 700px;
-  padding-block: clamp(8px, 2vw, 24px);
-}
-
-.figure figcaption {
-  margin-top: 14px;
-  max-width: 34em;
-}
-
-/* A scroll breakdown runs the full width of the page. */
-.breakdown {
-  margin-top: clamp(32px, 5vw, 64px);
 }

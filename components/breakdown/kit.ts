@@ -81,6 +81,21 @@ export function near(position: number, i: number, inner = 0.3, outer = 0.55): nu
   return 1 - ramp(Math.abs(position - i), inner, outer);
 }
 
+/* ---------- stage shape ---------- */
+
+/** The shell's phone layout: the visual pinned across the top, the steps under it. */
+export const NARROW_QUERY = "(max-width: 799px)";
+
+/**
+ * Whether a scene should use its layout for a wide stage. On phones the stage counts as
+ * wide from about square. On wide screens the stage is about square already, so there it
+ * takes a clearly wide stage, such as a short browser window.
+ */
+export function isWideStage(width: number, height: number) {
+  const narrow = typeof window !== "undefined" && window.matchMedia(NARROW_QUERY).matches;
+  return width / height > (narrow ? 0.95 : 1.45);
+}
+
 /* ---------- renderer ---------- */
 
 export class NoWebGLError extends Error {}

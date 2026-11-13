@@ -36,6 +36,8 @@ function Figure({ item }: { item: Work }) {
     );
   }
   if (!item.image) return null;
+  // The page already opens on this picture.
+  if (item.frame && item.frame.src === item.image.src) return null;
   const media = mediaFor(item.slug);
   const still = media.hero ?? item.image;
   return (
@@ -111,60 +113,82 @@ export default async function ProjectPage({ params }: Props) {
   if (item.years) facts.push({ term: "Years", value: item.years });
   if (item.stack?.length) facts.push({ term: "Built with", value: item.stack.join(", ") });
 
+  const frame = item.frame;
+
   return (
-    <article className="wrap section--tight">
-      <Link href="/projects" className={`link small ${styles.back}`}>
-        All projects
-      </Link>
-
-      <header className={styles.head}>
-        <h1 className="title">{item.title}</h1>
-        <p className={`lede ${styles.summary}`}>{item.summary}</p>
-      </header>
-
-      {Breakdown ? <Breakdown className={styles.breakdown} /> : null}
-      <Figure item={item} />
-
-      <div className={styles.cols}>
-        <aside className={styles.side}>
-          <dl className={styles.facts}>
-            {facts.map((f) => (
-              <div key={f.term} className={styles.fact}>
-                <dt className="muted">{f.term}</dt>
-                <dd>{f.value}</dd>
-              </div>
-            ))}
-          </dl>
-          {item.links.length > 0 ? (
-            <div className={styles.actions}>
-              {item.links.map((l, i) => (
-                <a
-                  key={l.href}
-                  href={l.href}
-                  target="_blank"
-                  rel="noopener"
-                  className={i === 0 ? "btn" : "btn btn--quiet"}
-                >
-                  {l.label}
-                </a>
-              ))}
-            </div>
-          ) : null}
-        </aside>
-
-        <div className={`prose ${styles.body}`}>
-          {item.body.map((p, i) => (
-            <p key={i} className={i === 0 ? "lede" : undefined}>
-              {p}
-            </p>
-          ))}
+    <article className={frame ? styles.page : `section--tight ${styles.page}`}>
+      {frame ? (
+        // The film's frame for this project, with the title where the film's caption sat.
+        // data-film puts the site header over it in white (see globals.css).
+        <header className={styles.hero} data-film>
+          <Image src={frame.src} alt={frame.alt} fill preload sizes="100vw" className={styles.heroImage} />
+          <div className={`wrap ${styles.heroText}`}>
+            <Link href="/projects" className={`link small ${styles.back}`}>
+              All projects
+            </Link>
+            <h1 className={`title ${styles.heroTitle}`}>{item.title}</h1>
+            <p className={`lede ${styles.summary}`}>{item.summary}</p>
+          </div>
+        </header>
+      ) : (
+        <div className="wrap">
+          <Link href="/projects" className={`link small ${styles.back}`}>
+            All projects
+          </Link>
+          <header className={styles.head}>
+            <h1 className="title">{item.title}</h1>
+            <p className={`lede ${styles.summary}`}>{item.summary}</p>
+          </header>
         </div>
-      </div>
+      )}
 
-      <Link href={`/projects/${next.slug}`} className={styles.next}>
-        <span className="small muted">Next</span>
-        <span className="h2">{next.title}</span>
-      </Link>
+      {/* A breakdown runs the full width of the screen, outside the wrap. */}
+      {Breakdown ? <Breakdown className={frame ? styles.breakdownAfterHero : styles.breakdown} /> : null}
+
+      <div className="wrap">
+        <Figure item={item} />
+
+        <div className={Breakdown ? `${styles.cols} ${styles.colsAfterBreakdown}` : styles.cols}>
+          <div className={`prose ${styles.body}`}>
+            {item.body.map((p, i) => (
+              <p key={i} className={i === 0 ? "lede" : undefined}>
+                {p}
+              </p>
+            ))}
+          </div>
+
+          <aside className={styles.side}>
+            <dl className={styles.facts}>
+              {facts.map((f) => (
+                <div key={f.term} className={styles.fact}>
+                  <dt className="muted">{f.term}</dt>
+                  <dd>{f.value}</dd>
+                </div>
+              ))}
+            </dl>
+            {item.links.length > 0 ? (
+              <div className={styles.actions}>
+                {item.links.map((l, i) => (
+                  <a
+                    key={l.href}
+                    href={l.href}
+                    target="_blank"
+                    rel="noopener"
+                    className={i === 0 ? "btn" : "btn btn--quiet"}
+                  >
+                    {l.label}
+                  </a>
+                ))}
+              </div>
+            ) : null}
+          </aside>
+        </div>
+
+        <Link href={`/projects/${next.slug}`} className={styles.next}>
+          <span className="small muted">Next</span>
+          <span className="h2">{next.title}</span>
+        </Link>
+      </div>
     </article>
   );
 }

@@ -1,5 +1,6 @@
 import type * as THREE from "three";
 import {
+  isWideStage,
   createProjector,
   createRenderer,
   disposeRenderer,
@@ -146,7 +147,7 @@ export function createLinesScene(T: Three, ctx: SceneContext): BreakdownScene {
     if (!size) return;
     width = size.width;
     height = size.height;
-    wide = width / height > 0.95;
+    wide = isWideStage(width, height);
     sizes.clear();
   }
 

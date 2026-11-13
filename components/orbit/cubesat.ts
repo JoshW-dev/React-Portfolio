@@ -71,26 +71,29 @@ type Spec = {
   map?: boolean;
   /** Edge line weight in the drawing look. */
   weight?: number;
+  /** Surface colour in the drawing look (edges only): greys, so blue stays for the subject. */
+  draw: number;
 };
 
 const SPEC: Record<Role, Spec> = {
-  alu: { color: 0xc3c7cd, metal: 0.95, rough: 0.32, weight: 0.4 },
-  plate: { color: 0xb4b8be, metal: 0.9, rough: 0.42, weight: 0.4 },
-  skin: { color: 0xb3b7bd, metal: 0.85, rough: 0.46, ghost: true },
-  black: { color: 0x1b1d21, metal: 0.55, rough: 0.42 },
-  substrate: { color: 0x1d2924, metal: 0.2, rough: 0.5, ghost: true },
-  cell: { color: 0xffffff, metal: 0.3, rough: 0.3, ghost: true, coat: 1, map: true },
-  hinge: { color: 0xb9bdc3, metal: 0.95, rough: 0.35, ghost: true },
-  glass: { color: 0x080b14, metal: 0, rough: 0.04, coat: 1 },
-  tape: { color: 0xd3c8a8, metal: 0.9, rough: 0.32 },
-  antennaBase: { color: 0x202a26, metal: 0.2, rough: 0.55 },
-  pcb: { color: 0x1d5a3b, metal: 0.05, rough: 0.6 },
-  chip: { color: 0x141518, metal: 0.2, rough: 0.45 },
-  gold: { color: 0xd4a54a, metal: 1, rough: 0.3 },
-  copper: { color: 0xb9703f, metal: 1, rough: 0.36 },
-  rotor: { color: 0xc9ccd2, metal: 1, rough: 0.22 },
-  battery: { color: 0x3d5d57, metal: 0.15, rough: 0.45 },
-  sensor: { color: 0x1a1c22, metal: 0.25, rough: 0.35 },
+  alu: { color: 0xc3c7cd, metal: 0.95, rough: 0.32, weight: 0.7, draw: 0xd3d7dc },
+  plate: { color: 0xb4b8be, metal: 0.9, rough: 0.42, weight: 0.7, draw: 0xcdd2d8 },
+  skin: { color: 0xb3b7bd, metal: 0.85, rough: 0.46, ghost: true, draw: 0xe4e7eb },
+  black: { color: 0x1b1d21, metal: 0.55, rough: 0.42, draw: 0x3c4047 },
+  substrate: { color: 0x1d2924, metal: 0.2, rough: 0.5, ghost: true, draw: 0xc6cbd2 },
+  // The cells keep their own dark blue in the drawing look; draw is unused for them.
+  cell: { color: 0xffffff, metal: 0.3, rough: 0.3, ghost: true, coat: 1, map: true, draw: 0x1f2d5e },
+  hinge: { color: 0xb9bdc3, metal: 0.95, rough: 0.35, ghost: true, draw: 0xb5bac1 },
+  glass: { color: 0x080b14, metal: 0, rough: 0.04, coat: 1, draw: 0x1b2232 },
+  tape: { color: 0xd3c8a8, metal: 0.9, rough: 0.32, draw: 0xdcdfe3 },
+  antennaBase: { color: 0x202a26, metal: 0.2, rough: 0.55, draw: 0xb9bec5 },
+  pcb: { color: 0x1d5a3b, metal: 0.05, rough: 0.6, draw: 0xbac7bf },
+  chip: { color: 0x141518, metal: 0.2, rough: 0.45, draw: 0x4a4f56 },
+  gold: { color: 0xd4a54a, metal: 1, rough: 0.3, draw: 0xd2c7a4 },
+  copper: { color: 0xb9703f, metal: 1, rough: 0.36, draw: 0xcfae98 },
+  rotor: { color: 0xc9ccd2, metal: 1, rough: 0.22, draw: 0xdadde1 },
+  battery: { color: 0x3d5d57, metal: 0.15, rough: 0.45, draw: 0xa9b5b2 },
+  sensor: { color: 0x1a1c22, metal: 0.25, rough: 0.35, draw: 0x3c4047 },
 };
 
 /**
@@ -103,11 +106,26 @@ const BARREL_TOP = 0.048;
 const SENSOR_FACE = 0.0537;
 const SENSOR_BOARD = 0.058;
 
+/** A line material whose colour, opacity and width (CSS pixels, where supported) are set here. */
+export type EdgeMaterial = THREE.Material & { color: THREE.Color; linewidth: number };
+
+/**
+ * Edge lines wider than one device pixel, built by the caller from the three.js line addons,
+ * so this file stays free of them. Without it, edges are plain 1px WebGL lines.
+ */
+export type EdgeLines = {
+  material(): EdgeMaterial;
+  /** Draws a mesh's hard edges with that material. */
+  object(edges: THREE.EdgesGeometry, material: EdgeMaterial): THREE.Object3D;
+};
+
 export type CubeSatOptions = {
   /** Build the parts inside each unit (the breakdown only). */
   interior?: boolean;
   /** Add edge lines for the engineering-drawing look (the breakdown only). */
   edges?: boolean;
+  /** How the edge lines are drawn. */
+  lines?: EdgeLines;
   /** Edge line colour. */
   ink?: string;
   /** Colour for tinted parts in the drawing look. */
@@ -147,11 +165,11 @@ export type CubeSat = {
   /** 0 wings folded against the sides, 1 flat (the default). */
   setDeploy(d: number): void;
   /**
-   * Fades a set's skins (or the whole of the wings) toward 10% opacity, and shows the parts
+   * Fades a set's skins (or the whole of the wings) toward 16% opacity, and shows the parts
    * inside that unit. Drawing look only.
    */
   setGhost(set: SetIndex, g: number): void;
-  /** Edge weight for a set in the drawing look, 0 to 1. Lower pushes it back. */
+  /** Edge and fill weight for a set in the drawing look, 0 to 1. Lower pushes it back. */
   setFocus(set: SetIndex, f: number): void;
   /** Tints parts toward the accent colour in the drawing look, 0 to 1. */
   setTint(set: SetIndex, roles: Role[], t: number): void;
@@ -166,7 +184,11 @@ type Look = {
   set: number;
   role: Role;
   paperColor: { value: THREE.Color };
-  line: THREE.LineBasicMaterial | null;
+  /** How far the drawing look replaces the surface colour, 0 to 1. */
+  paperAmount: { value: number };
+  /** The role's drawing-look grey. */
+  draw: THREE.Color;
+  line: EdgeMaterial | null;
   tint: number;
 };
 
@@ -250,7 +272,7 @@ function cellTexture(T: Three, anisotropy: number): THREE.Texture {
 }
 
 export function buildCubeSat(T: Three, opts: CubeSatOptions = {}): CubeSat {
-  const { interior = false, edges = false, ink = "#000000", accent = "#2540f5", anisotropy = 4 } = opts;
+  const { interior = false, edges = false, lines, ink = "#000000", accent = "#2540f5", anisotropy = 4 } = opts;
   const geometries = new Set<THREE.BufferGeometry>();
   const looks: Look[] = [];
   const paper = { value: 0 };
@@ -258,7 +280,10 @@ export function buildCubeSat(T: Three, opts: CubeSatOptions = {}): CubeSat {
   const accentColor = new T.Color(accent);
   const white = new T.Color(0xffffff);
   /** Paper colour for a fully tinted part: the accent, much lighter. */
-  const tintFill = white.clone().lerp(accentColor, 0.2);
+  const tintFill = white.clone().lerp(accentColor, 0.22);
+  /** Tinted solar cells turn the accent itself, so the array reads as one blue plane. */
+  const cellTint = accentColor.clone().lerp(white, 0.1);
+  const skinDraw = new T.Color(SPEC.skin.draw);
   const cellMap = cellTexture(T, anisotropy);
 
   const state = {
@@ -289,20 +314,23 @@ export function buildCubeSat(T: Three, opts: CubeSatOptions = {}): CubeSat {
       set,
       role,
       paperColor: { value: white.clone() },
+      paperAmount: { value: 1 },
+      draw: new T.Color(spec.draw),
       line: null,
       tint: 0,
     };
     if (edges) {
       if (spec.ghost) mat.transparent = true;
-      // Engineering-drawing mode mixes the surface colour (map included) toward paper.
+      // Engineering-drawing mode mixes the surface colour (map included) toward its drawing grey.
       mat.onBeforeCompile = (shader) => {
         shader.uniforms.uPaper = paper;
         shader.uniforms.uPaperColor = look.paperColor;
+        shader.uniforms.uPaperAmount = look.paperAmount;
         shader.fragmentShader =
-          "uniform float uPaper;\nuniform vec3 uPaperColor;\n" +
+          "uniform float uPaper;\nuniform float uPaperAmount;\nuniform vec3 uPaperColor;\n" +
           shader.fragmentShader.replace(
             "#include <map_fragment>",
-            "#include <map_fragment>\n  diffuseColor.rgb = mix(diffuseColor.rgb, uPaperColor, uPaper);",
+            "#include <map_fragment>\n  diffuseColor.rgb = mix(diffuseColor.rgb, uPaperColor, uPaper * uPaperAmount);",
           );
       };
       mat.customProgramCacheKey = () => "cubesat-paper";
@@ -310,13 +338,18 @@ export function buildCubeSat(T: Three, opts: CubeSatOptions = {}): CubeSat {
       mat.polygonOffset = true;
       mat.polygonOffsetFactor = 1;
       mat.polygonOffsetUnits = 1;
-      look.line = new T.LineBasicMaterial({
-        color: ink,
-        transparent: true,
-        opacity: 0,
-        depthWrite: false,
-        toneMapped: false,
-      });
+      if (lines) {
+        look.line = lines.material();
+      } else {
+        const basic = new T.LineBasicMaterial({
+          color: ink,
+          transparent: true,
+          opacity: 0,
+          depthWrite: false,
+          toneMapped: false,
+        });
+        look.line = basic;
+      }
     }
     looks.push(look);
     return look;
@@ -342,9 +375,13 @@ export function buildCubeSat(T: Three, opts: CubeSatOptions = {}): CubeSat {
     if (look.line) {
       const eg = new T.EdgesGeometry(geo, 24);
       geometries.add(eg);
-      const lines = new T.LineSegments(eg, look.line);
-      lines.raycast = () => {};
-      m.add(lines);
+      const edgeLines = lines ? lines.object(eg, look.line) : new T.LineSegments(eg, look.line);
+      const lineGeo = (edgeLines as THREE.Mesh).geometry;
+      if (lineGeo) geometries.add(lineGeo);
+      // Wide lines are meshes too; this tells callers measuring the model to skip them.
+      edgeLines.userData.edge = true;
+      edgeLines.raycast = () => {};
+      m.add(edgeLines);
     }
     return m;
   }
@@ -698,17 +735,34 @@ export function buildCubeSat(T: Three, opts: CubeSatOptions = {}): CubeSat {
       // Stay above zero, so the clear-coat shader variant never has to recompile.
       if (spec.coat) (mat as THREE.MeshPhysicalMaterial).clearcoat = Math.max(0.001, spec.coat * (1 - s));
       if (!edges) continue;
-      l.paperColor.value.copy(white).lerp(tintFill, l.tint);
+      const focus = state.focus[l.set];
       const ghost = spec.ghost ? state.ghost[l.set] : 0;
+      // Fill: the role's grey, washed toward white on a set that isn't the subject, and toward
+      // the accent when tinted. The cells keep their own dark blue until they are tinted.
+      if (spec.map) {
+        // See-through cells go the skins' grey, so a cell in front of the subject stays a pale film.
+        l.paperColor.value.copy(skinDraw).lerp(cellTint, l.tint);
+        l.paperAmount.value = Math.max(l.tint, smooth(ghost));
+      } else {
+        l.paperColor.value
+          .copy(l.draw)
+          .lerp(white, (1 - focus) * 0.45)
+          .lerp(tintFill, l.tint);
+        l.paperAmount.value = 1;
+      }
       if (spec.ghost) {
-        mat.opacity = 1 - 0.9 * smooth(ghost);
+        mat.opacity = 1 - 0.84 * smooth(ghost);
         mat.depthWrite = mat.opacity > 0.98;
       }
-      const weight = spec.weight ?? 0.85;
-      const base = spec.ghost ? weight + (0.22 - weight) * ghost : weight;
+      // Edges: ink, lighter and thinner off the subject, the accent and heavier on it.
+      const weight = spec.weight ?? 0.9;
+      const base = spec.ghost ? weight + (0.4 - weight) * ghost : weight;
       const line = l.line!;
       line.color.copy(inkColor).lerp(accentColor, l.tint);
-      line.opacity = s * (base * state.focus[l.set] * (1 - l.tint) + l.tint);
+      const opacity = s * (base * (0.35 + 0.65 * focus) * (1 - l.tint) + l.tint);
+      line.opacity = opacity;
+      line.visible = opacity > 0.004;
+      line.linewidth = 0.95 + 0.5 * focus * (1 - ghost) + 0.75 * l.tint;
     }
   }
 

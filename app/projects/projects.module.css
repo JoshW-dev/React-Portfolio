@@ -12,7 +12,7 @@
   flex-wrap: wrap;
   column-gap: clamp(18px, 2.2vw, 28px);
   margin-top: clamp(48px, 7vw, 96px);
-  margin-bottom: 14px;
+  margin-bottom: clamp(20px, 2.6vw, 36px);
 }
 
 .option {

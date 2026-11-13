@@ -1,0 +1,284 @@
+.stage {
+  position: relative;
+}
+
+.frame {
+  position: relative;
+  isolation: isolate;
+}
+
+/* The screen: wide on a desktop, taller on a phone. */
+.screen {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border-radius: 16px;
+  aspect-ratio: 16 / 10;
+  background: #f1f1f1;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.08);
+}
+
+@media (min-width: 900px) {
+  .screen {
+    aspect-ratio: 2.05 / 1;
+    max-height: max(360px, 56vh);
+    width: 100%;
+  }
+}
+
+.slide {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.7s var(--ease);
+}
+
+.slide[data-active="true"] {
+  opacity: 1;
+}
+
+.media {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+}
+
+video.media {
+  opacity: 0;
+  transition: opacity 0.5s var(--ease);
+}
+
+video.media[data-ready="true"] {
+  opacity: 1;
+}
+
+/* A still image drifts in slowly, so the screen is never frozen. */
+.slide[data-active="true"][data-still="true"] .media {
+  animation: push 9s ease-out both;
+}
+
+@keyframes push {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.05);
+  }
+}
+
+/*
+  Coloured light under the screen, taken from the project's own image. It's a
+  tiny copy blurred small and scaled up, which costs far less than blurring a
+  full-size layer.
+*/
+.glow {
+  position: absolute;
+  z-index: -1;
+  left: 37.5%;
+  top: 60%;
+  width: 25%;
+  height: 25%;
+  background-size: cover;
+  background-position: center;
+  filter: blur(14px) saturate(1.5);
+  transform: scale(3.85, 3.1);
+  opacity: 0;
+  transition: opacity 0.9s var(--ease);
+  pointer-events: none;
+}
+
+.glow[data-active="true"] {
+  opacity: 0.5;
+}
+
+/* ---------- caption ---------- */
+
+.caption {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px 40px;
+  margin-top: clamp(20px, 2.4vw, 32px);
+}
+
+.words {
+  min-width: 0;
+  animation: settle 0.5s var(--ease) both;
+}
+
+@keyframes settle {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.title {
+  font-size: clamp(1.7rem, 3vw, 2.6rem);
+  line-height: 1.05;
+  font-weight: 650;
+  letter-spacing: -0.025em;
+  font-variation-settings: "wdth" 92;
+}
+
+.title a {
+  text-decoration: none;
+}
+
+.title a:hover {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 0.14em;
+}
+
+.summary {
+  margin-top: 8px;
+  max-width: 36em;
+  font-size: clamp(1.02rem, 1.3vw, 1.2rem);
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+}
+
+.toggle {
+  min-width: 72px;
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.18s var(--ease);
+}
+
+.toggle:hover {
+  border-color: var(--ink);
+}
+
+/* ---------- the list of names, with the timer on the active one ---------- */
+
+.tabs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  gap: 6px 14px;
+  margin-top: clamp(22px, 2.6vw, 36px);
+}
+
+.tab {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  color: var(--faint);
+  transition: color 0.2s var(--ease);
+}
+
+.tab:hover,
+.tab[aria-current="true"] {
+  color: var(--ink);
+}
+
+.bar {
+  position: relative;
+  display: block;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.fill {
+  position: absolute;
+  inset: 0;
+  border-radius: 2px;
+  background: var(--ink);
+  transform-origin: left center;
+}
+
+.fill[data-on="true"] {
+  transform: scaleX(0);
+  animation: run 7s linear forwards;
+  animation-play-state: paused;
+}
+
+.fill[data-on="true"][data-running="true"] {
+  animation-play-state: running;
+}
+
+@keyframes run {
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.name {
+  display: block;
+  margin-top: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+@media (max-width: 900px) {
+  .caption {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .tabs {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    row-gap: 14px;
+  }
+
+  .name {
+    font-size: 0.8125rem;
+  }
+}
+
+/* On a phone the names would take eight rows, so only the bars stay. */
+@media (max-width: 520px) {
+  .tabs {
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .tab {
+    display: grid;
+    align-items: center;
+  }
+
+  .name {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+/* The timer is the only thing here that must keep its real duration. */
+@media (prefers-reduced-motion: reduce) {
+  .fill[data-on="true"] {
+    animation-duration: 7s !important;
+  }
+}

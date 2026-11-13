@@ -1,132 +1,96 @@
-import Image from "next/image";
 import Link from "next/link";
-import CallFlow from "@/components/CallFlow";
-import CallReplay from "@/components/CallReplay";
 import Portrait from "@/components/Portrait";
-import WorkIndex from "@/components/WorkIndex";
-import { featured, work } from "@/lib/work";
+import ProjectGrid from "@/components/ProjectGrid";
+import Stage, { type Slide } from "@/components/Stage";
+import { mediaFor } from "@/lib/media";
+import { stage, work } from "@/lib/work";
 import styles from "./home.module.css";
 
-const proof = [
+const jobs = [
   {
-    value: "100,000+",
-    label: "calls a year on the phone lines my agents answer",
-    where: "Government",
+    years: "2026 to now",
+    role: "Senior software engineer, AI",
+    place: "GovTech startup, backed by Y Combinator",
+    note: "Voice and chat agents that answer residents\u2019 questions, on phone lines that take more than 100,000 calls a year.",
   },
   {
-    value: "$300M+",
-    label: "cut from a hydrogen plant's capital budget",
-    where: "Energy",
+    years: "2023 to 2026",
+    role: "AI growth engineer",
+    place: "Disco",
+    note: "Built the AI course builder and the automation behind sales and marketing. Cut chat response times 75% and cost 58%.",
   },
   {
-    value: "75%",
-    label: "faster replies from an AI chat agent",
-    where: "Education",
+    years: "2021 to 2023",
+    role: "Engineering consultant",
+    place: "Energy and manufacturing projects",
+    note: "Led the design sessions that cut $300M+ from a hydrogen plant\u2019s budget, and cut downtime 35% on two production lines.",
   },
   {
-    value: "58%",
-    label: "lower cost to run that same agent",
-    where: "Education",
+    years: "2020 to 2021",
+    role: "Chief technical officer, satellite project",
+    place: "Queen\u2019s Space Engineering Team",
+    note: "Led 35 students designing and building a CubeSat.",
   },
   {
-    value: "35%",
-    label: "less downtime on two production lines",
-    where: "Manufacturing",
+    years: "2019 to 2020",
+    role: "Software developer",
+    place: "Centre for Advanced Computing",
+    note: "Led the build and launch of a mental health startup\u2019s web platform in four months.",
+  },
+  {
+    years: "2016 to 2021",
+    role: "B.A.Sc., Computer Engineering and Applied Mathematics",
+    place: "Queen\u2019s University",
+    note: "",
   },
 ];
 
 export default function Home() {
-  const rest = work.filter((w) => !w.featured);
+  const slides: Slide[] = stage.flatMap((slug) => {
+    const item = work.find((w) => w.slug === slug);
+    if (!item?.image) return [];
+    const media = mediaFor(slug);
+    return [
+      {
+        slug,
+        title: item.title,
+        summary: item.summary,
+        kind: item.kind,
+        image: media.hero ? { ...media.hero, alt: item.image.alt } : item.image,
+        video: media.video,
+      },
+    ];
+  });
+
+  const more = work.filter((w) => !stage.includes(w.slug)).slice(0, 9);
 
   return (
     <>
-      <section className={`wrap ${styles.hero}`}>
-        <h1 className={`display ${styles.headline}`}>
-          <span>AI agents that pick up</span> <span>100,000 calls a year.</span>
-        </h1>
-
+      <section className={`wrap ${styles.top}`}>
         <div className={styles.intro}>
+          <h1 className={styles.hello}>Hi, I&rsquo;m Josh.</h1>
           <p className="lede">
-            I&rsquo;m Josh Wade. I build them, and I&rsquo;m the engineer on the call with
-            your team from kickoff to go-live.
-          </p>
-          <div className={styles.actions}>
-            <Link className="btn" href="/work">
-              See the work
-            </Link>
-            <Link className="btn btn--quiet" href="/resume">
-              Read the resume
-            </Link>
-          </div>
-        </div>
-
-        <div className={styles.replay}>
-          <CallReplay />
-          <p className={`small muted ${styles.disclosure}`}>
-            A made-up caller with made-up details, replayed to show how a call runs. The
-            real agents run on Twilio and ElevenLabs.
+            I&rsquo;m an AI engineer in Toronto. I build voice and chat agents at work, and on my
+            own time I make products, research projects, games and the odd painting. Here are
+            some of them.
           </p>
         </div>
-
-        <dl className={styles.proof}>
-          {proof.map((p) => (
-            <div key={p.value}>
-              <dt>{p.value}</dt>
-              <dd>{p.label}</dd>
-              <dd className="small muted">{p.where}</dd>
-            </div>
-          ))}
-        </dl>
+        <Stage slides={slides} />
       </section>
 
-      <section className="wrap section">
-        <h2 className="h2">Selected work</h2>
-        <div className={styles.studies}>
-          {featured.map((item) => (
-            <article key={item.slug} className={styles.study}>
-              <div className={styles.studyText}>
-                <h3 className={styles.studyTitle}>
-                  <Link href={`/work/${item.slug}`}>{item.title}</Link>
-                </h3>
-                <p className="lede">{item.summary}</p>
-                <p className="small muted">
-                  {item.industry}, {item.years}
-                </p>
-                <Link className="link" href={`/work/${item.slug}`}>
-                  Read the case study
-                </Link>
-              </div>
-              <Link
-                href={`/work/${item.slug}`}
-                className={styles.studyFigure}
-                tabIndex={-1}
-                aria-hidden="true"
-              >
-                {item.image ? (
-                  <Image
-                    src={item.image.src}
-                    alt=""
-                    width={item.image.width}
-                    height={item.image.height}
-                    sizes="(max-width: 900px) 100vw, 720px"
-                  />
-                ) : (
-                  <CallFlow />
-                )}
-              </Link>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="wrap section rule">
-        <div className={styles.indexHead}>
-          <h2 className="h2">The rest of what I&rsquo;ve built</h2>
-          <Link className="link" href="/work">
+      <section className={`wrap ${styles.more}`}>
+        <div className={styles.head}>
+          <h2 className="h2">More projects</h2>
+          <Link className="link" href="/projects">
             See all {work.length}
           </Link>
         </div>
-        <WorkIndex items={rest.slice(0, 8)} />
+        <ProjectGrid items={more} />
+        <p className={styles.all}>
+          <Link className="btn" href="/projects">
+            See all {work.length} projects
+          </Link>
+        </p>
       </section>
 
       <section className="wrap section rule">
@@ -134,26 +98,27 @@ export default function Home() {
           <figure className={styles.portrait}>
             <Portrait className={styles.photo} />
             <figcaption className="small muted">
-              The sky moves on the shader I wrote for{" "}
-              <Link className="link" href="/work/in-search-of-light">
+              The background moves on the shader I wrote for{" "}
+              <Link className="link" href="/projects/in-search-of-light">
                 In Search of Light
               </Link>
               .
             </figcaption>
           </figure>
           <div className={styles.aboutText}>
-            <h2 className="h2">Who you&rsquo;d be working with</h2>
+            <h2 className="h2">About me</h2>
             <div className="prose">
-              <p className="lede">
-                I&rsquo;m a customer-facing AI engineer in Toronto. I write the agent, and
-                then I&rsquo;m in the kickoff, the test calls and the go-live with the
-                people who&rsquo;ll depend on it.
+              <p>
+                I studied computer engineering and applied math at Queen&rsquo;s, and spent my
+                last year there as CTO of a 35-student team building a satellite. After school I
+                worked as an engineering consultant on a hydrogen plant, a ship refit and a
+                couple of factory lines, then moved into AI at Disco, an ed-tech startup.
               </p>
               <p>
-                Before this I spent almost three years building AI features at an ed-tech
-                startup, and two before that as an engineering consultant on energy and
-                manufacturing projects, so I&rsquo;m used to walking into an operation I
-                don&rsquo;t know yet.
+                These days I build voice and chat agents for local governments at a Y
+                Combinator-backed startup. Outside of work I&rsquo;m usually making something,
+                and lately that&rsquo;s been games and a simulation of how societies form. I
+                also paint, mostly by pouring acrylics and seeing what gravity does.
               </p>
             </div>
             <Link className="link" href="/about">
@@ -161,6 +126,27 @@ export default function Home() {
             </Link>
           </div>
         </div>
+      </section>
+
+      <section className="wrap section rule">
+        <div className={styles.head}>
+          <h2 className="h2">Experience</h2>
+          <Link className="link" href="/resume">
+            Read the resume
+          </Link>
+        </div>
+        <ol className={styles.jobs}>
+          {jobs.map((job) => (
+            <li key={job.years + job.role}>
+              <span className={`muted ${styles.years}`}>{job.years}</span>
+              <span className={styles.role}>
+                <strong>{job.role}</strong>
+                <span className="muted">{job.place}</span>
+              </span>
+              <span className={styles.result}>{job.note}</span>
+            </li>
+          ))}
+        </ol>
       </section>
     </>
   );

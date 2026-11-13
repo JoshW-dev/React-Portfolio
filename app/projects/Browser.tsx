@@ -1,20 +1,25 @@
 "use client";
 
-import { useState } from "react";
-import WorkIndex from "@/components/WorkIndex";
-import type { Work, WorkKind } from "@/lib/work";
-import styles from "./work.module.css";
+import { useState, type ReactNode } from "react";
+import type { WorkKind } from "@/lib/work";
+import styles from "./projects.module.css";
 
 type Filter = WorkKind | "All";
 
-export default function Browser({ items, kinds }: { items: Work[]; kinds: WorkKind[] }) {
+/** Filter buttons. The grids are rendered on the server and passed in, one per kind. */
+export default function Browser({
+  kinds,
+  views,
+}: {
+  kinds: WorkKind[];
+  views: Record<string, ReactNode>;
+}) {
   const [filter, setFilter] = useState<Filter>("All");
-  const shown = filter === "All" ? items : items.filter((w) => w.kind === filter);
   const options: Filter[] = ["All", ...kinds];
 
   return (
     <>
-      <div className={styles.filter} role="group" aria-label="Filter work by kind">
+      <div className={styles.filter} role="group" aria-label="Filter projects by kind">
         {options.map((option) => (
           <button
             key={option}
@@ -27,7 +32,7 @@ export default function Browser({ items, kinds }: { items: Work[]; kinds: WorkKi
           </button>
         ))}
       </div>
-      <WorkIndex items={shown} />
+      {views[filter]}
     </>
   );
 }

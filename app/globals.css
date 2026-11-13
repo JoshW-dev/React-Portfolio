@@ -145,22 +145,22 @@ button {
   text-wrap: balance;
 }
 
-/* Inner-page title, smaller than the home headline. */
+/* Inner-page title. */
 .title {
-  font-size: clamp(2.6rem, 6.2vw, 6rem);
-  line-height: 0.94;
+  font-size: clamp(2.5rem, 5.4vw, 4.8rem);
+  line-height: 0.98;
   font-weight: 700;
-  letter-spacing: -0.024em;
-  font-variation-settings: "wdth" 80;
+  letter-spacing: -0.03em;
+  font-variation-settings: "wdth" 88;
   text-wrap: balance;
 }
 
 .h2 {
-  font-size: clamp(1.9rem, 3.6vw, 3.25rem);
-  line-height: 1;
+  font-size: clamp(1.75rem, 2.9vw, 2.6rem);
+  line-height: 1.04;
   font-weight: 650;
-  letter-spacing: -0.028em;
-  font-variation-settings: "wdth" 84;
+  letter-spacing: -0.026em;
+  font-variation-settings: "wdth" 90;
   text-wrap: balance;
 }
 

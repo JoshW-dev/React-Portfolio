@@ -4,8 +4,8 @@ const config: NextConfig = {
   reactStrictMode: true,
   async redirects() {
     return [
-      { source: "/projects", destination: "/work", permanent: true },
-      { source: "/project", destination: "/work", permanent: true },
+      { source: "/project", destination: "/projects", permanent: true },
+      { source: "/work", destination: "/projects", permanent: true },
     ];
   },
   async rewrites() {

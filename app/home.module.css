@@ -1,172 +1,47 @@
-/* ---------- hero ---------- */
+/* ---------- top: a hello, then the projects ---------- */
 
-.hero {
-  padding-top: clamp(28px, 4.5vw, 64px);
-  padding-bottom: clamp(56px, 7vw, 104px);
-}
-
-.headline span {
-  display: inline;
+.top {
+  padding-top: clamp(20px, 3.4vw, 48px);
 }
 
 .intro {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 24px 48px;
-  margin-top: clamp(22px, 2.6vw, 36px);
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: 16px clamp(24px, 5vw, 80px);
+  align-items: end;
+  margin-bottom: clamp(28px, 3.6vw, 48px);
+}
+
+.hello {
+  font-size: clamp(2.8rem, 6.4vw, 5.6rem);
+  line-height: 0.95;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  font-variation-settings: "wdth" 88;
 }
 
 .intro p {
-  max-width: 27em;
+  max-width: 33em;
 }
 
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+/* ---------- more projects ---------- */
+
+.more {
+  padding-top: clamp(72px, 9vw, 130px);
+  padding-bottom: var(--section);
 }
 
-.replay {
-  margin-top: clamp(32px, 4.2vw, 56px);
-}
-
-.disclosure {
-  margin-top: 12px;
-}
-
-/* The page's one entrance: headline, then the call starts. */
-.headline,
-.intro,
-.replay,
-.proof {
-  animation: rise 0.7s var(--ease) both;
-}
-
-.intro {
-  animation-delay: 0.06s;
-}
-
-.replay {
-  animation-delay: 0.14s;
-}
-
-.proof {
-  animation-delay: 0.22s;
-}
-
-@keyframes rise {
-  from {
-    opacity: 0;
-    transform: translateY(18px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-/* ---------- proof ---------- */
-
-.proof {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  margin-top: clamp(48px, 6vw, 88px);
-}
-
-.proof > div {
-  padding: 4px 20px 0 20px;
-  border-left: 1px solid var(--line);
-}
-
-.proof > div:first-child {
-  padding-left: 0;
-  border-left: 0;
-}
-
-.proof dt {
-  font-size: clamp(2.2rem, 4.1vw, 3.9rem);
-  line-height: 1;
-  font-weight: 700;
-  letter-spacing: -0.024em;
-  font-variation-settings: "wdth" 78;
-}
-
-.proof dd {
-  margin-top: 10px;
-  max-width: 15em;
-  line-height: 1.35;
-  text-wrap: balance;
-}
-
-.proof dd + dd {
-  margin-top: 6px;
-}
-
-/* ---------- selected work ---------- */
-
-.studies {
-  margin-top: clamp(28px, 3.4vw, 48px);
-}
-
-.study {
-  display: grid;
-  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
-  gap: clamp(28px, 5vw, 88px);
-  align-items: center;
-  padding-block: clamp(36px, 5vw, 72px);
-  border-top: 1px solid var(--line);
-}
-
-.study:first-child {
-  border-top-color: var(--ink);
-}
-
-.studyText {
-  display: grid;
-  gap: 16px;
-  justify-items: start;
-}
-
-.studyTitle {
-  font-size: clamp(1.9rem, 3.4vw, 3.1rem);
-  line-height: 1;
-  font-weight: 650;
-  letter-spacing: -0.03em;
-  font-variation-settings: "wdth" 82;
-  text-wrap: balance;
-}
-
-.studyTitle a {
-  text-decoration: none;
-}
-
-.studyTitle a:hover {
-  text-decoration: underline;
-  text-decoration-thickness: 2px;
-  text-underline-offset: 0.14em;
-}
-
-.studyFigure {
-  display: block;
-}
-
-.studyFigure img {
-  width: 100%;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-}
-
-/* ---------- index ---------- */
-
-.indexHead {
+.head {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
   gap: 12px 32px;
-  margin-bottom: clamp(28px, 4vw, 52px);
+  margin-bottom: clamp(28px, 3.6vw, 48px);
+}
+
+.all {
+  margin-top: clamp(40px, 5vw, 72px);
 }
 
 /* ---------- about ---------- */
@@ -179,11 +54,11 @@
 }
 
 .portrait {
-  max-width: 420px;
+  max-width: 400px;
 }
 
 .photo {
-  border-radius: 6px;
+  border-radius: 12px;
 }
 
 .portrait figcaption {
@@ -196,37 +71,46 @@
   justify-items: start;
 }
 
+/* ---------- experience ---------- */
+
+.jobs {
+  border-top: 1px solid var(--ink);
+}
+
+.jobs li {
+  display: grid;
+  grid-template-columns: 8.5rem minmax(0, 4fr) minmax(0, 6fr);
+  gap: 6px clamp(16px, 3vw, 48px);
+  align-items: baseline;
+  padding-block: 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.role {
+  display: grid;
+  gap: 2px;
+}
+
+.role strong {
+  font-weight: 650;
+  letter-spacing: -0.012em;
+}
+
+.result {
+  line-height: 1.45;
+  text-wrap: pretty;
+}
+
 /* ---------- small screens ---------- */
 
-@media (min-width: 1000px) {
-  .headline span {
-    display: block;
-  }
-}
-
-@media (max-width: 1000px) {
-  .proof {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    row-gap: 32px;
-  }
-
-  .proof > div:nth-child(odd) {
-    padding-left: 0;
-    border-left: 0;
-  }
-
-  .proof > div:last-child {
-    grid-column: 1 / -1;
-  }
-}
-
 @media (max-width: 900px) {
-  .study,
+  .intro,
   .about {
     grid-template-columns: minmax(0, 1fr);
+    align-items: start;
   }
 
-  .studyFigure {
-    order: -1;
+  .jobs li {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

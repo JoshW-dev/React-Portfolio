@@ -46,7 +46,7 @@ export default function AboutPage() {
     <>
       <section className={`wrap ${styles.intro}`}>
         <div className={styles.text}>
-          <h1 className="title">I&rsquo;m the engineer on the call with the customer.</h1>
+          <h1 className="title">About me</h1>
           <div className={`prose ${styles.copy}`}>
             <p>
               I&rsquo;m a customer-facing AI engineer from Toronto. Right now I
@@ -109,12 +109,12 @@ export default function AboutPage() {
       <section className="rule section--tight">
         <div className="wrap">
           <p className="lede">
-            The projects behind these bars are on the work page, and my resume
+            The projects behind these bars are on the projects page, and my resume
             has the same history with exact dates.
           </p>
           <p className={styles.next}>
-            <Link className="link" href="/work">
-              See the work
+            <Link className="link" href="/projects">
+              See the projects
             </Link>
             <Link className="link" href="/resume">
               Read the resume

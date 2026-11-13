@@ -13,10 +13,9 @@ export default function Footer() {
     <footer id="contact" className={styles.footer}>
       <div className={`wrap rule ${styles.grid}`}>
         <div>
-          <h2 className="title">Let&rsquo;s talk.</h2>
+          <h2 className="title">Say hi.</h2>
           <p className={`lede ${styles.note}`}>
-            LinkedIn is the fastest way to reach me. Tell me what your customers keep
-            calling about and I&rsquo;ll tell you if an agent can take it.
+            LinkedIn is the easiest place to reach me, and my code is on GitHub.
           </p>
         </div>
         <ul className={styles.links}>

@@ -16,9 +16,6 @@ export default function Nav() {
                 <Link href={item.href}>{item.label}</Link>
               </li>
             ))}
-            <li className={styles.cta}>
-              <a href="#contact">Get in touch</a>
-            </li>
           </ul>
         </nav>
       </div>

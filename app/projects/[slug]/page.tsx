@@ -4,7 +4,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getWork, work, type Work } from "@/lib/work";
 import { site } from "@/lib/site";
-import CallFlow from "@/components/CallFlow";
+import { mediaFor } from "@/lib/media";
+import CallReplay from "@/components/CallReplay";
 import styles from "./project.module.css";
 
 /** The figure under the title. Returns the project image, or null when there isn't one. */
@@ -12,26 +13,43 @@ function Figure({ item }: { item: Work }) {
   if (item.slug === "voice-agents") {
     return (
       <figure className={styles.figure}>
-        <CallFlow className={styles.diagram} />
+        <CallReplay />
         <figcaption className="small muted">
-          One call, from the caller to the answer. The agents run in parallel and read from
-          the jurisdiction&rsquo;s own material.
+          A made-up caller with made-up details, replayed to show how a call runs. The real
+          agents run on Twilio and ElevenLabs.
         </figcaption>
       </figure>
     );
   }
   if (!item.image) return null;
+  const media = mediaFor(item.slug);
+  const still = media.hero ?? item.image;
   return (
     <figure className={styles.figure}>
-      <Image
-        src={item.image.src}
-        alt={item.image.alt}
-        width={item.image.width}
-        height={item.image.height}
-        preload
-        sizes="(max-width: 1320px) 100vw, 1192px"
-        className={styles.image}
-      />
+      {media.video ? (
+        <video
+          className={styles.image}
+          src={media.video}
+          poster={still.src}
+          width={1280}
+          height={800}
+          muted
+          loop
+          playsInline
+          autoPlay
+          aria-label={item.image.alt}
+        />
+      ) : (
+        <Image
+          src={still.src}
+          alt={item.image.alt}
+          width={still.width}
+          height={still.height}
+          preload
+          sizes="(max-width: 1100px) 100vw, 1040px"
+          className={styles.image}
+        />
+      )}
     </figure>
   );
 }
@@ -48,7 +66,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const item = getWork(slug);
   if (!item) return {};
-  const path = `/work/${item.slug}`;
+  const path = `/projects/${item.slug}`;
   return {
     title: item.title,
     description: item.summary,
@@ -80,8 +98,8 @@ export default async function ProjectPage({ params }: Props) {
 
   return (
     <article className="wrap section--tight">
-      <Link href="/work" className={`link small ${styles.back}`}>
-        All work
+      <Link href="/projects" className={`link small ${styles.back}`}>
+        All projects
       </Link>
 
       <header className={styles.head}>
@@ -127,7 +145,7 @@ export default async function ProjectPage({ params }: Props) {
         </div>
       </div>
 
-      <Link href={`/work/${next.slug}`} className={styles.next}>
+      <Link href={`/projects/${next.slug}`} className={styles.next}>
         <span className="small muted">Next</span>
         <span className="h2">{next.title}</span>
       </Link>

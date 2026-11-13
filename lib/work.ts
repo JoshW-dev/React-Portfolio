@@ -1,5 +1,5 @@
 export type WorkKind =
-  | "Client work"
+  | "Work"
   | "Product"
   | "Research"
   | "Game"
@@ -20,18 +20,16 @@ export type Work = {
   body: string[];
   stack?: string[];
   links: { label: string; href: string }[];
-  featured?: boolean;
 };
 
-export const work: Work[] = [
+const entries: Work[] = [
   {
     slug: "voice-agents",
     title: "Voice agents for local government",
     summary: "Phone agents for government lines that take more than 100,000 calls a year.",
-    kind: "Client work",
+    kind: "Work",
     industry: "Government",
     years: "2026 to now",
-    featured: true,
     stack: ["Twilio", "ElevenLabs", "Langfuse", "RAG", "Python", "TypeScript"],
     links: [],
     body: [
@@ -45,10 +43,9 @@ export const work: Work[] = [
     slug: "disco",
     title: "Disco",
     summary: "An AI course builder that helped close enterprise deals, and the automation behind sales.",
-    kind: "Client work",
+    kind: "Work",
     industry: "Education",
     years: "2023 to 2026",
-    featured: true,
     image: {
       src: "/work/disco.webp",
       width: 1000,
@@ -69,10 +66,9 @@ export const work: Work[] = [
     slug: "hydrogen-plant",
     title: "Clean hydrogen plant",
     summary: "Design sessions that cut more than $300M from a hydrogen plant's capital budget.",
-    kind: "Client work",
+    kind: "Work",
     industry: "Energy",
     years: "2021 to 2023",
-    featured: true,
     image: {
       src: "/work/02.webp",
       width: 1000,
@@ -452,7 +448,7 @@ export const work: Work[] = [
     slug: "ai-education-assistant",
     title: "AI Education Assistant Platform",
     summary: "A learning platform for students and educators, built on IBM Watson.",
-    kind: "Client work",
+    kind: "Work",
     industry: "Education",
     years: "2019",
     image: {
@@ -492,7 +488,7 @@ export const work: Work[] = [
     slug: "fpso",
     title: "FPSO refurbishment",
     summary: "Logistics and scheduling tools for a vessel refit, cutting delays by over a month.",
-    kind: "Client work",
+    kind: "Work",
     industry: "Energy",
     image: {
       src: "/work/04.webp",
@@ -539,19 +535,65 @@ export const work: Work[] = [
   },
 ];
 
-export const featured: Work[] = work.filter((w) => w.featured);
+/** Display order: Josh's own ranking, with his own projects first. */
+const order = [
+  "fastform",
+  "openaffect",
+  "highstyle",
+  "insider-signal",
+  "sketch-deck",
+  "bottleneck-radar",
+  "game-of-society",
+  "duskmere",
+  "quiet-order",
+  "in-search-of-light",
+  "eigenvirtue",
+  "disco",
+  "voice-agents",
+  "convert2epub",
+  "somebody-built-this",
+  "founderrise",
+  "mymcat",
+  "feedbacker",
+  "local-llm",
+  "adam",
+  "investor-assistant",
+  "ai-education-assistant",
+  "cubesat",
+  "hydrogen-plant",
+  "fpso",
+  "masterpiece-pets",
+  "abstract-painting",
+];
+
+export const work: Work[] = [
+  ...order.map((slug) => entries.find((w) => w.slug === slug)).filter((w): w is Work => !!w),
+  ...entries.filter((w) => !order.includes(w.slug)),
+];
+
+/** The projects that play on the home page, one at a time. */
+export const stage = [
+  "openaffect",
+  "highstyle",
+  "fastform",
+  "game-of-society",
+  "duskmere",
+  "in-search-of-light",
+  "bottleneck-radar",
+  "insider-signal",
+];
 
 export function getWork(slug: string): Work | undefined {
   return work.find((w) => w.slug === slug);
 }
 
 const kindOrder: WorkKind[] = [
-  "Client work",
   "Product",
   "Research",
   "Game",
   "Art",
   "Tool",
+  "Work",
   "Engineering",
 ];
 

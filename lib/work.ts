@@ -25,8 +25,8 @@ export type Work = {
 const entries: Work[] = [
   {
     slug: "voice-agents",
-    title: "Voice agents for local government",
-    summary: "Phone agents for government lines that take more than 100,000 calls a year.",
+    title: "AI for county governments",
+    summary: "Voice and chat agents that take routine work off county offices across the U.S.",
     kind: "Work",
     industry: "Government",
     years: "2026 to now",
@@ -37,6 +37,7 @@ const entries: Work[] = [
       "I built the call routing system and the parallel voice agents behind it on Twilio and ElevenLabs, for deployments that take more than 100,000 calls a year.",
       "Every answer comes from the jurisdiction's own material: its knowledge base, its records data, and an FAQ bank mined from past conversations. Prompts are managed in Langfuse.",
       "I'm also the engineer on the launch. For government teams in Texas and California that has meant running kickoff, setting up the phone lines, building the knowledge base, making test calls and handling customer communication until go-live.",
+      "The work reaches past the phone line. A lot of it is setting up the systems that automate county paperwork, and one recent deployment helped run elections in North Carolina.",
     ],
   },
   {

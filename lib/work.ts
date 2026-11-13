@@ -165,8 +165,7 @@ const entries: Work[] = [
     stack: ["Next.js", "TypeScript", "Postgres"],
     links: [{ label: "Open crimsonlead.com", href: "https://crimsonlead.com/" }],
     body: [
-      "Government offices publish records every day that show a business is about to need something. A new trucking authority needs insurance, a federal bid for HVAC work needs a contractor, and a company that files a fundraising notice will soon need payroll. Crimsonlead reads those records each morning and turns the new ones into leads.",
-      "It runs eight desks on 25 public sources, and each desk is built for one kind of buyer. Every record is checked and graded A, B or C against a rubric written for its source, then shown with a plain reason for why it matters now. The site drafts a first message, and a person reads it before anything goes out.",
+      "Government offices publish records every day that show a business is about to need something. A new trucking authority needs insurance, a federal bid for HVAC work needs a contractor, and a company that files a fundraising notice will soon need payroll.",
       "It runs daily behind a password, and so far I haven't sent a single message from it. I'm still finding out which desks produce leads that are worth a person's time.",
     ],
   },
@@ -235,9 +234,8 @@ const entries: Work[] = [
       { label: "View the code", href: "https://github.com/JoshW-dev/bottleneck-radar" },
     ],
     body: [
-      "A monthly research pipeline for the AI data center buildout. It turns hyperscaler capex from SEC filings into gigawatts, GPUs, HBM and gas turbines, then reads Korean memory exports, Taiwan export orders, turbine backlogs and ERCOT's large-load queue to find which physical input is tightest.",
-      "Angus the Nontechnical ran this analysis on TikTok as four prompts, and I rebuilt it so code fetches every number and Claude Sonnet only makes the call, which keeps each month comparable with the last. The model can only name companies from a fixed list, and it has to say what would prove the call wrong.",
-      "Two more stages clone Situational Awareness LP's latest 13F and check a portfolio's exposure to the bottleneck through a read-only IBKR Flex query. GitHub Actions publishes the results each month as a static dashboard, where a WebGL globe draws arcs from where each input is made to two big US data center markets.",
+      "Angus the Nontechnical ran this analysis on TikTok as four prompts, and I rebuilt it so code fetches every number and Claude Sonnet only makes the call, which keeps each month comparable with the last.",
+      "Two more stages clone Situational Awareness LP's latest 13F and check a portfolio's exposure to the bottleneck through a read-only IBKR Flex query. GitHub Actions publishes the results each month as a static dashboard.",
     ],
   },
   {

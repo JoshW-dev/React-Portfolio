@@ -68,9 +68,19 @@
       "hop": "nyc-doha",
       "job": "814f9d9b-cf63-4bba-857b-b20685fc4c3a",
       "what": "Low over open sea before dawn, skyline on the horizon"
+    },
+    {
+      "hop": "plant-line",
+      "job": "b75973b4-cc1a-4742-8dc9-9f5d0bdc189a",
+      "what": "High over the Great Plains flying south, early morning"
+    },
+    {
+      "hop": "plant-line",
+      "job": "0c3e2d3b-739c-4b88-9ace-52a47c69e324",
+      "what": "Low approach to a Texas factory with its door open (used only in the failed take)"
     }
   ],
-  "clips_note": "Hop clips generated 2026-11-13 with flux_3_video at 1080p, no audio, 8 credits a second. Each takes the stop before it as start_image, the stop after it as end_image, and the mid frame (when there is one) as image_references. The orbit start frame is public/film/00-orbit-live.webp imported as media ef03665d-4816-450b-bb95-acd1f0d54505.",
+  "clips_note": "Hop clips generated 2026-11-13 with flux_3_video at 1080p, no audio, 8 credits a second. Each takes the stop before it as start_image, the stop after it as end_image, and the mid frame (when there is one) as image_references. The orbit start frame is public/film/00-orbit-live.webp imported as media ef03665d-4816-450b-bb95-acd1f0d54505. Each source is encoded by scripts/film-encode.sh into hd (1920), d (1280) and m (854) files with a keyframe every 12 frames.",
   "clips": [
     {
       "clip": "orbit-rockies",
@@ -84,9 +94,13 @@
     },
     {
       "clip": "plant-line",
-      "job": "3313a902-903a-4b78-aa70-ae638bed2ed6",
-      "seconds": 7,
-      "note": "Second take. The first (b478c27e, mid aca0de84) made a new building fade in. This one flies to the grey building already in the start frame."
+      "seconds": 13.25,
+      "jobs": [
+        "9b2fd1d1-c74b-4671-be10-44995b362aac",
+        "8888d064-cc8f-4ea4-a9a5-4d3c1ea93d89",
+        "99411bfc-ca1d-4178-b9cd-9554395a3467"
+      ],
+      "note": "Third version, joined from three parts. Part 1 (9b2fd1d1, 7 s): plant frame to the plains frame b75973b4, with a pull-back frame (media d54c7a55, cut from the failed take) as its one reference. Part 2 (8888d064, 6 s): plains frame to a far view of the Texas factory (media 40b93551, frame 168 of the failed take), no reference. Part 3: frames 168 to 240 of the failed take 99411bfc. The slow plains drift across the join of parts 1 and 2 is sped up 2.5x. The second take (3313a902, 7 s, flew into a building at the plant) was replaced because it implied the plant and the production line were one place."
     },
     {
       "clip": "twin-sf",
@@ -107,6 +121,18 @@
       "clip": "nyc-doha",
       "job": "3bd3392c-52ca-4c9b-af15-4f9bb07339e0",
       "seconds": 8
+    }
+  ],
+  "failed_takes": [
+    {
+      "hop": "plant-line",
+      "job": "99411bfc-ca1d-4178-b9cd-9554395a3467",
+      "seconds": 10,
+      "mids": [
+        "b75973b4-cc1a-4742-8dc9-9f5d0bdc189a (high over the plains)",
+        "0c3e2d3b-739c-4b88-9ace-52a47c69e324 (Texas factory approach, door open)"
+      ],
+      "note": "Plant to Texas in one clip with two mid frames. Came back as a shot list with hard cuts at 2.08, 2.29, 6.63 and 6.92 s. Not used. Its last 3 s (far view of the Texas factory, the approach, the door, the line) are clean and can end a retake. Both mid frames are good and can be reused as the start or end frames of two shorter clips."
     }
   ]
 }

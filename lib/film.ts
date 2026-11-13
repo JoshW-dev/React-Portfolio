@@ -40,6 +40,8 @@ export type Hop = {
   clip?: string;
   /** Colour the still fade passes through. Not used while a clip plays. */
   veil?: Veil;
+  /** Scroll length in viewport heights, for a clip much longer than the usual 8 seconds. */
+  scroll?: number;
 };
 
 export const STOPS: Stop[] = [
@@ -107,7 +109,8 @@ export const STOPS: Stop[] = [
 export const HOPS: Hop[] = [
   { from: 0, to: 1, kind: "video", clip: "orbit-rockies" },
   { from: 1, to: 2, kind: "video", clip: "rockies-plant" },
-  { from: 2, to: 3, kind: "video", clip: "plant-line", veil: "steam" },
+  // A 13 second flight from Alberta to Texas, so it gets more scroll than an 8 second hop.
+  { from: 2, to: 3, kind: "video", clip: "plant-line", veil: "steam", scroll: 260 },
   { from: 3, to: 4, kind: "wipe" }, // the real line turns into its model; stays a wipe
   { from: 4, to: 5, kind: "video", clip: "twin-sf", veil: "fog" },
   { from: 5, to: 6, kind: "video", clip: "sf-towns" },

@@ -62,7 +62,7 @@ const { SEGS, HOLD_SEG, HOP_SEG, TOTAL } = (() => {
     holds.push(hold);
     at += hold.len;
     if (i < LAST) {
-      const hop: Seg = { start: at, len: SCROLL[kindOf(HOP_LIST[i])], stop: i, hop: i };
+      const hop: Seg = { start: at, len: HOP_LIST[i].scroll ?? SCROLL[kindOf(HOP_LIST[i])], stop: i, hop: i };
       segs.push(hop);
       hops.push(hop);
       at += hop.len;

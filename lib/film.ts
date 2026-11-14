@@ -95,7 +95,7 @@ export const STOPS: Stop[] = [
     spots: [{ x: 0.457, y: 0.14, label: "Disco", href: "/projects/disco" }],
     place: "The same line, as software",
     short: "Disco",
-    text: "Then I moved to the software side. At Disco I built AI features and the automation behind sales and marketing, across more than 80,000 contacts.",
+    text: "Then I moved to software, where I treated Disco\u2019s sales funnel like this line. AI found its bottleneck, and enterprise leads doubled in under two months.",
   },
   {
     still: "/film/06-sf.webp",

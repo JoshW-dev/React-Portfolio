@@ -1,299 +1,234 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, type CSSProperties } from "react";
 import ScrollBreakdown, {
   BreakdownCanvas,
   type BreakdownApi,
   type BreakdownStep,
   type SceneFactory,
 } from "@/components/breakdown/ScrollBreakdown";
-import type { Callout } from "@/components/breakdown/kit";
-import type { CalloutKey, DiscoDom, NoteKey } from "./discoScene";
+import type { GrowthDom, NoteKey, PanelKey } from "./growthScene";
 import styles from "./DiscoBreakdown.module.css";
 
 const STEPS: BreakdownStep[] = [
   {
-    id: "describe",
-    title: "A course starts as a description",
+    id: "audit",
+    title: "Find the bottleneck first",
     body: (
       <p>
-        Disco is a Canadian ed-tech startup whose learning platform has more than 300,000
-        learners, and I spent almost three years there as an AI growth engineer. The biggest
-        piece of that work was AI curriculum generation, where an organization describes the
-        course it wants and the build starts from that description.
+        Disco had hundreds of ideas for AI, so I started by asking where the business was stuck.
+        I connected an AI research tool to the CRM, email, calendar, team chat and call
+        recordings, and it wrote one report on where revenue came from. The bottleneck was
+        finding new customers.
       </p>
     ),
   },
   {
-    id: "canvas",
-    title: "The course fills in on a canvas",
+    id: "glass",
+    title: "Every lead under the glass",
     body: (
       <p>
-        RAG pipelines and agent flows draft the modules and lessons onto a canvas step by step,
-        and the person building the course approves each stage before the next one starts. They
-        can pull any lesson out and rewrite it, so the edit stays in their hands. Enterprise
-        deals picked up after it shipped.
+        A sales funnel works a lot like a production line: leads come in at one end and revenue
+        comes out the other. With every lead and sales call in front of it, the AI found that
+        enterprise buyers were worth about 10 times more than smaller companies, yet most of the
+        sales time went to the smaller ones. Most enterprise buyers had found Disco through AI
+        chat.
       </p>
     ),
   },
   {
-    id: "parallel",
-    title: "Faster with the steps side by side",
+    id: "discovered",
+    title: "Get found by the right buyers",
     body: (
       <p>
-        Disco&rsquo;s chat agent was slow because each of its steps waited for the one before
-        it to finish. I ran them in parallel, which cut response times by 75% and cost by 58%,
-        and the answers got better too.
+        We pointed all our content at four topics that enterprise buyers kept raising on sales
+        calls, as articles and videos. AI chat tools started to recommend Disco when buyers asked
+        about them. AI search went from about 30% of our new leads to about 60%.
       </p>
     ),
   },
   {
     id: "research",
-    title: "One question reaches every system",
+    title: "Research every lead before the first message",
     body: (
       <p>
-        For the sales and marketing teams I set up deep research in Claude and connected it to
-        the CRM and the other systems they depended on. A question about an account now draws
-        on all of them at once.
+        Researching a new lead used to take a few hours by hand. Now AI reads the company&rsquo;s
+        website, the CRM and any past conversations, and sorts the lead into one of three kinds of
+        buyer. The first message talks about what that kind of buyer cares about, and the
+        salesperson knows it before the call.
       </p>
     ),
   },
   {
-    id: "unattended",
-    title: "It keeps running on its own",
+    id: "qualify",
+    title: "Qualify before the sales call",
     body: (
       <p>
-        The same stack, built on Claude, Make.com and custom MCP integrations, handles lead
-        enrichment, buyer-intent alerts and outbound sequencing across more than 80,000
-        contacts. A payment recovery pipeline runs alongside it with nobody touching it, and it
-        brings back tens of thousands of dollars a month in late payments.
+        A fit check runs before anyone books a call. Enterprise buyers who match go to a
+        salesperson. Smaller companies get pointed to the self-serve demo, and leads that
+        don&rsquo;t fit are told so, which leaves the sales team&rsquo;s time for the deals that
+        bring in revenue.
+      </p>
+    ),
+  },
+  {
+    id: "results",
+    title: "What changed",
+    body: (
+      <p>
+        Enterprise leads roughly doubled in under two months, and annual recurring revenue from
+        those customers roughly tripled in five. They were also easier to manage, churned less and
+        signed annual contracts.
       </p>
     ),
   },
 ];
 
-const CALLOUTS: { key: CalloutKey; text: string }[] = [
-  { key: "card", text: "Course description" },
-  { key: "canvas", text: "Empty canvas" },
-  { key: "agents", text: "Agents" },
-  { key: "approve", text: "Each stage approved" },
-  { key: "edit", text: "Rewritten by hand" },
-  { key: "serial", text: "One after another" },
-  { key: "parallel", text: "All at once" },
-  { key: "question", text: "A question about an account" },
-  { key: "contacts", text: "80,000+ contacts" },
-  { key: "coins", text: "Late payments recovered" },
+/** blue: the part a step is about. wrap: one or two words a line. */
+const NOTES: { key: NoteKey; text: string; blue?: boolean; wrap?: boolean; quiet?: boolean }[] = [
+  { key: "tool0", text: "CRM", quiet: true },
+  { key: "tool1", text: "Email", quiet: true },
+  { key: "tool2", text: "Calendar", quiet: true },
+  { key: "tool3", text: "Team chat", quiet: true },
+  { key: "tool4", text: "Call recordings", quiet: true },
+  { key: "tool5", text: "Meeting notes", quiet: true },
+  { key: "ai", text: "AI research" },
+  { key: "bar0", text: "Find new customers", blue: true, wrap: true },
+  { key: "bar1", text: "Serve customers", wrap: true },
+  { key: "bar2", text: "Handle admin", wrap: true },
+  { key: "bar3", text: "Follow up", wrap: true },
+  { key: "bar4", text: "Hire people", wrap: true },
+  { key: "bottleneck", text: "Bottleneck", blue: true },
+  { key: "src0", text: "AI chat", blue: true, quiet: true },
+  { key: "src1", text: "Google search", quiet: true },
+  { key: "src2", text: "Organic content", quiet: true },
+  { key: "src3", text: "Paid ads", quiet: true },
+  { key: "src4", text: "Referrals", quiet: true },
+  { key: "src5", text: "Conferences", quiet: true },
+  { key: "stage0", text: "New leads", wrap: true },
+  { key: "stage1", text: "Qualified", wrap: true },
+  { key: "stage2", text: "Segmented", wrap: true },
+  { key: "stage3", text: "Contacted", wrap: true },
+  { key: "stage4", text: "Sales call", wrap: true },
+  { key: "revenue", text: "Revenue" },
+  { key: "lost", text: "Lost along the way", quiet: true },
+  { key: "cards", text: "Articles and videos on four buyer topics" },
+  { key: "research", text: "AI research", blue: true },
+  { key: "lane0", text: "Learning business", blue: true },
+  { key: "lane1", text: "L&D team", blue: true },
+  { key: "lane2", text: "Smaller company" },
+  { key: "message", text: "A first message for each kind of buyer" },
+  { key: "fit", text: "Fit check", blue: true },
+  { key: "call", text: "Sales call", blue: true },
+  { key: "demo", text: "Self-serve demo" },
+  { key: "poor", text: "Poor fit: no sales time", quiet: true },
 ];
 
-const NOTES: { key: NoteKey; text: string }[] = [
-  { key: "hub", text: "Claude" },
-  { key: "crm", text: "CRM" },
-];
+type Refs = { notes: Partial<Record<NoteKey, HTMLSpanElement>>; panels: Partial<Record<PanelKey, HTMLDivElement>> };
 
-type Refs = {
-  ticks: (SVGPathElement | null)[];
-  spokes: (SVGPathElement | null)[];
-  heads: (SVGCircleElement | null)[];
-  ask: SVGPathElement | null;
-  orbit: SVGPathElement | null;
-  stats: HTMLDivElement | null;
-  timeFill: HTMLSpanElement | null;
-  costFill: HTMLSpanElement | null;
-  timeNote: HTMLSpanElement | null;
-  costNote: HTMLSpanElement | null;
-  lines: Partial<Record<CalloutKey, SVGLineElement>>;
-  dots: Partial<Record<CalloutKey, SVGCircleElement>>;
-  tags: Partial<Record<CalloutKey, HTMLSpanElement>>;
-  notes: Partial<Record<NoteKey, HTMLSpanElement>>;
-};
-
-const SPOKES = 6;
-
-function collect(r: Refs): DiscoDom {
-  const need = <E,>(el: E | undefined | null, name: string): E => {
-    if (!el) throw new Error(`Disco overlay is missing ${name}`);
-    return el;
-  };
-  const callouts = {} as Record<CalloutKey, Callout>;
-  for (const { key } of CALLOUTS)
-    callouts[key] = { el: need(r.tags[key], key), line: need(r.lines[key], key), dot: r.dots[key] ?? null };
+function collect(r: Refs): GrowthDom {
   const notes = {} as Record<NoteKey, HTMLElement>;
-  for (const { key } of NOTES) notes[key] = need(r.notes[key], key);
-  return {
-    callouts,
-    notes,
-    ticks: r.ticks.map((t, i) => need(t, `tick ${i}`)),
-    spokes: r.spokes.map((s, i) => need(s, `spoke ${i}`)),
-    heads: r.heads.map((h, i) => need(h, `head ${i}`)),
-    ask: need(r.ask, "ask"),
-    orbit: need(r.orbit, "orbit"),
-    stats: need(r.stats, "stats"),
-    timeFill: need(r.timeFill, "timeFill"),
-    costFill: need(r.costFill, "costFill"),
-    timeNote: need(r.timeNote, "timeNote"),
-    costNote: need(r.costNote, "costNote"),
-  };
+  for (const { key } of NOTES) {
+    const el = r.notes[key];
+    if (!el) throw new Error(`Disco overlay is missing ${key}`);
+    notes[key] = el;
+  }
+  const panels = {} as Record<PanelKey, HTMLElement>;
+  for (const key of ["key", "share", "results"] as const) {
+    const el = r.panels[key];
+    if (!el) throw new Error(`Disco overlay is missing the ${key} panel`);
+    panels[key] = el;
+  }
+  return { notes, panels };
 }
 
 function Visual({ api }: { api: BreakdownApi }) {
-  const refs = useRef<Refs>({
-    ticks: [null, null, null, null],
-    spokes: Array(SPOKES).fill(null),
-    heads: Array(SPOKES).fill(null),
-    ask: null,
-    orbit: null,
-    stats: null,
-    timeFill: null,
-    costFill: null,
-    timeNote: null,
-    costNote: null,
-    lines: {},
-    dots: {},
-    tags: {},
-    notes: {},
-  });
-  const r = refs.current;
+  const refs = useRef<Refs>({ notes: {}, panels: {} });
+  const panel = (key: PanelKey) => (el: HTMLDivElement | null) => {
+    if (el) refs.current.panels[key] = el;
+  };
 
   const load = async (): Promise<SceneFactory> => {
-    const mod = await import("./discoScene");
-    return (T, ctx) => mod.createDiscoScene(T, ctx, collect(refs.current));
+    const mod = await import("./growthScene");
+    return (T, ctx) => mod.createGrowthScene(T, ctx, collect(refs.current));
   };
 
   return (
-    <BreakdownCanvas api={api} load={load} fallback="The 3D drawing needs WebGL." className={styles.host}>
-      <svg className={styles.overlay} aria-hidden="true">
-        {r.ticks.map((_, i) => (
-          <path
-            key={i}
-            d="M -5 0 L -1.5 3.5 L 5.5 -4.5"
-            className={styles.tick}
-            ref={(el) => {
-              r.ticks[i] = el;
-            }}
-          />
-        ))}
-        <path
-          className={styles.ask}
-          ref={(el) => {
-            r.ask = el;
-          }}
-        />
-        {r.spokes.map((_, i) => (
-          <g key={i} className={styles.spoke}>
-            <path
-              ref={(el) => {
-                r.spokes[i] = el;
-              }}
-            />
-            <circle
-              r={3}
-              ref={(el) => {
-                r.heads[i] = el;
-              }}
-            />
-          </g>
-        ))}
-        <path
-          className={styles.orbit}
-          ref={(el) => {
-            r.orbit = el;
-          }}
-        />
-        {CALLOUTS.map((c) => (
-          <g key={c.key} className={styles.leader}>
-            <line
-              ref={(el) => {
-                if (el) r.lines[c.key] = el;
-              }}
-            />
-            <circle
-              r={2.5}
-              ref={(el) => {
-                if (el) r.dots[c.key] = el;
-              }}
-            />
-          </g>
-        ))}
-      </svg>
-      {CALLOUTS.map((c) => (
-        <span
-          key={c.key}
-          className={styles.tag}
-          aria-hidden="true"
-          ref={(el) => {
-            if (el) r.tags[c.key] = el;
-          }}
-        >
-          {c.text}
-        </span>
-      ))}
+    <BreakdownCanvas api={api} load={load} fallback="The 3D drawing of the sales line needs WebGL." className={styles.host}>
       {NOTES.map((n) => (
         <span
           key={n.key}
-          className={styles.note}
+          className={[styles.note, n.blue && styles.blue, n.wrap && styles.wrap, n.quiet && styles.quiet].filter(Boolean).join(" ")}
           aria-hidden="true"
           ref={(el) => {
-            if (el) r.notes[n.key] = el;
+            if (el) refs.current.notes[n.key] = el;
           }}
         >
           {n.text}
         </span>
       ))}
-      <div
-        className={styles.stats}
-        aria-hidden="true"
-        ref={(el) => {
-          r.stats = el;
-        }}
-      >
-        <span className={styles.statLabel}>Response time</span>
+
+      <div className={`${styles.panel} ${styles.key}`} aria-hidden="true" ref={panel("key")}>
+        <span className={styles.keyRow}>
+          <i className={`${styles.swatch} ${styles.tall}`} />
+          Enterprise lead, worth about 10× a smaller one
+        </span>
+        <span className={styles.keyRow}>
+          <i className={`${styles.swatch} ${styles.flat}`} />
+          Smaller company
+        </span>
+      </div>
+
+      <div className={`${styles.panel} ${styles.share}`} aria-hidden="true" ref={panel("share")}>
+        <span className={styles.shareLabel}>New leads from AI search</span>
         <span className={styles.track}>
-          <span
-            className={styles.fill}
-            ref={(el) => {
-              r.timeFill = el;
-            }}
-          />
+          <span className={styles.fill} />
         </span>
-        <span
-          className={styles.statValue}
-          ref={(el) => {
-            r.timeNote = el;
-          }}
-        >
-          75% less
+        <span className={styles.shareValue}>
+          <span className={styles.from}>~30%</span>
+          <span className={styles.to}>~60%</span>
         </span>
-        <span className={styles.statLabel}>Cost</span>
-        <span className={styles.track}>
-          <span
-            className={styles.fill}
-            ref={(el) => {
-              r.costFill = el;
-            }}
-          />
-        </span>
-        <span
-          className={styles.statValue}
-          ref={(el) => {
-            r.costNote = el;
-          }}
-        >
-          58% less
-        </span>
+      </div>
+
+      <div className={`${styles.panel} ${styles.results}`} aria-hidden="true" ref={panel("results")}>
+        <div className={styles.result}>
+          <span className={styles.bars}>
+            <i className={styles.before} />
+            <i className={styles.after} style={{ "--k": 2 } as CSSProperties} />
+          </span>
+          <span className={styles.figure}>~2×</span>
+          <span className={styles.what}>
+            Enterprise leads
+            <br />
+            <span className={styles.when}>in under 2 months</span>
+          </span>
+        </div>
+        <div className={styles.result}>
+          <span className={styles.bars}>
+            <i className={styles.before} />
+            <i className={styles.after} style={{ "--k": 3 } as CSSProperties} />
+          </span>
+          <span className={styles.figure}>~3×</span>
+          <span className={styles.what}>
+            ARR from them
+            <br />
+            <span className={styles.when}>in 5 months</span>
+          </span>
+        </div>
       </div>
     </BreakdownCanvas>
   );
 }
 
-/** Disco's scroll breakdown: a model of the course builder and the sales systems, five steps. */
+/** Disco's scroll breakdown: the sales funnel drawn as a production line, six steps. */
 export default function DiscoBreakdown({ className }: { className?: string }) {
   return (
     <ScrollBreakdown
       className={className}
-      label="How the course builder and the sales systems work"
+      label="How the AI growth system at Disco works"
       steps={STEPS}
       visual={(api) => <Visual api={api} />}
-      caption="A simplified drawing of how the pieces fit together. Drag it to turn it."
+      caption="A simplified model of the sales line, drawn for this page. Drag it to turn it."
     />
   );
 }

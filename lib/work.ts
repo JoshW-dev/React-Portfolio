@@ -54,7 +54,7 @@ const entries: Work[] = [
   {
     slug: "disco",
     title: "Disco",
-    summary: "An AI course builder that helped close enterprise deals, and the automation behind sales.",
+    summary: "I used AI to find Disco's bottleneck, then rebuilt the sales funnel around it.",
     kind: "Work",
     industry: "Education",
     years: "2023 to 2026",
@@ -64,15 +64,17 @@ const entries: Work[] = [
       height: 436,
       alt: "Disco's home page with the headline Human-First, AI-Native Learning",
     },
-    stack: ["Claude", "RAG", "MCP", "Make.com", "TypeScript", "Python"],
+    stack: ["Claude", "MCP", "HubSpot", "Apollo", "Make.com", "TypeScript"],
     frame: {
       src: "/film/05-twin.webp",
       alt: "Illustration of a carton packaging line drawn as a glowing wireframe model, robot arms over the conveyor",
     },
     links: [{ label: "Open disco.co", href: "https://www.disco.co/" }],
     body: [
-      "I worked on the product and on the systems the sales and marketing teams ran on.",
-      "One piece the steps above leave out is a content system I built for SEO and AI search. It got Disco cited in ChatGPT and Google AI Overviews while doubling site activity.",
+      "Disco is an AI-powered education platform that companies use to run training, either as a business of their own or for their own people. As its GTM engineer, I spent my last two years there taking what I'd learned on factory lines and using it on sales and marketing.",
+      "On a production line you find the bottleneck and work on that, because work anywhere else won't change the output. The same rule picked which AI idea to build first, and AI then did the research and the repetitive work around it.",
+      "It took about six months of experiments that went nowhere before we found what worked, so the steps above are the version that stuck.",
+      "Before the growth work I built Disco's AI course builder. I also cut its chat agent's response time by 75% and its cost by 58% by running the agent's steps in parallel, and the same automation stack ran lead enrichment and outbound email across more than 80,000 contacts.",
     ],
   },
   {

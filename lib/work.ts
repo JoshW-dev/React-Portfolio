@@ -66,8 +66,8 @@ const entries: Work[] = [
     },
     stack: ["Claude", "MCP", "HubSpot", "Apollo", "Make.com", "TypeScript"],
     frame: {
-      src: "/film/05-twin.webp",
-      alt: "Illustration of a carton packaging line drawn as a glowing wireframe model, robot arms over the conveyor",
+      src: "/work/disco-hero.webp",
+      alt: "Illustration of a sales pipeline as a glowing wireframe: contact cards pass through three rings, branch along an automation flow and land on a pipeline board",
     },
     links: [{ label: "Open disco.co", href: "https://www.disco.co/" }],
     body: [

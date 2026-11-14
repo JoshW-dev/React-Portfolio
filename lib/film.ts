@@ -71,7 +71,7 @@ export const STOPS: Stop[] = [
     spots: [{ x: 0.6, y: 0.27, label: "AI tutor, 2019", href: "/projects/ai-education-assistant" }],
     place: "Alberta, Canada",
     short: "Alberta",
-    text: "In 2019, three years before ChatGPT, I built an AI tutor for the University of Alberta. It wrote quiz questions from course material and answered students\u2019 questions.",
+    text: "In 2019, three years before ChatGPT, I built an AI tutor for Athabasca University. It wrote quiz questions from course material and answered students\u2019 questions.",
   },
   {
     still: "/film/03-plant.webp",

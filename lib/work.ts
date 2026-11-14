@@ -486,7 +486,7 @@ const entries: Work[] = [
   {
     slug: "ai-education-assistant",
     title: "AI Education Assistant",
-    summary: "An AI tutor for the University of Alberta, built on IBM Watson in 2019, three years before ChatGPT.",
+    summary: "An AI tutor for Athabasca University, built on IBM Watson in 2019, three years before ChatGPT.",
     kind: "Work",
     industry: "Education",
     years: "2019",
@@ -503,7 +503,7 @@ const entries: Work[] = [
     },
     links: [{ label: "Open cac.queensu.ca", href: "https://cac.queensu.ca/" }],
     body: [
-      "In 2019 I led the design and full-stack build of a pilot AI tutor at Queen\u2019s Centre for Advanced Computing, working with IBM, for the University of Alberta. It wrote quiz questions from course material and answered students\u2019 questions, three years before ChatGPT made that ordinary.",
+      "In 2019 I led the design and full-stack build of a pilot AI tutor at Queen\u2019s Centre for Advanced Computing, working with IBM, for Athabasca University. It wrote quiz questions from course material and answered students\u2019 questions, three years before ChatGPT made that ordinary.",
       "Students and educators each had their own view in React. Behind it, three Node.js services in Docker on Kubernetes handled content generation, answer extraction and the tutor\u2019s conversation, using a Python NLP engine and IBM Watson\u2019s language understanding, search and assistant services, with MongoDB holding the course data.",
     ],
   },

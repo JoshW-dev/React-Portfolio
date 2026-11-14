@@ -16,8 +16,8 @@ const STEPS: BreakdownStep[] = [
     title: "It starts with course material",
     body: (
       <p>
-        In 2019 I directed the design and full-stack build of a pilot AI tutor for the University of
-        Alberta, made at Queen&rsquo;s University&rsquo;s Centre for Advanced Computing with IBM. That
+        In 2019 I directed the design and full-stack build of a pilot AI tutor for Athabasca
+        University, made at Queen&rsquo;s University&rsquo;s Centre for Advanced Computing with IBM. That
         was three years before ChatGPT came out. Everything the tutor did started from a
         course&rsquo;s own material.
       </p>

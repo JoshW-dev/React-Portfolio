@@ -203,6 +203,26 @@ const restBefore = (pos: number) => {
   for (const k of RESTS) if (HOLD_SEG[k].start <= pos + 1e-6) out = k;
   return out;
 };
+/** How long a far jump stays on black waiting for the place's picture to load. */
+const DIP_WAIT_MAX = 3000;
+/**
+ * The picture a far jump lands on: the last frame of the clip into the stop, or the stop's
+ * own still. Loaded at high priority, once, and decoded so it shows at once.
+ */
+const landing = new Map<number, Promise<void>>();
+const loadLanding = (k: number) => {
+  let done = landing.get(k);
+  if (!done) {
+    const hop = k > 0 ? HOP_LIST[k - 1] : null;
+    const src = hop && kindOf(hop) === "video" && hop.clip ? clipFile(hop.clip, "last.webp") : STOPS[k].still;
+    const img = new Image();
+    img.fetchPriority = "high";
+    img.src = src;
+    done = img.decode().catch(() => undefined);
+    landing.set(k, done);
+  }
+  return done;
+};
 /** The side map's fill: rest stops passed so far, with the share of the way to the next. */
 const mapProgress = (pos: number) => {
   for (let i = RESTS.length - 1; i >= 0; i--) {
@@ -639,23 +659,26 @@ export default function FilmScroll() {
       jumping = true;
       put(dipRef.current, "opacity", "1");
       put(dipRef.current, "visibility", "visible");
-      timersJump.push(
-        window.setTimeout(() => {
-          home = k;
-          settling = -1;
-          window.scrollTo({ top: yOf(target), behavior: "instant" });
-          snapNext = true;
-          kick(true);
-          timersJump.push(
-            window.setTimeout(() => {
-              jumping = false;
-              put(dipRef.current, "opacity", "0");
-              timersJump.push(window.setTimeout(() => put(dipRef.current, "visibility", "hidden"), DIP_MS + 40));
-              kick();
-            }, 220),
-          );
-        }, DIP_MS),
-      );
+      // The place's picture loads during the dip, and the film stays on black until it can show.
+      const picture = loadLanding(k);
+      const dipped = new Promise<void>((r) => timersJump.push(window.setTimeout(r, DIP_MS)));
+      const late = new Promise<void>((r) => timersJump.push(window.setTimeout(r, DIP_WAIT_MAX)));
+      void dipped.then(() => {
+        if (disposed) return;
+        home = k;
+        settling = -1;
+        window.scrollTo({ top: yOf(target), behavior: "instant" });
+        snapNext = true;
+        kick(true);
+        const settled = new Promise<void>((r) => timersJump.push(window.setTimeout(r, 220)));
+        void Promise.all([settled, Promise.race([picture, late])]).then(() => {
+          if (disposed) return;
+          jumping = false;
+          put(dipRef.current, "opacity", "0");
+          timersJump.push(window.setTimeout(() => put(dipRef.current, "visibility", "hidden"), DIP_MS + 40));
+          kick();
+        });
+      });
     };
     jumpRef.current = jumpTo;
 
@@ -1408,6 +1431,8 @@ export default function FilmScroll() {
                   className={styles.mapStop}
                   aria-current={k === stop ? "location" : undefined}
                   onClick={() => jumpRef.current?.(k)}
+                  onPointerEnter={() => void loadLanding(k)}
+                  onFocus={() => void loadLanding(k)}
                 >
                   <span className={styles.mapLabel}>{STOPS[k].short}</span>
                   <span className={styles.mapDot} aria-hidden="true" />

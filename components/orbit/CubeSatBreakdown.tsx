@@ -115,6 +115,9 @@ const NOTES: { key: NoteKey; text: string }[] = [
 ];
 
 type Refs = {
+  limbs: (SVGPathElement | null)[];
+  earthImage: (SVGGraphicsElement | null)[];
+  stars: (HTMLCanvasElement | null)[];
   svg: Partial<Record<"earth" | "station" | "uplink" | "rays" | "wedge" | "tracks" | "sight" | "cone" | "light", SVGPathElement>> & {
     sun?: SVGGElement;
     target?: SVGGElement;
@@ -136,8 +139,14 @@ function collect(r: Refs): CubeSatDom {
     callouts[key] = { el: need(r.tags[key], key), line: need(r.lines[key], key), dot: r.dots[key] ?? null };
   const notes = {} as Record<NoteKey, HTMLElement>;
   for (const { key } of NOTES) notes[key] = need(r.notes[key], key);
+  const limbs = r.limbs.filter((l): l is SVGPathElement => !!l);
+  const earthImage = r.earthImage.filter((l): l is SVGGraphicsElement => !!l);
+  const [s0, s1] = r.stars;
   return {
     earth: need(r.svg.earth, "earth"),
+    limbs,
+    earthImage,
+    stars: s0 && s1 ? [s0, s1] : undefined,
     station: need(r.svg.station, "station"),
     uplink: need(r.svg.uplink, "uplink"),
     sun: need(r.svg.sun, "sun"),
@@ -163,7 +172,7 @@ const SUN_TICKS = Array.from({ length: 8 }, (_, i) => {
 }).join(" ");
 
 function Visual({ api }: { api: BreakdownApi }) {
-  const refs = useRef<Refs>({ svg: {}, particles: [null, null, null], lines: {}, dots: {}, tags: {}, notes: {} });
+  const refs = useRef<Refs>({ limbs: [null, null], earthImage: [null, null], stars: [null, null], svg: {}, particles: [null, null, null], lines: {}, dots: {}, tags: {}, notes: {} });
   const r = refs.current;
   const path = (name: keyof Refs["svg"]) => (el: SVGPathElement | null) => {
     if (el) (r.svg as Record<string, unknown>)[name] = el;
@@ -180,18 +189,74 @@ function Visual({ api }: { api: BreakdownApi }) {
     return (T, ctx) => mod.createCubeSatBreakdown(T, ctx, collect(refs.current), fat);
   };
   // Ids in url() references must be plain.
-  const tintId = `limb-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
+  const uid = useId().replace(/[^a-zA-Z0-9_-]/g, "");
+  const tintId = `limb-${uid}`;
+  const clipId = `earth-${uid}`;
+  const shadeId = `shade-${uid}`;
+  const glowId = `glow-${uid}`;
 
   return (
     <BreakdownCanvas api={api} load={load} fallback="The 3D drawing of the satellite needs WebGL." className={styles.host}>
-      {/* Earth's limb, behind the canvas. */}
+      {/* Stars, on a dark page only. The second canvas holds the few that twinkle. */}
+      {[0, 1].map((i) => (
+        <canvas
+          key={i}
+          aria-hidden="true"
+          className={i === 0 ? styles.stars : `${styles.stars} ${styles.twinkle}`}
+          ref={(el) => {
+            r.stars[i] = el;
+          }}
+        />
+      ))}
+      {/* Earth's limb, behind the canvas. On a dark page it shows the planet from orbit: the
+          day side over the Rockies, the night side's city lights to the east, and a thin
+          atmosphere along the edge. */}
       <svg className={styles.ground} aria-hidden="true">
         <defs>
           <linearGradient id={tintId} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0" className={styles.tintTop} />
             <stop offset="0.6" className={styles.tintBottom} />
           </linearGradient>
+          <clipPath id={clipId}>
+            <path
+              ref={(el) => {
+                r.limbs[0] = el;
+              }}
+            />
+          </clipPath>
+          {/* Haze near the edge, where you look through more air, and shade further down. */}
+          <linearGradient id={shadeId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#8fb8ff" stopOpacity="0.55" />
+            <stop offset="0.16" stopColor="#5c8de0" stopOpacity="0.18" />
+            <stop offset="0.5" stopColor="#05070b" stopOpacity="0" />
+            <stop offset="1" stopColor="#05070b" stopOpacity="0.55" />
+          </linearGradient>
+          <filter id={glowId} x="-5%" y="-50%" width="110%" height="200%">
+            <feGaussianBlur stdDeviation="5" />
+          </filter>
         </defs>
+        <g className={styles.planet} clipPath={`url(#${clipId})`}>
+          <image
+            href="/work/cubesat/earth-strip.webp"
+            preserveAspectRatio="xMidYMin slice"
+            ref={(el) => {
+              r.earthImage[0] = el;
+            }}
+          />
+          <rect
+            fill={`url(#${shadeId})`}
+            ref={(el) => {
+              r.earthImage[1] = el;
+            }}
+          />
+        </g>
+        <path
+          className={styles.atmosphere}
+          filter={`url(#${glowId})`}
+          ref={(el) => {
+            r.limbs[1] = el;
+          }}
+        />
         <path ref={path("earth")} className={styles.earth} fill={`url(#${tintId})`} />
       </svg>
       <svg className={styles.overlay} aria-hidden="true">

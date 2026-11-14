@@ -56,6 +56,12 @@ export type NoteKey = "station" | "sun" | "angle10" | "particles" | "target" | "
 
 export type CubeSatDom = {
   earth: SVGPathElement;
+  /** More paths drawn along the limb (the clip for Earth's picture, the atmosphere's glow). */
+  limbs?: SVGPathElement[];
+  /** Earth's picture, laid under the limb. */
+  earthImage?: SVGGraphicsElement[];
+  /** Star canvases: every star but the twinkling ones, then the twinkling ones. */
+  stars?: [HTMLCanvasElement, HTMLCanvasElement];
   station: SVGPathElement;
   uplink: SVGPathElement;
   sun: SVGGElement;
@@ -535,19 +541,29 @@ export function createCubeSatBreakdown(T: Three, ctx: SceneContext, dom: CubeSat
     if (W !== limbW || yTop !== limbTop) {
       limbW = W;
       limbTop = yTop;
-      dom.earth.setAttribute("d", `M -2 ${f1(yAt(-2))} A ${f1(R)} ${f1(R)} 0 0 1 ${f1(W + 2)} ${f1(yAt(W + 2))} L ${f1(W + 2)} ${f1(H + 2)} L -2 ${f1(H + 2)} Z`);
+      const d = `M -2 ${f1(yAt(-2))} A ${f1(R)} ${f1(R)} 0 0 1 ${f1(W + 2)} ${f1(yAt(W + 2))} L ${f1(W + 2)} ${f1(H + 2)} L -2 ${f1(H + 2)} Z`;
+      dom.earth.setAttribute("d", d);
+      for (const l of dom.limbs ?? []) l.setAttribute("d", d);
+      for (const el of dom.earthImage ?? []) {
+        el.setAttribute("x", "0");
+        el.setAttribute("y", f1(yTop - 2));
+        el.setAttribute("width", f1(W));
+        el.setAttribute("height", f1(H - yTop + 4));
+      }
+      if (dom.stars) drawStars(dom.stars, W, H, yAt);
     }
 
     // Step 0: a ground station radios the coordinates up to the antennas.
     const w0 = near(p, 0, 0.25, 0.5);
     const sx = W * (wide ? 0.14 : 0.13);
     const sy = yAt(sx) + rise;
-    dom.station.setAttribute("d", `M ${f1(sx - 6)} ${f1(sy + 1)} L ${f1(sx)} ${f1(sy - 9)} L ${f1(sx + 6)} ${f1(sy + 1)} Z`);
-    setOpacity(dom.station, w0);
     // To the antenna tip nearest the station, so the line stays clear of the body.
     let a = tipPts[0];
     for (const t of tipPts) if (Math.hypot(t.x - sx, t.y - sy) < Math.hypot(a.x - sx, a.y - sy)) a = t;
-    dom.uplink.setAttribute("d", `M ${f1(sx)} ${f1(sy - 12)} L ${f1(a.x)} ${f1(a.y)}`);
+    const dish = stationShape(sx, sy, ex, ey, a.x, a.y);
+    dom.station.setAttribute("d", dish.d);
+    setOpacity(dom.station, w0);
+    dom.uplink.setAttribute("d", `M ${f1(dish.feed.x)} ${f1(dish.feed.y)} L ${f1(a.x)} ${f1(a.y)}`);
     dom.uplink.style.strokeDashoffset = reducedMotion ? "0" : f1(-time * 22);
     setOpacity(dom.uplink, w0);
     note(dom.notes.station, sx, sy + 20, w0, "center");
@@ -775,4 +791,111 @@ export function createCubeSatBreakdown(T: Three, ctx: SceneContext, dom: CubeSat
       disposeRenderer(renderer);
     },
   };
+}
+
+/** A small seeded random number source, so the stars sit in the same places on every visit. */
+function seeded(seed: number) {
+  let t = seed >>> 0;
+  return () => {
+    t = (t + 0x6d2b79f5) >>> 0;
+    let r = Math.imul(t ^ (t >>> 15), 1 | t);
+    r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r;
+    return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/**
+ * Stars above Earth's limb. Most go on the first canvas; one in nine goes on the second, which
+ * the stylesheet fades in and out so a few stars twinkle.
+ */
+function drawStars(canvases: [HTMLCanvasElement, HTMLCanvasElement], W: number, H: number, yAt: (x: number) => number) {
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  const ctxs = canvases.map((c) => {
+    c.width = Math.round(W * dpr);
+    c.height = Math.round(H * dpr);
+    const ctx = c.getContext("2d");
+    ctx?.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx?.clearRect(0, 0, W, H);
+    return ctx;
+  });
+  const rand = seeded(20190501);
+  const count = Math.round((W * H) / 1700);
+  for (let i = 0; i < count; i++) {
+    const x = rand() * W;
+    const y = rand() * H;
+    const big = rand() < 0.07;
+    const r = big ? 0.9 + rand() * 0.7 : 0.35 + rand() * 0.55;
+    const alpha = big ? 0.75 + rand() * 0.25 : 0.25 + rand() * 0.55;
+    const tint = rand();
+    const twinkle = rand() < 0.11;
+    // Stars stop short of the limb, where the atmosphere glows.
+    if (y > yAt(x) - 6) continue;
+    const ctx = ctxs[twinkle ? 1 : 0];
+    if (!ctx) continue;
+    ctx.fillStyle = tint < 0.12 ? `rgba(255,226,196,${alpha})` : tint < 0.3 ? `rgba(200,220,255,${alpha})` : `rgba(255,255,255,${alpha})`;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+    if (big) {
+      ctx.fillStyle = `rgba(200,220,255,${alpha * 0.12})`;
+      ctx.beginPath();
+      ctx.arc(x, y, r * 3.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+}
+
+/**
+ * The ground station: a low building on Earth's limb with a mast and a dish on top, the dish
+ * turned toward the satellite. (sx, sy) is the point on the limb, (ex, ey) Earth's centre,
+ * (tx, ty) the antenna it talks to. Returns one path, and the tip of the dish's feed.
+ */
+function stationShape(sx: number, sy: number, ex: number, ey: number, tx: number, ty: number) {
+  // "Up" at this point on the limb, away from Earth's centre, and "along" the ground.
+  let ux = sx - ex;
+  let uy = sy - ey;
+  const ul = Math.hypot(ux, uy) || 1;
+  ux /= ul;
+  uy /= ul;
+  const ax = -uy;
+  const ay = ux;
+  // Drawn in small units, then scaled up so it reads at a glance on the limb.
+  const k = 1.9;
+  const at = (along: number, up: number) => ({ x: sx + k * (ax * along + ux * up), y: sy + k * (ay * along + uy * up) });
+  const f = (n: number) => n.toFixed(1);
+  const poly = (pts: { x: number; y: number }[]) => `M ${pts.map((q) => `${f(q.x)} ${f(q.y)}`).join(" L ")} Z`;
+
+  // The building, with a lower annex, and the mast.
+  const building = poly([at(-9, 0), at(5, 0), at(5, 6), at(-9, 6)]);
+  const annex = poly([at(5, 0), at(11, 0), at(11, 3.5), at(5, 3.5)]);
+  const mast = poly([at(-3.2, 6), at(-1.8, 6), at(-1.8, 12), at(-3.2, 12)]);
+  const hub = at(-2.5, 13);
+
+  // The dish faces the satellite, kept within 70 degrees of straight up.
+  let dx = tx - hub.x;
+  let dy = ty - hub.y;
+  const dl = Math.hypot(dx, dy) || 1;
+  dx /= dl;
+  dy /= dl;
+  const up = Math.atan2(uy, ux);
+  let rel = Math.atan2(dy, dx) - up;
+  rel = Math.atan2(Math.sin(rel), Math.cos(rel));
+  const lim = (70 * Math.PI) / 180;
+  rel = Math.max(-lim, Math.min(lim, rel));
+  const vx = Math.cos(up + rel);
+  const vy = Math.sin(up + rel);
+  // Across the dish's face.
+  const cx = -vy;
+  const cy = vx;
+  const rim = 7.5;
+  const p = (u: number, c: number) => ({ x: hub.x + k * (vx * u + cx * c), y: hub.y + k * (vy * u + cy * c) });
+  const rimA = p(3.6, -rim);
+  const rimB = p(3.6, rim);
+  const back = p(-3.8, 0);
+  const inner = p(2, 0);
+  const bowl = `M ${f(rimA.x)} ${f(rimA.y)} Q ${f(back.x)} ${f(back.y)} ${f(rimB.x)} ${f(rimB.y)} Q ${f(inner.x)} ${f(inner.y)} ${f(rimA.x)} ${f(rimA.y)} Z`;
+  // The feed: a thin arm out to a small block in front of the dish.
+  const arm = poly([p(0, -0.6), p(9, -0.6), p(9, 0.6), p(0, 0.6)]);
+  const head = poly([p(8.4, -1.6), p(11, -1.6), p(11, 1.6), p(8.4, 1.6)]);
+  return { d: [building, annex, mast, bowl, arm, head].join(" "), feed: p(11.5, 0) };
 }

@@ -15,7 +15,7 @@ import { lerp, paperMaterial, type Palette } from "@/components/breakdown/kit";
 
 type Three = typeof THREE;
 export type V3 = [number, number, number];
-/** Fill shades: the three pale fills from the palette, then white. */
+/** Fill shades: the palette's three fills, then its paper (white on a white page). */
 export type Shade = 0 | 1 | 2 | 3;
 export type Add = (geo: THREE.BufferGeometry, shade: Shade, pos?: V3, rot?: V3, scale?: V3) => void;
 
@@ -41,12 +41,13 @@ const easeOutBack = (t: number) => {
 export function createShop(T: Three, palette: Palette) {
   const geos = new Map<string, THREE.BufferGeometry>();
   const edgeGeos = new Map<THREE.BufferGeometry, THREE.BufferGeometry>();
-  const shades = [palette.fills[0], palette.fills[1], palette.fills[2], "#ffffff"].map((h) => new T.Color(h));
-  const white = new T.Color("#ffffff");
+  const shades = [palette.fills[0], palette.fills[1], palette.fills[2], palette.paper].map((h) => new T.Color(h));
+  /** Where a part out of focus fades to: the page. */
+  const page = new T.Color(palette.bg);
   const ink = new T.Color(palette.ink);
   const agent = new T.Color(palette.agent);
-  /** The fill for a part that is live: a pale wash of the site blue. */
-  const tintFill = new T.Color("#ffffff").lerp(agent, 0.2);
+  /** The fill for a part that is live: a wash of the site blue over the paper. */
+  const tintFill = new T.Color(palette.paper).lerp(agent, 0.2);
 
   const cached = (key: string, make: () => THREE.BufferGeometry) => {
     let g = geos.get(key);
@@ -143,7 +144,7 @@ export function createShop(T: Three, palette: Palette) {
         const key = `${p.tint.toFixed(3)}|${p.dim.toFixed(3)}|${p.rise.toFixed(3)}`;
         if (key === last) return;
         last = key;
-        for (const [shade, mat] of mats) mat.color.copy(shades[shade]).lerp(white, p.dim * 0.9).lerp(tintFill, p.tint);
+        for (const [shade, mat] of mats) mat.color.copy(shades[shade]).lerp(page, p.dim * 0.9).lerp(tintFill, p.tint);
         edge.color.copy(ink).lerp(agent, p.tint);
         edge.opacity = lerp(0.85 * (1 - 0.85 * p.dim), 1, p.tint);
         const r = p.rise;

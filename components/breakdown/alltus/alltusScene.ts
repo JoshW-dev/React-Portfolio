@@ -195,7 +195,8 @@ export function createAlltusBreakdown(T: Three, ctx: SceneContext, dom: AlltusDo
   world.updateMatrixWorld(true);
 
   // ---- Cables and the pulses that run along them -------------------------------------
-  const lineColor = new T.Color("#c4c7cd");
+  // A quiet grey off the page: light on a white page, dark on a dark one.
+  const lineColor = new T.Color(palette.dark ? "#3a414c" : "#c4c7cd");
   const agentColor = new T.Color(palette.agent);
   type Cable = {
     curve: THREE.Curve<THREE.Vector3>;

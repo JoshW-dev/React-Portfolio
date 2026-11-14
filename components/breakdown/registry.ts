@@ -7,6 +7,7 @@ import AlltusBreakdown from "./alltus/AlltusBreakdown";
 import CrimsonleadBreakdown from "./crimsonlead/CrimsonleadBreakdown";
 import BottleneckBreakdown from "./bottleneck/BottleneckBreakdown";
 import BoseBreakdown from "./bose/BoseBreakdown";
+import EducationBreakdown from "./education/EducationBreakdown";
 
 /** The scroll breakdown for a project, keyed by its slug. */
 export const breakdowns: Record<string, ComponentType<{ className?: string }>> = {
@@ -18,4 +19,5 @@ export const breakdowns: Record<string, ComponentType<{ className?: string }>> =
   crimsonlead: CrimsonleadBreakdown,
   "bottleneck-radar": BottleneckBreakdown,
   "bose-ar": BoseBreakdown,
+  "ai-education-assistant": EducationBreakdown,
 };

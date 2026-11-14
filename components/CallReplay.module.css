@@ -1,6 +1,24 @@
 .panel {
+  /* Words and waveform bars still to come, and the live dot's ring. The canvas reads these. */
+  --ahead: #c9cbd1;
+  --wave-ink-ahead: #dcdde1;
+  --wave-agent-ahead: #d3d9fd;
+  --wave-quiet: #c9cbd1;
+  --wave-quiet-ahead: #ececef;
+  --pulse: 37 64 245;
+
   border-top: 1px solid var(--ink);
   border-bottom: 1px solid var(--line);
+}
+
+/* On a dark page what is still to come sits dark, just above the page. */
+:global([data-theme="dark"]) .panel {
+  --ahead: #4a505b;
+  --wave-ink-ahead: #2b3038;
+  --wave-agent-ahead: #252d52;
+  --wave-quiet: #4a505b;
+  --wave-quiet-ahead: #1f242c;
+  --pulse: 111 134 255;
 }
 
 /* ---------- header ---------- */
@@ -29,10 +47,10 @@
 @keyframes pulse {
   0%,
   100% {
-    box-shadow: 0 0 0 0 rgb(37 64 245 / 0.35);
+    box-shadow: 0 0 0 0 rgb(var(--pulse) / 0.35);
   }
   50% {
-    box-shadow: 0 0 0 7px rgb(37 64 245 / 0);
+    box-shadow: 0 0 0 7px rgb(var(--pulse) / 0);
   }
 }
 
@@ -68,7 +86,7 @@
   padding: 0 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fff;
+  background: var(--bg);
   font-size: 0.875rem;
   font-weight: 600;
   cursor: pointer;
@@ -145,7 +163,7 @@
 }
 
 .text span {
-  color: #c9cbd1;
+  color: var(--ahead);
   transition: color 0.16s linear;
 }
 

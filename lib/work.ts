@@ -22,6 +22,8 @@ export type Work = {
    * full-bleed, with the title over it where the film's caption sits.
    */
   frame?: { src: string; alt: string };
+  /** The page takes the dark theme, for a project whose frame is dark (space, night). */
+  dark?: boolean;
   body: string[];
   stack?: string[];
   links: { label: string; href: string }[];
@@ -36,6 +38,7 @@ const entries: Work[] = [
     industry: "Government",
     years: "2026 to now",
     stack: ["Twilio", "ElevenLabs", "Langfuse", "RAG", "Python", "TypeScript"],
+    dark: true,
     frame: {
       src: "/film/07-towns.webp",
       alt: "Illustration of farm country at night from high above, a river and the lights of small towns under a full moon",
@@ -480,8 +483,8 @@ const entries: Work[] = [
   },
   {
     slug: "ai-education-assistant",
-    title: "AI Education Assistant Platform",
-    summary: "A learning platform for students and educators, built on IBM Watson.",
+    title: "AI Education Assistant",
+    summary: "An AI tutor for the University of Alberta, built on IBM Watson in 2019, three years before ChatGPT.",
     kind: "Work",
     industry: "Education",
     years: "2019",
@@ -492,9 +495,14 @@ const entries: Work[] = [
       alt: "Architecture diagram linking a React front end and Node.js services to IBM Watson and MongoDB",
     },
     stack: ["React.js", "Node.js", "Kubernetes", "Docker", "IBM Watson", "Python"],
+    frame: {
+      src: "/film/clips/orbit-rockies-last.webp",
+      alt: "The Rockies at dawn from above a ridge, a blue lake below and the plains of Alberta on the horizon",
+    },
     links: [{ label: "Open cac.queensu.ca", href: "https://cac.queensu.ca/" }],
     body: [
-      "Full stack design and development of an AI-assisted academic learning web platform (2019). Created with React.js, Node.js, Kubernetes, Docker, IBM-Watson and Python NLP libraries. Created for the Centre for Advanced Computing.",
+      "In 2019 I led the design and full-stack build of a pilot AI tutor at Queen\u2019s Centre for Advanced Computing, working with IBM, for the University of Alberta. It wrote quiz questions from course material and answered students\u2019 questions, three years before ChatGPT made that ordinary.",
+      "Students and educators each had their own view in React. Behind it, three Node.js services in Docker on Kubernetes handled content generation, answer extraction and the tutor\u2019s conversation, using a Python NLP engine and IBM Watson\u2019s language understanding, search and assistant services, with MongoDB holding the course data.",
     ],
   },
   {
@@ -511,6 +519,7 @@ const entries: Work[] = [
       alt: "Table of the satellite's control modes above a block diagram of its reaction wheel control loop",
     },
     stack: ["MATLAB", "Simulink"],
+    dark: true,
     frame: {
       src: "/film/clips/orbit-rockies-first.webp",
       alt: "Earth from low orbit, with snow on the Rockies and city lights on the night side",
@@ -626,6 +635,7 @@ const entries: Work[] = [
 /** Display order: Josh's own ranking, with his own projects first. */
 const order = [
   "cubesat",
+  "ai-education-assistant",
   "hydrogen-plant",
   "production-lines",
   "alltus",
@@ -651,7 +661,6 @@ const order = [
   "local-llm",
   "adam",
   "investor-assistant",
-  "ai-education-assistant",
   "fpso",
   "masterpiece-pets",
   "abstract-painting",

@@ -35,6 +35,11 @@ import styles from "./FilmScroll.module.css";
 
   Each stop can carry up to two hotspots, rings on things in the picture that open a
   project. They show only while the playhead rests in the stop's hold.
+
+  The scroll can run at most one stop ahead of where the film last landed. Past the middle of
+  the next stop's hold, the page is held where it is until the playhead lands there, so a
+  long swipe flies one flight and stops on its place. The side map lists every place: the
+  next or last one plays its flight, a further one dips to black and opens there.
 */
 
 type Kind = "video" | "wipe" | "fade";
@@ -171,6 +176,45 @@ const SEEK_EPS = 0.005;
 // of a frame at 60 fps, which is inside the last frame at 24, 30 and 60 fps alike.
 const END_GUARD = 0.25 / 60;
 const PHONE = "(max-width: 800px)";
+
+// The scroll gate and the side map.
+/** Stops the film rests on, in order: every stop that is not a pass stop. */
+const RESTS = STOPS.flatMap((s, k) => (s.pass ? [] : [k]));
+/** How far into a rest stop's hold the scroll may run before the playhead lands there. */
+const GATE_SHARE = 0.5;
+const SETTLE_MS = 300; // the playhead rests this long on a stop before the gate moves on
+const CUE_IDLE_MS = 2600; // resting this long on a stop brings the scroll cue back
+const DIP_MS = 280; // the side map's jump: fade to black, move, fade back
+/** The scroll position a rest stop's gate sits at. */
+const gateAt = (k: number) => (k === LAST ? TOTAL : HOLD_SEG[k].start + HOLD_SEG[k].len * GATE_SHARE);
+/** Where the side map lands on a stop: just inside its hold. */
+const landAt = (k: number) => (k === 0 ? 0 : HOLD_SEG[k].start + Math.min(4, HOLD_SEG[k].len * 0.08));
+/** The rest stop whose hold holds this position, or -1. */
+const restIn = (pos: number) => {
+  for (const k of RESTS) {
+    const h = HOLD_SEG[k];
+    if (pos >= h.start - 1e-6 && pos <= h.start + h.len + 1e-6) return k;
+  }
+  return -1;
+};
+/** The last rest stop at or before this position. */
+const restBefore = (pos: number) => {
+  let out = RESTS[0];
+  for (const k of RESTS) if (HOLD_SEG[k].start <= pos + 1e-6) out = k;
+  return out;
+};
+/** The side map's fill: rest stops passed so far, with the share of the way to the next. */
+const mapProgress = (pos: number) => {
+  for (let i = RESTS.length - 1; i >= 0; i--) {
+    const a = HOLD_SEG[RESTS[i]].start;
+    if (pos >= a) {
+      if (i === RESTS.length - 1) return i;
+      const b = HOLD_SEG[RESTS[i + 1]].start;
+      return i + clamp01((pos - a) / (b - a));
+    }
+  }
+  return 0;
+};
 
 // The quality tier, measured on the first fetch.
 const SLOW_TYPES = ["slow-2g", "2g", "3g"];
@@ -375,6 +419,10 @@ export default function FilmScroll() {
   const cueRef = useRef<HTMLDivElement>(null);
   const loadRef = useRef<HTMLDivElement>(null);
   const loadFillRef = useRef<HTMLSpanElement>(null);
+  const mapRef = useRef<HTMLElement>(null);
+  const mapFillRef = useRef<HTMLSpanElement>(null);
+  const dipRef = useRef<HTMLDivElement>(null);
+  const jumpRef = useRef<((k: number) => void) | null>(null);
   const layers = useRef(new Map<string, HTMLElement>());
   const refFns = useRef(new Map<string, (el: HTMLElement | null) => void>());
   const orbitControl = useRef<OrbitControl | null>(null);
@@ -456,6 +504,13 @@ export default function FilmScroll() {
     let waitHop: number | null = null; // the clip hop the playhead is waiting at
     let waitSince = 0;
     let lastShot: Shot | null = null;
+    // The gate: the stop the film last landed on, and a stop it is settling on.
+    let home = 0;
+    let settling = -1;
+    let settleSince = 0;
+    let snapNext = false; // the next frame puts the playhead on the scroll, for a jump
+    let jumping = false;
+    let lastScrollAt = performance.now();
 
     const targetOf = (c: Clip) => Math.min(Math.max(0, c.dur - END_GUARD), clipProgress(c.hop, p) * c.dur);
 
@@ -543,6 +598,66 @@ export default function FilmScroll() {
       window.addEventListener("keydown", onKeyHold);
       window.addEventListener("scroll", onScrollHold, { passive: true });
     }
+
+    // ---- Gate ----------------------------------------------------------------------------
+
+    const gateOn = () => !reduced && !intro.holding && !jumping;
+    /** Page scroll position of a film position. */
+    const yOf = (pos: number) => {
+      const r = wrap.getBoundingClientRect();
+      const span = Math.max(1, r.height - window.innerHeight);
+      return r.top + window.scrollY + (pos / TOTAL) * span;
+    };
+    // Runs on every scroll, before the frame: holds the page between the gates either side
+    // of the stop the film last landed on. The film is pinned, so the hold does not show.
+    const onScrollGate = () => {
+      lastScrollAt = performance.now();
+      if (!gateOn()) return;
+      const i = RESTS.indexOf(home);
+      const lo = i > 0 ? yOf(gateAt(RESTS[i - 1])) : -Infinity;
+      const hi = i < RESTS.length - 1 ? yOf(gateAt(RESTS[i + 1])) : Infinity;
+      const y = window.scrollY;
+      if (y > hi + 1) window.scrollTo({ top: hi, behavior: "instant" });
+      else if (y < lo - 1) window.scrollTo({ top: lo, behavior: "instant" });
+    };
+
+    const timersJump: number[] = [];
+    // The side map. A neighbouring stop plays its flight. A further one dips to black, moves
+    // the film there with the playhead on it, and fades back.
+    const jumpTo = (k: number) => {
+      if (jumping || disposed) return;
+      skipIntro();
+      const i = RESTS.indexOf(home);
+      const j = RESTS.indexOf(k);
+      if (j < 0) return;
+      const target = landAt(k);
+      if (reduced || Math.abs(j - i) <= 1) {
+        window.scrollTo({ top: yOf(target), behavior: "instant" });
+        kick();
+        return;
+      }
+      jumping = true;
+      put(dipRef.current, "opacity", "1");
+      put(dipRef.current, "visibility", "visible");
+      timersJump.push(
+        window.setTimeout(() => {
+          home = k;
+          settling = -1;
+          window.scrollTo({ top: yOf(target), behavior: "instant" });
+          snapNext = true;
+          kick(true);
+          timersJump.push(
+            window.setTimeout(() => {
+              jumping = false;
+              put(dipRef.current, "opacity", "0");
+              timersJump.push(window.setTimeout(() => put(dipRef.current, "visibility", "hidden"), DIP_MS + 40));
+              kick();
+            }, 220),
+          );
+        }, DIP_MS),
+      );
+    };
+    jumpRef.current = jumpTo;
 
     // ---- Playhead ------------------------------------------------------------------------
 
@@ -953,9 +1068,17 @@ export default function FilmScroll() {
         setStop(s.stop);
       }
 
-      // The scroll cue shows once the intro lets go, until the visitor first scrolls.
+      // The scroll cue shows once the intro lets go, until the visitor first scrolls, and again
+      // whenever the film has rested a while on a stop with more to come.
       if (intro.cue && x > 0.5) intro.cue = false;
-      put(cueRef.current, "opacity", intro.cue ? "1" : "0");
+      const resting = !intro.holding && p === x && waitHop === null && restIn(p) >= 0 && restIn(p) !== LAST;
+      const cue = intro.cue || (resting && now - lastScrollAt > CUE_IDLE_MS);
+      put(cueRef.current, "opacity", cue ? "1" : "0");
+
+      // The side map: hidden while the intro holds, its fill tracking the playhead.
+      put(mapRef.current, "opacity", intro.holding ? "0" : "1");
+      put(mapRef.current, "visibility", intro.holding ? "hidden" : "visible");
+      put(mapFillRef.current, "transform", `scaleY(${(mapProgress(p) / Math.max(1, RESTS.length - 1)).toFixed(4)})`);
 
       // The hairline: bytes of the clip the playhead is waiting for.
       const wait = waitHop === null ? undefined : clipOf[waitHop];
@@ -986,10 +1109,14 @@ export default function FilmScroll() {
 
       const waited = waitHop;
       // Nobody sees the playhead catch up on the first frame, with reduced motion, or off screen.
-      if (!started || reduced || !inView) {
+      if (!started || reduced || !inView || snapNext) {
         p = x;
         waitHop = null;
         started = true;
+        snapNext = false;
+        // Wherever the playhead was put, the gate starts from there.
+        if (!jumping) home = restBefore(p);
+        settling = -1;
       } else advance(dt);
       if (x !== p) dir = x > p ? 1 : -1;
       if (waitHop !== null && waitHop !== waited) waitSince = now;
@@ -998,6 +1125,19 @@ export default function FilmScroll() {
       pump();
 
       let busy = p !== x || waitHop !== null;
+
+      // The gate moves on once the playhead has rested on a new stop for a moment.
+      const at = restIn(p);
+      if (at >= 0 && at !== home) {
+        if (settling !== at) {
+          settling = at;
+          settleSince = now;
+        }
+        if (now - settleSince >= SETTLE_MS) {
+          home = at;
+          settling = -1;
+        } else busy = true;
+      } else settling = -1;
       for (const c of clips) {
         if (c.state !== "ready") continue;
         const el = videoOf(c);
@@ -1040,6 +1180,7 @@ export default function FilmScroll() {
     });
     io.observe(wrap);
     document.addEventListener("visibilitychange", onKick);
+    window.addEventListener("scroll", onScrollGate, { passive: true });
     window.addEventListener("scroll", onKick, { passive: true });
     window.addEventListener("resize", onKick);
     kick();
@@ -1069,6 +1210,10 @@ export default function FilmScroll() {
         get tier() {
           return tier;
         },
+        get home() {
+          return home;
+        },
+        jump: (k: number) => jumpTo(k),
         get waiting() {
           return waitHop;
         },
@@ -1093,8 +1238,11 @@ export default function FilmScroll() {
       io.disconnect();
       reduceQuery.removeEventListener("change", onReduce);
       document.removeEventListener("visibilitychange", onKick);
+      window.removeEventListener("scroll", onScrollGate);
       window.removeEventListener("scroll", onKick);
       window.removeEventListener("resize", onKick);
+      timersJump.forEach((t) => clearTimeout(t));
+      jumpRef.current = null;
       window.removeEventListener("touchstart", onGesture);
       window.removeEventListener("pointerdown", onGesture);
       for (const c of clips) {
@@ -1124,6 +1272,8 @@ export default function FilmScroll() {
       const top = Math.max(box.top, nav && nav.bottom > box.top ? nav.bottom : box.top) + 4;
       const words = captionRef.current?.getBoundingClientRect();
       const kept: DOMRect[] = [];
+      const map = mapRef.current?.getBoundingClientRect();
+      if (map && map.width > 0) kept.push(map);
       // What shows of a spot: its ring and its label, without the link's padding.
       const shown = (el: HTMLElement) => {
         const a = (el.firstElementChild as HTMLElement).getBoundingClientRect();
@@ -1240,9 +1390,34 @@ export default function FilmScroll() {
         </div>
 
         <div ref={cueRef} className={styles.cue} aria-hidden="true">
-          <span>Scroll</span>
+          <span>
+            Scroll<span className={styles.cueMore}> to fly on</span>
+          </span>
           <i />
         </div>
+
+        <nav ref={mapRef} className={styles.map} aria-label="Places in the film">
+          <span className={styles.mapRail} aria-hidden="true">
+            <span ref={mapFillRef} className={styles.mapFill} />
+          </span>
+          <ol>
+            {RESTS.map((k) => (
+              <li key={k}>
+                <button
+                  type="button"
+                  className={styles.mapStop}
+                  aria-current={k === stop ? "location" : undefined}
+                  onClick={() => jumpRef.current?.(k)}
+                >
+                  <span className={styles.mapLabel}>{STOPS[k].short}</span>
+                  <span className={styles.mapDot} aria-hidden="true" />
+                </button>
+              </li>
+            ))}
+          </ol>
+        </nav>
+
+        <div ref={dipRef} className={styles.dip} aria-hidden="true" />
 
         <div ref={loadRef} className={styles.load} aria-hidden="true">
           <span ref={loadFillRef} />

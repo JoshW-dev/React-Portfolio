@@ -7,6 +7,7 @@ import { mediaFor } from "@/lib/media";
 import CallReplay from "@/components/CallReplay";
 import TwinCompare from "@/components/TwinCompare";
 import TransitionLink from "@/components/TransitionLink";
+import HeroNudge from "@/components/HeroNudge";
 import { breakdowns } from "@/components/breakdown/registry";
 import styles from "./project.module.css";
 
@@ -116,7 +117,10 @@ export default async function ProjectPage({ params }: Props) {
   const frame = item.frame;
 
   return (
-    <article className={frame ? styles.page : `section--tight ${styles.page}`}>
+    <article
+      className={frame ? styles.page : `section--tight ${styles.page}`}
+      data-theme={item.dark ? "dark" : undefined}
+    >
       {frame ? (
         // The film's frame for this project, with the title where the film's caption sat.
         // data-film puts the site header over it in white (see globals.css).
@@ -144,6 +148,7 @@ export default async function ProjectPage({ params }: Props) {
 
       {/* A breakdown runs the full width of the screen, outside the wrap. */}
       {Breakdown ? <Breakdown className={frame ? styles.breakdownAfterHero : styles.breakdown} /> : null}
+      {frame && Breakdown ? <HeroNudge /> : null}
 
       <div className="wrap">
         <Figure item={item} />

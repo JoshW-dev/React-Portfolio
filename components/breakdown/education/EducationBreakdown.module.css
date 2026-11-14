@@ -1,0 +1,51 @@
+.host {
+  container-type: size;
+  /* Keeps a label that strays from widening the page. */
+  overflow: hidden;
+}
+
+/* Hidden until the first frame has placed everything, and gone without WebGL. */
+.host[data-mode="loading"] .note,
+.host[data-mode="fallback"] .note {
+  visibility: hidden;
+}
+
+.note {
+  position: absolute;
+  left: 0;
+  top: 0;
+  white-space: nowrap;
+  text-align: center;
+  font-size: 0.875rem;
+  line-height: 1.25;
+  color: var(--ink);
+  padding: 1px 5px;
+  pointer-events: none;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+/* Long names on top of a block: one word to a line. */
+.split {
+  white-space: normal;
+  width: min-content;
+}
+
+/* Labels off the model sit on the white page, over any link that runs behind them. */
+.free {
+  background: var(--bg);
+}
+
+@container (max-width: 520px) {
+  .note {
+    font-size: 0.6875rem;
+    line-height: 1.15;
+    padding: 0 3px;
+  }
+
+  /* Long names go one word to a line, to fit over their block. */
+  .wrap {
+    white-space: normal;
+    width: min-content;
+  }
+}

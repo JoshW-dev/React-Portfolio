@@ -13,6 +13,8 @@ type Three = typeof THREE;
 /* ---------- palette ---------- */
 
 export type Palette = {
+  /** The page is dark (a project page marked data-theme="dark"). */
+  dark: boolean;
   bg: string;
   ink: string;
   muted: string;
@@ -21,11 +23,17 @@ export type Palette = {
   /** The site blue. Only for the live or active part. */
   agent: string;
   agentPale: string;
-  /** Pale fills for low-poly parts, lightest first. */
+  /**
+   * Fills for low-poly parts, nearest the page first: pale greys on a white page, dark
+   * greys on a dark one, so ink edges always read against them.
+   */
   fills: [string, string, string];
+  /** The fill nearest the page of all: white on a white page. */
+  paper: string;
 };
 
 const FALLBACK: Palette = {
+  dark: false,
   bg: "#ffffff",
   ink: "#000000",
   muted: "#5d6168",
@@ -34,21 +42,40 @@ const FALLBACK: Palette = {
   agent: "#2540f5",
   agentPale: "#eef1ff",
   fills: ["#f6f7f8", "#eceef1", "#dfe2e6"],
+  paper: "#ffffff",
 };
 
-/** Reads the site tokens from CSS custom properties on an element, with fallbacks. */
+/** The same family inverted for a dark page: dark grey parts under light ink edges. */
+const DARK: Palette = {
+  dark: true,
+  bg: "#05070b",
+  ink: "#f2f4f7",
+  muted: "#a3a9b3",
+  faint: "#6b717c",
+  line: "#1f242c",
+  agent: "#6f86ff",
+  agentPale: "#141a33",
+  fills: ["#13171d", "#191e25", "#212730"],
+  paper: "#0d1015",
+};
+
+/**
+ * Reads the site tokens from CSS custom properties on an element, with fallbacks. Inside a
+ * data-theme="dark" page the fills are the dark set.
+ */
 export function readPalette(el: Element): Palette {
+  const base = el.closest('[data-theme="dark"]') ? DARK : FALLBACK;
   const cs = getComputedStyle(el);
   const v = (name: string, fallback: string) => cs.getPropertyValue(name).trim() || fallback;
   return {
-    ...FALLBACK,
-    bg: v("--bg", FALLBACK.bg),
-    ink: v("--ink", FALLBACK.ink),
-    muted: v("--muted", FALLBACK.muted),
-    faint: v("--faint", FALLBACK.faint),
-    line: v("--line", FALLBACK.line),
-    agent: v("--agent", FALLBACK.agent),
-    agentPale: v("--agent-pale", FALLBACK.agentPale),
+    ...base,
+    bg: v("--bg", base.bg),
+    ink: v("--ink", base.ink),
+    muted: v("--muted", base.muted),
+    faint: v("--faint", base.faint),
+    line: v("--line", base.line),
+    agent: v("--agent", base.agent),
+    agentPale: v("--agent-pale", base.agentPale),
   };
 }
 
@@ -110,7 +137,7 @@ export type RendererOptions = {
 };
 
 /**
- * A WebGL 2 renderer on a transparent canvas, so the page's white shows through. Throws
+ * A WebGL 2 renderer on a transparent canvas, so the page shows through. Throws
  * NoWebGLError when WebGL 2 is missing.
  */
 export function createRenderer(T: Three, canvas: HTMLCanvasElement, opts: RendererOptions = {}) {

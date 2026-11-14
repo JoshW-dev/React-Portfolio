@@ -2,6 +2,15 @@
   container-type: size;
   /* Keeps the ground under the canvas inside this stage. */
   isolation: isolate;
+  /* Earth's limb: its edge and the tint under it. */
+  --limb-line: #a9aeb6;
+  --limb-tint: #edf0f4;
+}
+
+/* On a dark page the limb is a faint blue haze, like the atmosphere seen from orbit. */
+:global([data-theme="dark"]) .host {
+  --limb-line: #3d4a63;
+  --limb-tint: #0f1729;
 }
 
 /* Close-ups run parts off the edge of the stage; fade them out there. */
@@ -56,16 +65,16 @@
 }
 
 .earth {
-  stroke: #a9aeb6;
+  stroke: var(--limb-line);
   stroke-width: 1;
 }
 
 .tintTop {
-  stop-color: #edf0f4;
+  stop-color: var(--limb-tint);
 }
 
 .tintBottom {
-  stop-color: #edf0f4;
+  stop-color: var(--limb-tint);
   stop-opacity: 0;
 }
 

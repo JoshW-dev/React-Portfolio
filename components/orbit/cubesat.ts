@@ -130,6 +130,11 @@ export type CubeSatOptions = {
   ink?: string;
   /** Colour for tinted parts in the drawing look. */
   accent?: string;
+  /**
+   * The page behind the drawing look. Faces out of focus wash toward it. On a dark page the
+   * drawing-look greys turn dark, so light ink edges read on them. Defaults to white.
+   */
+  ground?: string;
   anisotropy?: number;
 };
 
@@ -272,18 +277,31 @@ function cellTexture(T: Three, anisotropy: number): THREE.Texture {
 }
 
 export function buildCubeSat(T: Three, opts: CubeSatOptions = {}): CubeSat {
-  const { interior = false, edges = false, lines, ink = "#000000", accent = "#2540f5", anisotropy = 4 } = opts;
+  const { interior = false, edges = false, lines, ink = "#000000", accent = "#2540f5", ground = "#ffffff", anisotropy = 4 } = opts;
   const geometries = new Set<THREE.BufferGeometry>();
   const looks: Look[] = [];
   const paper = { value: 0 };
   const inkColor = new T.Color(ink);
   const accentColor = new T.Color(accent);
-  const white = new T.Color(0xffffff);
-  /** Paper colour for a fully tinted part: the accent, much lighter. */
+  /** The page. White, unless the drawing sits on a dark page. */
+  const white = new T.Color(ground);
+  const darkGround = white.getHSL({ h: 0, s: 0, l: 0 }).l < 0.5;
+  /**
+   * A role's drawing-look grey. On a dark page each grey becomes a dark one just above the
+   * page, in the same order (black parts stay darkest), worked out in sRGB.
+   */
+  const drawColor = (hex: number) => {
+    const c = new T.Color(hex);
+    if (!darkGround) return c;
+    const g = white.getRGB(new T.Color(), T.SRGBColorSpace);
+    const d = c.getRGB(new T.Color(), T.SRGBColorSpace);
+    return c.setRGB(g.r + 0.03 + 0.15 * d.r, g.g + 0.03 + 0.15 * d.g, g.b + 0.03 + 0.15 * d.b, T.SRGBColorSpace);
+  };
+  /** Paper colour for a fully tinted part: the accent, washed toward the page. */
   const tintFill = white.clone().lerp(accentColor, 0.22);
   /** Tinted solar cells turn the accent itself, so the array reads as one blue plane. */
   const cellTint = accentColor.clone().lerp(white, 0.1);
-  const skinDraw = new T.Color(SPEC.skin.draw);
+  const skinDraw = drawColor(SPEC.skin.draw);
   const cellMap = cellTexture(T, anisotropy);
 
   const state = {
@@ -315,7 +333,7 @@ export function buildCubeSat(T: Three, opts: CubeSatOptions = {}): CubeSat {
       role,
       paperColor: { value: white.clone() },
       paperAmount: { value: 1 },
-      draw: new T.Color(spec.draw),
+      draw: drawColor(spec.draw),
       line: null,
       tint: 0,
     };

@@ -203,7 +203,7 @@ export function createCubeSatBreakdown(T: Three, ctx: SceneContext, dom: CubeSat
       return new fat.LineSegments2(new fat.LineSegmentsGeometry().fromEdgesGeometry(edges), material as LineMaterial);
     },
   };
-  const sat = buildCubeSat(T, { interior: true, edges: true, lines, ink: palette.ink, accent: palette.agent, anisotropy });
+  const sat = buildCubeSat(T, { interior: true, edges: true, lines, ink: palette.ink, accent: palette.agent, ground: palette.bg, anisotropy });
   // pivot (drag) > sway > story attitude > satellite
   const pivot = new T.Group();
   const sway = new T.Group();

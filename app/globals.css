@@ -24,6 +24,22 @@
   --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
+/*
+  Dark pages: a project whose film frame is dark (space, night) keeps that dark ground down
+  the page. The project page marks its article data-theme="dark", and the whole document,
+  nav and footer included, takes the dark tokens while it is on screen.
+*/
+:root:has(article[data-theme="dark"]) {
+  --bg: #05070b;
+  --ink: #f2f4f7;
+  --muted: #a3a9b3;
+  --faint: #6b717c;
+  --line: #1f242c;
+  --agent: #6f86ff;
+  --agent-pale: #141a33;
+  color-scheme: dark;
+}
+
 *,
 *::before,
 *::after {
@@ -226,7 +242,7 @@ button {
   border: 1px solid var(--ink);
   border-radius: var(--radius);
   background: var(--ink);
-  color: #fff;
+  color: var(--bg);
   font-weight: 600;
   font-size: 1rem;
   letter-spacing: -0.005em;
@@ -237,12 +253,12 @@ button {
 }
 
 .btn:hover {
-  background: #fff;
+  background: var(--bg);
   color: var(--ink);
 }
 
 .btn--quiet {
-  background: #fff;
+  background: var(--bg);
   color: var(--ink);
   border-color: var(--line);
 }

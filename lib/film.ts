@@ -22,6 +22,8 @@ export type Stop = {
   /** The stop's own frame, used by the still fallback and reduced motion. */
   still: string;
   place: string;
+  /** The stop's name on the side map, a word or two. */
+  short: string;
   /** The caption. A pass stop has none. */
   text?: string;
   /** The project this stop opens, as the caption's button. */
@@ -60,26 +62,31 @@ export const STOPS: Stop[] = [
     still: "/film/00-orbit-live.webp",
     link: { href: "/projects/cubesat", label: "Open the CubeSat project" },
     place: "Low Earth orbit",
+    short: "Orbit",
     text: "Hi, I’m Josh. I’m an AI engineer, and I’ve built things in a lot of places. Scroll and I’ll take you to them.",
   },
   {
     still: "/film/02-rockies.webp",
+    link: { href: "/projects/ai-education-assistant", label: "Open the education assistant project" },
+    spots: [{ x: 0.6, y: 0.27, label: "AI tutor, 2019", href: "/projects/ai-education-assistant" }],
     place: "Alberta, Canada",
-    text: "After school I moved west and spent two years here as an engineering consultant.",
-    pass: true,
+    short: "Alberta",
+    text: "In 2019, three years before ChatGPT, I built an AI tutor for the University of Alberta. It wrote quiz questions from course material and answered students\u2019 questions.",
   },
   {
     still: "/film/03-plant.webp",
     link: { href: "/projects/hydrogen-plant", label: "Open the hydrogen plant project" },
     spots: [{ x: 0.458, y: 0.25, label: "Clean hydrogen plant", href: "/projects/hydrogen-plant" }],
     place: "Hydrogen plant, Alberta",
-    text: "On a clean hydrogen plant, the design sessions I led cut more than $300M from the capital budget.",
+    short: "Hydrogen plant",
+    text: "After school I moved to Alberta as an engineering consultant. The design sessions I led on a clean hydrogen plant cut more than $300M from its budget.",
   },
   {
     still: "/film/04-line.webp",
     link: { href: "/projects/production-lines", label: "Open the production lines project" },
     spots: [{ x: 0.46, y: 0.15, label: "Two production lines", href: "/projects/production-lines" }],
     place: "Production lines, Texas and California",
+    short: "Production lines",
     text: "On two production lines we cut downtime 35% in 8 weeks.",
   },
   {
@@ -87,6 +94,7 @@ export const STOPS: Stop[] = [
     link: { href: "/projects/disco", label: "Open the Disco project" },
     spots: [{ x: 0.457, y: 0.14, label: "Disco", href: "/projects/disco" }],
     place: "The same line, as software",
+    short: "Disco",
     text: "Then I moved to the software side. At Disco I built AI features and the automation behind sales and marketing, across more than 80,000 contacts.",
   },
   {
@@ -94,6 +102,7 @@ export const STOPS: Stop[] = [
     link: { href: "/projects/alltus", label: "Open the Alltus project" },
     spots: [{ x: 0.612, y: 0.35, label: "Alltus", href: "/projects/alltus" }],
     place: "San Francisco Bay",
+    short: "San Francisco",
     text: "Now I work at Alltus, which makes AI for local government.",
   },
   {
@@ -104,6 +113,7 @@ export const STOPS: Stop[] = [
       { x: 0.597, y: 0.582, label: "Crimsonlead", href: "/projects/crimsonlead" },
     ],
     place: "Counties across the U.S.",
+    short: "Counties",
     text: "Our agents answer phone lines that take more than 100,000 calls a year, and one deployment helped run elections in North Carolina.",
   },
   {
@@ -114,6 +124,7 @@ export const STOPS: Stop[] = [
       { x: 0.414, y: 0.4, label: "Insider Signal", href: "/projects/insider-signal" },
     ],
     place: "New York, at night",
+    short: "New York",
     text: "Nights are for my own projects: products, research, games and art.",
   },
   {
@@ -121,6 +132,7 @@ export const STOPS: Stop[] = [
     link: { href: "/about", label: "More about me" },
     spots: [{ x: 0.54, y: 0.37, label: "About me", href: "/about" }],
     place: "Doha, November 2026",
+    short: "Doha",
     text: "I’m writing this from Doha. I’m based in Toronto and usually somewhere else.",
   },
 ];

@@ -51,7 +51,7 @@
 
 .cta a:hover {
   background: var(--ink);
-  color: #fff;
+  color: var(--bg);
   text-decoration: none;
 }
 

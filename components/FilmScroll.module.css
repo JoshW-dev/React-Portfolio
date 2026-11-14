@@ -301,11 +301,11 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  font-size: 0.875rem;
+  gap: 10px;
+  font-size: 1rem;
   font-weight: 500;
-  letter-spacing: 0.02em;
-  color: rgb(255 255 255 / 0.88);
+  letter-spacing: 0.01em;
+  color: #fff;
   text-shadow: 0 1px 8px rgb(0 0 0 / 0.6);
   transform: translateX(-50%);
   opacity: 0;
@@ -316,10 +316,11 @@
 .cue i {
   position: relative;
   display: block;
-  width: 1px;
-  height: 34px;
+  width: 2px;
+  height: 46px;
   overflow: hidden;
-  background: rgb(255 255 255 / 0.16);
+  border-radius: 1px;
+  background: rgb(255 255 255 / 0.22);
 }
 
 .cue i::after {
@@ -364,6 +365,10 @@
   .cue i {
     height: 26px;
   }
+
+  .cueMore {
+    display: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -400,4 +405,167 @@
     font-size: clamp(1.3rem, 5.6vw, 1.75rem);
     line-height: 1.16;
   }
+}
+
+/*
+  The side map: every place the film rests on, top to bottom, on a hairline that fills as
+  the film goes. It sits on the right edge, centred, with the names to the left of the dots.
+  A click goes to that place.
+*/
+.map {
+  position: absolute;
+  z-index: 6;
+  top: 50%;
+  right: clamp(14px, 2.2vw, 32px);
+  transform: translateY(-50%);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.8s var(--ease);
+}
+
+/* A soft shade behind the names, so they read on a bright frame. */
+.map::before {
+  content: "";
+  position: absolute;
+  inset: -40px -40px -40px -60px;
+  background: radial-gradient(closest-side, rgb(0 0 0 / 0.34), rgb(0 0 0 / 0));
+  pointer-events: none;
+}
+
+.map ol {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(6px, 1.4vh, 14px);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The rail runs through the dots' centres, from the first dot to the last. */
+.mapRail {
+  position: absolute;
+  top: 22px;
+  bottom: 22px;
+  right: 21px;
+  width: 1px;
+  background: rgb(255 255 255 / 0.22);
+}
+
+.mapFill {
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  transform: scaleY(0);
+  transform-origin: 50% 0;
+}
+
+.mapStop {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 14px 0 8px;
+  border: 0;
+  background: none;
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+
+.mapLabel {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  text-shadow: 0 1px 8px rgb(0 0 0 / 0.7);
+  opacity: 0.6;
+  transition: opacity 0.25s var(--ease), transform 0.25s var(--ease);
+}
+
+.mapDot {
+  position: relative;
+  width: 15px;
+  height: 15px;
+  flex: none;
+}
+
+.mapDot::before {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.55);
+  box-shadow: 0 0 0 3px rgb(0 0 0 / 0.25);
+  transition: inset 0.25s var(--ease), background 0.25s var(--ease);
+}
+
+.mapStop:hover .mapLabel,
+.mapStop:focus-visible .mapLabel {
+  opacity: 1;
+  transform: translateX(-2px);
+}
+
+.mapStop:hover .mapDot::before {
+  background: #fff;
+}
+
+.mapStop[aria-current] .mapLabel {
+  opacity: 1;
+}
+
+.mapStop[aria-current] .mapDot::before {
+  inset: 1px;
+  background: #fff;
+  box-shadow: 0 0 0 4px rgb(255 255 255 / 0.18), 0 0 14px rgb(255 255 255 / 0.5);
+}
+
+.mapStop:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: -2px;
+  border-radius: 6px;
+}
+
+/* On a phone the map keeps its dots and shows only the current place's name. */
+@media (max-width: 640px) {
+  .map {
+    right: 2px;
+  }
+
+  .map ol {
+    gap: 0;
+  }
+
+  .mapStop {
+    min-height: 34px;
+    padding: 0 10px 0 4px;
+  }
+
+  .mapLabel {
+    display: none;
+  }
+
+  .map::before {
+    inset: -20px -10px;
+  }
+
+  .mapRail {
+    top: 17px;
+    bottom: 17px;
+    right: 17px;
+  }
+}
+
+/* The side map's jump to a far place: a short dip to black. */
+.dip {
+  position: absolute;
+  inset: 0;
+  z-index: 7;
+  background: #000;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.28s var(--ease);
 }

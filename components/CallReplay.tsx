@@ -151,14 +151,42 @@ function loudness(who: 0 | 1, t: number) {
   return 0;
 }
 
-const INK = "#000000";
-const INK_AHEAD = "#dcdde1";
-const AGENT = "#2540f5";
-const AGENT_AHEAD = "#d3d9fd";
+type WaveColors = { ink: string; inkAhead: string; agent: string; agentAhead: string; quiet: string; quietAhead: string };
+
+const LIGHT: WaveColors = {
+  ink: "#000000",
+  inkAhead: "#dcdde1",
+  agent: "#2540f5",
+  agentAhead: "#d3d9fd",
+  quiet: "#c9cbd1",
+  quietAhead: "#ececef",
+};
+
+const waveColors = new WeakMap<HTMLCanvasElement, WaveColors>();
+
+/** The waveform's colours from the page tokens (see CallReplay.module.css), read once per canvas. */
+function colorsFor(canvas: HTMLCanvasElement): WaveColors {
+  let c = waveColors.get(canvas);
+  if (!c) {
+    const cs = getComputedStyle(canvas);
+    const v = (name: string, fallback: string) => cs.getPropertyValue(name).trim() || fallback;
+    c = {
+      ink: v("--ink", LIGHT.ink),
+      inkAhead: v("--wave-ink-ahead", LIGHT.inkAhead),
+      agent: v("--agent", LIGHT.agent),
+      agentAhead: v("--wave-agent-ahead", LIGHT.agentAhead),
+      quiet: v("--wave-quiet", LIGHT.quiet),
+      quietAhead: v("--wave-quiet-ahead", LIGHT.quietAhead),
+    };
+    waveColors.set(canvas, c);
+  }
+  return c;
+}
 
 function draw(canvas: HTMLCanvasElement, t: number, now: number) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
+  const C = colorsFor(canvas);
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   const w = canvas.clientWidth;
   const h = canvas.clientHeight;
@@ -189,15 +217,15 @@ function draw(canvas: HTMLCanvasElement, t: number, now: number) {
       }
       const bh = a > 0 ? Math.max(2, a * maxH) : 2;
       ctx.fillStyle =
-        who === 0 ? (played ? INK : INK_AHEAD) : played ? AGENT : AGENT_AHEAD;
-      if (a === 0) ctx.fillStyle = played ? "#c9cbd1" : "#ececef";
+        who === 0 ? (played ? C.ink : C.inkAhead) : played ? C.agent : C.agentAhead;
+      if (a === 0) ctx.fillStyle = played ? C.quiet : C.quietAhead;
       ctx.beginPath();
       ctx.roundRect(x, mid - bh / 2, bar, bh, bar / 2);
       ctx.fill();
     }
   }
 
-  ctx.fillStyle = INK;
+  ctx.fillStyle = C.ink;
   ctx.fillRect(Math.round(headX), 0, 1, h);
 }
 

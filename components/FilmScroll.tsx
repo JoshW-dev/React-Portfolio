@@ -40,6 +40,11 @@ import styles from "./FilmScroll.module.css";
   the next stop's hold, the page is held where it is until the playhead lands there, so a
   long swipe flies one flight and stops on its place. The side map lists every place: the
   next or last one plays its flight, a further one dips to black and opens there.
+
+  A flight that starts always finishes. Once the scroll leaves a stop's hold, the playhead
+  heads for the next stop in the way the page last scrolled, wherever the scroll stops. When
+  the gesture ends, the page is moved to that stop too, so the next scroll starts from there.
+  The film is pinned, so the move does not show.
 */
 
 type Kind = "video" | "wipe" | "fade";
@@ -203,6 +208,22 @@ const restBefore = (pos: number) => {
   for (const k of RESTS) if (HOLD_SEG[k].start <= pos + 1e-6) out = k;
   return out;
 };
+/** Where a flight back to a rest stop lands: just inside the end of its hold. */
+const backAt = (k: number) => HOLD_SEG[k].start + HOLD_SEG[k].len - Math.min(4, HOLD_SEG[k].len * 0.08);
+/**
+ * Where the film is headed for a scroll position. Inside a rest stop's hold it is the scroll
+ * itself. Between two rest stops it is the whole way to one of them, in the way the page
+ * last scrolled, so the film never rests mid-flight.
+ */
+const destination = (pos: number, way: number) => {
+  if (restIn(pos) >= 0) return pos;
+  const a = restBefore(pos);
+  const b = RESTS[RESTS.indexOf(a) + 1];
+  if (b === undefined) return pos;
+  return way < 0 ? backAt(a) : landAt(b);
+};
+/** No scroll for this long ends a gesture, and a page left between two stops moves on. */
+const IDLE_MS = 160;
 /** How long a far jump stays on black waiting for the place's picture to load. */
 const DIP_WAIT_MAX = 3000;
 /**
@@ -518,6 +539,11 @@ export default function FilmScroll() {
     const gated = (h: number) => playable(h) && !ready(h);
 
     let x = 0; // where the scroll puts the film, in vh
+    let goal = 0; // where the playhead is headed: the scroll, or the stop a flight goes to
+    let way = 1; // the way the page last scrolled
+    let lastY = window.scrollY;
+    let touching = false;
+    let idleTimer = 0;
     let p = 0; // the playhead
     let dir = 1; // the way the playhead last moved
     let started = false;
@@ -632,6 +658,10 @@ export default function FilmScroll() {
     // of the stop the film last landed on. The film is pinned, so the hold does not show.
     const onScrollGate = () => {
       lastScrollAt = performance.now();
+      const y0 = window.scrollY;
+      if (Math.abs(y0 - lastY) > 0.5) way = y0 > lastY ? 1 : -1;
+      lastY = y0;
+      idleSoon();
       if (!gateOn()) return;
       const i = RESTS.indexOf(home);
       const lo = i > 0 ? yOf(gateAt(RESTS[i - 1])) : -Infinity;
@@ -640,6 +670,37 @@ export default function FilmScroll() {
       if (y > hi + 1) window.scrollTo({ top: hi, behavior: "instant" });
       else if (y < lo - 1) window.scrollTo({ top: lo, behavior: "instant" });
     };
+
+    // When a gesture ends between two stops, the page moves to the stop the film is flying
+    // to, so the next scroll starts there. A finger on the screen holds this off until it lifts.
+    const settlePage = () => {
+      idleTimer = 0;
+      if (disposed || !gateOn() || touching || !filmOnScreen()) return;
+      const wait = IDLE_MS - (performance.now() - lastScrollAt);
+      if (wait > 1) {
+        idleTimer = window.setTimeout(settlePage, wait);
+        return;
+      }
+      const r = wrap.getBoundingClientRect();
+      const at = clamp01(-r.top / Math.max(1, r.height - window.innerHeight)) * TOTAL;
+      const to = destination(at, way);
+      if (Math.abs(to - at) > 0.5) window.scrollTo({ top: yOf(to), behavior: "instant" });
+    };
+    function idleSoon() {
+      if (!idleTimer && !disposed) idleTimer = window.setTimeout(settlePage, IDLE_MS);
+    }
+    const onTouchStart = () => {
+      touching = true;
+    };
+    const onTouchEnd = (e: TouchEvent) => {
+      if (e.touches.length) return;
+      touching = false;
+      lastScrollAt = performance.now();
+      idleSoon();
+    };
+    window.addEventListener("touchstart", onTouchStart, { passive: true });
+    window.addEventListener("touchend", onTouchEnd, { passive: true });
+    window.addEventListener("touchcancel", onTouchEnd, { passive: true });
 
     const timersJump: number[] = [];
     // The side map. A neighbouring stop plays its flight. A further one dips to black, moves
@@ -698,7 +759,7 @@ export default function FilmScroll() {
       for (const g of CLIP_HOPS) {
         if (!playable(g)) continue;
         const s = HOP_SEG[g];
-        if (!(d > 0 ? g > h && s.start < x : g < h && s.start + s.len > x)) continue;
+        if (!(d > 0 ? g > h && s.start < goal : g < h && s.start + s.len > goal)) continue;
         let joined = true;
         for (let k = Math.min(g, h) + 1; k <= Math.max(g, h); k++) if (!isPass(k)) joined = false;
         if (!joined) further++;
@@ -706,32 +767,32 @@ export default function FilmScroll() {
       return (seg.len / c.dur) * Math.min(RATE_MAX, RATE + RATE_STEP * further);
     };
 
-    /** The first clip hop between the playhead and the scroll that is not ready to play. */
+    /** The first clip hop between the playhead and its goal that is not ready to play. */
     const gateAhead = () => {
       let gate: { edge: number; hop: number } | null = null;
       for (const h of CLIP_HOPS) {
         if (!gated(h)) continue;
         const s = HOP_SEG[h];
         const end = s.start + s.len;
-        if (x > p && p <= s.start && x > s.start) {
+        if (goal > p && p <= s.start && goal > s.start) {
           if (!gate || s.start < gate.edge) gate = { edge: s.start, hop: h };
-        } else if (x < p && p >= end && x < end) {
+        } else if (goal < p && p >= end && goal < end) {
           if (!gate || end > gate.edge) gate = { edge: end, hop: h };
         }
       }
       return gate;
     };
 
-    // Moves the playhead toward the scroll for dt seconds, one part of the film at a time,
+    // Moves the playhead toward its goal for dt seconds, one part of the film at a time,
     // since each part has its own top speed.
     const advance = (dt: number) => {
       const gate = gateAhead();
       let left = dt;
-      for (let i = 0; i < 32 && left > 0 && p !== x; i++) {
+      for (let i = 0; i < 32 && left > 0 && p !== goal; i++) {
         if (gate && p === gate.edge) break;
-        const gap = x - p;
+        const gap = goal - p;
         if (Math.abs(gap) < SNAP) {
-          p = gate ? gate.edge : x;
+          p = gate ? gate.edge : goal;
           break;
         }
         const d = gap > 0 ? 1 : -1;
@@ -1094,7 +1155,7 @@ export default function FilmScroll() {
       // The scroll cue shows once the intro lets go, until the visitor first scrolls, and again
       // whenever the film has rested a while on a stop with more to come.
       if (intro.cue && x > 0.5) intro.cue = false;
-      const resting = !intro.holding && p === x && waitHop === null && restIn(p) >= 0 && restIn(p) !== LAST;
+      const resting = !intro.holding && p === goal && waitHop === null && restIn(p) >= 0 && restIn(p) !== LAST;
       const cue = intro.cue || (resting && now - lastScrollAt > CUE_IDLE_MS);
       put(cueRef.current, "opacity", cue ? "1" : "0");
 
@@ -1129,6 +1190,7 @@ export default function FilmScroll() {
       const rect = wrap.getBoundingClientRect();
       const span = Math.max(1, rect.height - window.innerHeight);
       x = clamp01(-rect.top / span) * TOTAL;
+      goal = gateOn() ? destination(x, way) : x;
 
       const waited = waitHop;
       // Nobody sees the playhead catch up on the first frame, with reduced motion, or off screen.
@@ -1141,13 +1203,13 @@ export default function FilmScroll() {
         if (!jumping) home = restBefore(p);
         settling = -1;
       } else advance(dt);
-      if (x !== p) dir = x > p ? 1 : -1;
+      if (goal !== p) dir = goal > p ? 1 : -1;
       if (waitHop !== null && waitHop !== waited) waitSince = now;
 
       manage();
       pump();
 
-      let busy = p !== x || waitHop !== null;
+      let busy = p !== goal || waitHop !== null;
 
       // The gate moves on once the playhead has rested on a new stop for a moment.
       const at = restIn(p);
@@ -1230,6 +1292,9 @@ export default function FilmScroll() {
         get p() {
           return p;
         },
+        get goal() {
+          return goal;
+        },
         get tier() {
           return tier;
         },
@@ -1268,6 +1333,10 @@ export default function FilmScroll() {
       jumpRef.current = null;
       window.removeEventListener("touchstart", onGesture);
       window.removeEventListener("pointerdown", onGesture);
+      window.removeEventListener("touchstart", onTouchStart);
+      window.removeEventListener("touchend", onTouchEnd);
+      window.removeEventListener("touchcancel", onTouchEnd);
+      if (idleTimer) clearTimeout(idleTimer);
       for (const c of clips) {
         c.fetchAbort?.abort();
         if (c.state === "attaching" || c.state === "ready") detach(c);

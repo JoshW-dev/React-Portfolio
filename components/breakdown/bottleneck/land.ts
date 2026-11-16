@@ -4,6 +4,8 @@
   positions reach the GPU.
 */
 
+import { filmUrl } from "@/lib/filmUrl";
+
 const WATER_MASK = "/film/earth/earth-water-2k.jpg";
 
 /**
@@ -14,7 +16,7 @@ const WATER_MASK = "/film/earth/earth-water-2k.jpg";
 export async function loadLandDots(step = 1.05, src = WATER_MASK): Promise<Float32Array> {
   const img = new Image();
   img.decoding = "async";
-  img.src = src;
+  img.src = filmUrl(src);
   await img.decode();
   const w = 1024;
   const h = 512;

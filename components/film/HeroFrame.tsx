@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useEffect, useLayoutEffect, useRef } from "react";
 import { sameMotion, takeHandoff, whenShown, type Handoff } from "@/lib/handoff";
+import { filmUrl } from "@/lib/filmUrl";
 import type { Loop } from "@/lib/film";
 import FilmLoop, { keptLoop, loopFile, startLoop } from "./FilmLoop";
 import { MotionFade, MovingStill, motionAllowed, type Motion } from "./movingStill";
@@ -232,7 +233,7 @@ export default function HeroFrame({ src, alt, motion, loop }: Props) {
   return (
     <div ref={boxRef} className={styles.box}>
       {/* The film's own files, already sized, so a page opened from the film has them cached. */}
-      <Image src={src} alt={alt} fill preload unoptimized sizes="100vw" className={styles.image} />
+      <Image src={filmUrl(src)} alt={alt} fill preload unoptimized sizes="100vw" className={styles.image} />
       {motion && <canvas ref={canvasRef} className={styles.canvas} aria-hidden="true" />}
       {loop && <FilmLoop loop={loop} videoRef={loopRef} />}
     </div>

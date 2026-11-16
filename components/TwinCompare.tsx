@@ -2,6 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element */
 import { useState, type CSSProperties } from "react";
+import { filmUrl } from "@/lib/filmUrl";
 import styles from "./TwinCompare.module.css";
 
 /** One frame, twice: the line as a photograph and as its model. Drag to move between them. */
@@ -11,14 +12,14 @@ export default function TwinCompare() {
   return (
     <div className={styles.compare} style={{ "--split": `${split}%` } as CSSProperties}>
       <img
-        src="/film/04-line.webp"
+        src={filmUrl("/film/04-line.webp")}
         width={1344}
         height={752}
         alt="A carton line in a packaging plant, seen low along the conveyor"
       />
       <img
         className={styles.model}
-        src="/film/05-twin.webp"
+        src={filmUrl("/film/05-twin.webp")}
         width={1344}
         height={752}
         alt="The same line drawn as a wireframe model, with a cluster of cartons marked in amber"

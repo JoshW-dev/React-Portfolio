@@ -4,8 +4,9 @@ import { Fragment, useCallback, useEffect, useRef, useState, type CSSProperties,
 import TransitionLink from "@/components/TransitionLink";
 import OrbitIntro, { type OrbitControl } from "@/components/orbit/OrbitIntro";
 import { MotionFade, MovingStill, loadPicture, motionAllowed, type Motion, type Source } from "@/components/film/movingStill";
-import FilmLoop, { keepLoop, keptLoop, loopFile, startLoop } from "@/components/film/FilmLoop";
+import FilmLoop, { keepLoop, keptFile, keptLoop, loopFile, startLoop } from "@/components/film/FilmLoop";
 import { HOPS, SCROLL, STOPS, VEILS, clipFile, motionForFrame, type ClipPart, type Hop, type Loop } from "@/lib/film";
+import { filmUrl } from "@/lib/filmUrl";
 import { setHandoff, type Handoff } from "@/lib/handoff";
 import styles from "./FilmScroll.module.css";
 
@@ -99,7 +100,7 @@ type Still = { key: string; bg: string; from: number; to: number; clip: boolean 
 const STILLS: Still[] = [
   ...STOPS.map((s, i): Still => {
     const after = HOP_SEG[i] ?? HOLD_SEG[i];
-    return { key: `stop-${i}`, bg: `url(${s.still})`, from: i === 0 ? 0 : HOP_SEG[i - 1].start, to: after.start + after.len, clip: false };
+    return { key: `stop-${i}`, bg: `url(${filmUrl(s.still)})`, from: i === 0 ? 0 : HOP_SEG[i - 1].start, to: after.start + after.len, clip: false };
   }),
   ...CLIP_HOPS.flatMap((h): Still[] => {
     const name = HOP_LIST[h].clip as string;
@@ -107,8 +108,8 @@ const STILLS: Still[] = [
     const to = HOP_SEG[h].start + HOP_SEG[h].len;
     // The stop's own still sits under each clip still, so a missing file never leaves a hole.
     return [
-      { key: `first-${h}`, bg: `url(${clipFile(name, "first.webp")}), url(${STOPS[h].still})`, from, to, clip: true },
-      { key: `last-${h}`, bg: `url(${clipFile(name, "last.webp")}), url(${STOPS[h + 1].still})`, from, to, clip: true },
+      { key: `first-${h}`, bg: `url(${filmUrl(clipFile(name, "first.webp"))}), url(${filmUrl(STOPS[h].still)})`, from, to, clip: true },
+      { key: `last-${h}`, bg: `url(${filmUrl(clipFile(name, "last.webp"))}), url(${filmUrl(STOPS[h + 1].still)})`, from, to, clip: true },
     ];
   }),
 ];
@@ -255,7 +256,7 @@ const loadLanding = (k: number) => {
     const src = hop && kindOf(hop) === "video" && hop.clip ? clipFile(hop.clip, "last.webp") : STOPS[k].still;
     const img = new Image();
     img.fetchPriority = "high";
-    img.src = src;
+    img.src = filmUrl(src);
     done = img.decode().catch(() => undefined);
     landing.set(k, done);
   }
@@ -318,6 +319,21 @@ type Clip = {
   fetchAbort: AbortController | null;
   attachAbort: AbortController | null;
 };
+
+/*
+  Downloads that outlive one showing of the film. Clip files fetched whole are kept as object
+  URLs for the page's life, by file path, as the loops are (FilmLoop.tsx), so the film shown
+  again (back from a project page) plays them from memory with no request. A download still
+  running when the film unmounts finishes into the same store, and the next showing waits on
+  it instead of starting over. The quality tier the first fetch measured is kept as well, so
+  a slow link isn't tested again on the big file.
+*/
+type Download = { done: Promise<void>; received: number; total: number };
+const keptClips = new Map<string, string>();
+const clipDownloads = new Map<string, Download>();
+const loopDownloads = new Map<string, Promise<void>>();
+let keptTier: Tier | null = null;
+const sleep = (ms: number) => new Promise<void>((r) => window.setTimeout(r, ms));
 
 /** What the screen shows at one playhead position. Layer keys: stop-i, first-h, last-h, video-h. */
 type Shot = {
@@ -544,21 +560,16 @@ export default function FilmScroll({ frames = NO_FRAMES }: { frames?: Record<str
     // The browser's own downlink figure reads low on many good connections, so only its
     // coarse type is trusted here. The measured first fetch decides the rest.
     const slowLink = !!conn && SLOW_TYPES.includes(conn.effectiveType ?? "");
-    let tier: Tier = slowLink ? "low" : "high";
-    let tierFixed = slowLink;
+    let tier: Tier = keptTier ?? (slowLink ? "low" : "high");
+    let tierFixed = keptTier !== null || slowLink;
 
-    const clips: Clip[] = CLIP_HOPS.map((h) => ({
-      hop: h,
-      name: HOP_LIST[h].clip as string,
-      state: "idle",
-      file: "",
-      received: 0,
-      total: 0,
-      url: null,
-      dur: 0,
-      fetchAbort: null,
-      attachAbort: null,
-    }));
+    const clips: Clip[] = CLIP_HOPS.map((h) => {
+      const name = HOP_LIST[h].clip as string;
+      // Fetched on an earlier showing: already in memory, this tier's file first.
+      const file = [parts[tier], parts.high, parts.low].map((part) => clipFile(name, part)).find((f) => keptClips.has(f)) ?? "";
+      const url = file ? (keptClips.get(file) ?? null) : null;
+      return { hop: h, name, state: url ? "fetched" : "idle", file, received: 0, total: 0, url, dur: 0, fetchAbort: null, attachAbort: null };
+    });
     const clipOf: (Clip | undefined)[] = [];
     clips.forEach((c) => (clipOf[c.hop] = c));
     const videoOf = (c: Clip) => layers.current.get(`video-${c.hop}`) as HTMLVideoElement | undefined;
@@ -1045,12 +1056,26 @@ export default function FilmScroll({ frames = NO_FRAMES }: { frames?: Record<str
       l.state = "loading";
       try {
         const file = loopFile(STOPS[l.k].loop as Loop, tier === "high" ? "hd" : "m");
-        const res = await fetch(file, { signal: ac.signal });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const blob = await res.blob();
-        l.url = URL.createObjectURL(new Blob([blob], { type: "video/mp4" }));
-        // Kept past this film, for the project page and for the film's next showing.
-        keepLoop(file, l.url);
+        // Still downloading from an earlier showing of the film: wait for it.
+        const running = loopDownloads.get(file);
+        if (running) await running;
+        let url = keptFile(file);
+        if (!url) {
+          let finish = () => {};
+          loopDownloads.set(file, new Promise<void>((r) => (finish = r)));
+          try {
+            const res = await fetch(file, { signal: ac.signal });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const blob = await res.blob();
+            url = URL.createObjectURL(new Blob([blob], { type: "video/mp4" }));
+            // Kept past this film, for the project page and for the film's next showing.
+            keepLoop(file, url);
+          } finally {
+            loopDownloads.delete(file);
+            finish();
+          }
+        }
+        l.url = url;
         l.state = "fetched";
       } catch {
         // An aborted fetch goes back in the line; a failed one plays from the network.
@@ -1064,65 +1089,123 @@ export default function FilmScroll({ frames = NO_FRAMES }: { frames?: Record<str
       kick();
     };
 
+    /**
+     * Fetches one clip file whole into the store (keptClips), listed in clipDownloads while it
+     * runs so a later showing can wait on it. It carries on if the film unmounts. With probe,
+     * it measures the link two seconds in and stops ("slow") if the file would take too long.
+     */
+    const download = async (
+      c: Clip,
+      ac: AbortController,
+      probe: boolean,
+    ): Promise<{ url: string } | { status: number } | { slow: true }> => {
+      const file = c.file;
+      let finish = () => {};
+      const dl: Download = { done: new Promise<void>((r) => (finish = r)), received: 0, total: 0 };
+      clipDownloads.set(file, dl);
+      try {
+        const res = await fetch(filmUrl(file), { signal: ac.signal });
+        if (!res.ok) {
+          void res.body?.cancel().catch(() => {});
+          return { status: res.status };
+        }
+        c.total = dl.total = Number(res.headers.get("content-length")) || 0;
+        const chunks: BlobPart[] = [];
+        const reader = res.body?.getReader();
+        if (!reader) chunks.push(await res.blob());
+        else {
+          let first = 0;
+          for (;;) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            chunks.push(value);
+            c.received += value.byteLength;
+            dl.received = c.received;
+            const now = performance.now();
+            if (!first) first = now;
+            else if (probe && !tierFixed && now - first >= PROBE_MS) {
+              // Project the whole download from the rate so far.
+              tierFixed = true;
+              const secs = ((c.total || PROBE_GUESS) * (now - first)) / 1000 / c.received;
+              if (secs > PROBE_MAX_SECS) {
+                void reader.cancel().catch(() => {});
+                ac.abort();
+                return { slow: true };
+              }
+              keptTier = tier;
+            }
+            if (waitHop === c.hop) kick();
+          }
+        }
+        const url = URL.createObjectURL(new Blob(chunks, { type: "video/mp4" }));
+        keptClips.set(file, url);
+        return { url };
+      } finally {
+        if (clipDownloads.get(file) === dl) clipDownloads.delete(file);
+        finish();
+      }
+    };
+
     const fetchClip = async (c: Clip) => {
       fetching = c;
       let t: Tier = tier;
       try {
         for (;;) {
+          // A tier another showing measured while this one waited.
+          if (keptTier !== null && !tierFixed) {
+            tier = keptTier;
+            tierFixed = true;
+            if (tier === "low") t = "low";
+          }
           const ac = new AbortController();
           c.fetchAbort = ac;
           c.state = "loading";
           c.file = clipFile(c.name, parts[t]);
           c.received = 0;
           c.total = 0;
+          // Fetched, or still downloading, on an earlier showing of the film.
+          const kept = keptClips.get(c.file);
+          if (kept) {
+            c.fetchAbort = null;
+            c.url = kept;
+            c.state = "fetched";
+            break;
+          }
+          const running = clipDownloads.get(c.file);
+          if (running) {
+            while (clipDownloads.get(c.file) === running) {
+              if (ac.signal.aborted) throw new DOMException("Aborted", "AbortError");
+              c.received = running.received;
+              c.total = running.total;
+              if (waitHop === c.hop) kick();
+              await Promise.race([running.done, sleep(120)]);
+            }
+            // Done: take it from the store. Failed: fetch it here.
+            continue;
+          }
           const probe = t === "high" && !tierFixed;
-          const res = await fetch(c.file, { signal: ac.signal });
-          if (!res.ok) {
+          const got = await download(c, ac, probe);
+          if ("status" in got) {
             // A missing high-tier file falls back to the low tier for this clip only.
             if (t === "high") {
-              void res.body?.cancel().catch(() => {});
               t = "low";
               continue;
             }
-            throw new Error(`HTTP ${res.status}`);
+            throw new Error(`HTTP ${got.status}`);
           }
-          c.total = Number(res.headers.get("content-length")) || 0;
-          const chunks: BlobPart[] = [];
-          let tooSlow = false;
-          const reader = res.body?.getReader();
-          if (!reader) chunks.push(await res.blob());
-          else {
-            let first = 0;
-            for (;;) {
-              const { done, value } = await reader.read();
-              if (done) break;
-              chunks.push(value);
-              c.received += value.byteLength;
-              const now = performance.now();
-              if (!first) first = now;
-              else if (probe && !tierFixed && now - first >= PROBE_MS) {
-                // Project the whole download from the rate so far.
-                tierFixed = true;
-                const secs = ((c.total || PROBE_GUESS) * (now - first)) / 1000 / c.received;
-                if (secs > PROBE_MAX_SECS) {
-                  tooSlow = true;
-                  break;
-                }
-              }
-              if (waitHop === c.hop) kick();
-            }
-          }
-          if (tooSlow) {
+          if ("slow" in got) {
             tier = "low";
+            keptTier = "low";
             t = "low";
-            void reader?.cancel().catch(() => {});
-            ac.abort();
             continue;
           }
           // A first fetch that finished inside the probe window keeps the high tier.
-          if (probe) tierFixed = true;
+          if (probe) {
+            tierFixed = true;
+            keptTier = tier;
+          }
           c.fetchAbort = null;
-          c.url = URL.createObjectURL(new Blob(chunks, { type: "video/mp4" }));
+          c.url = got.url;
           c.state = "fetched";
           break;
         }
@@ -1616,15 +1699,13 @@ export default function FilmScroll({ frames = NO_FRAMES }: { frames?: Record<str
       window.removeEventListener("touchcancel", onTouchEnd);
       if (idleTimer) clearTimeout(idleTimer);
       (moving as MovingStill | null)?.dispose();
+      // A download still running finishes into the store for the film's next showing, and
+      // every file fetched stays there (keptClips, and FilmLoop.tsx for the loops).
       for (const c of clips) {
-        c.fetchAbort?.abort();
         if (c.state === "attaching" || c.state === "ready") detach(c);
-        if (c.url) URL.revokeObjectURL(c.url);
         c.url = null;
       }
-      // The loops' files stay in memory (FilmLoop.tsx keeps them), so they are not revoked.
       for (const l of loopFiles) {
-        l.abort?.abort();
         const el = loopRefs.current[l.k];
         if (el && l.url && el.src === l.url) el.removeAttribute("src");
         l.url = null;

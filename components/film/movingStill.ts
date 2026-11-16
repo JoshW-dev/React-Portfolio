@@ -17,6 +17,8 @@
   project page's hero (HeroFrame), which draws the stop's own still.
 */
 
+import { filmUrl } from "@/lib/filmUrl";
+
 export type Motion = {
   /** The stop's motion map. */
   map: string;
@@ -56,9 +58,8 @@ const keyOf = (s: Source) => (typeof s === "string" ? s : s.key);
 
 /**
  * Pictures and maps loaded and decoded once per page load, by path, and kept. The film loads
- * a stop's pictures here, and a project page opened from it reads them back at once. A second
- * new Image() of the same path would ask the server again (the site's files are served with
- * max-age=0), which took 2.3 s on a slow link.
+ * a stop's pictures here, and a project page opened from it reads them back at once, with no
+ * request and no second decode.
  */
 const pictures = new Map<string, Promise<HTMLImageElement>>();
 const decodedPictures = new Map<string, HTMLImageElement>();
@@ -68,7 +69,7 @@ export function loadPicture(src: string): Promise<HTMLImageElement> {
   if (!p) {
     const img = new Image();
     img.decoding = "async";
-    img.src = src;
+    img.src = filmUrl(src);
     p = img.decode().then(() => {
       decodedPictures.set(src, img);
       return img;

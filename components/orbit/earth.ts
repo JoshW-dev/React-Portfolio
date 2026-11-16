@@ -1,4 +1,5 @@
 import type * as THREE from "three";
+import { filmUrl } from "@/lib/filmUrl";
 
 /*
   Earth seen from low orbit, ported from the McCarthy's orbit globe (same NASA maps, same
@@ -29,7 +30,7 @@ export async function loadImage(url: string, signal: AbortSignal): Promise<Image
   // Decoding off the main thread keeps the 8k swap from dropping frames.
   if (typeof createImageBitmap === "function") {
     try {
-      const res = await fetch(url, { signal });
+      const res = await fetch(filmUrl(url), { signal });
       if (!res.ok) throw new Error(`${res.status} ${url}`);
       const blob = await res.blob();
       return await createImageBitmap(blob, { colorSpaceConversion: "none", premultiplyAlpha: "none" });
@@ -39,7 +40,7 @@ export async function loadImage(url: string, signal: AbortSignal): Promise<Image
   }
   const img = new Image();
   img.decoding = "async";
-  img.src = url;
+  img.src = filmUrl(url);
   await img.decode();
   return img;
 }

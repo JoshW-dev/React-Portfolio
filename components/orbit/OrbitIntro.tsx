@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import TransitionLink from "@/components/TransitionLink";
+import { filmUrl } from "@/lib/filmUrl";
 import type { OrbitScene, SatFrame } from "./orbitScene";
 import styles from "./OrbitIntro.module.css";
 
@@ -304,7 +305,7 @@ export default function OrbitIntro({ active = true, className, earth = true, pos
     <div
       ref={wrapRef}
       className={className ? `${styles.wrap} ${className}` : styles.wrap}
-      style={earth ? ({ "--poster": `url(${poster})` } as CSSProperties) : undefined}
+      style={earth ? ({ "--poster": `url(${filmUrl(poster)})` } as CSSProperties) : undefined}
       data-earth={earth ? undefined : "false"}
       data-mode={mode}
       data-late={late ? "true" : undefined}

@@ -1,5 +1,6 @@
 import type { Ref } from "react";
 import type { Loop } from "@/lib/film";
+import { filmUrl } from "@/lib/filmUrl";
 import styles from "./FilmLoop.module.css";
 
 /*
@@ -14,7 +15,7 @@ type Props = { loop: Loop; videoRef: Ref<HTMLVideoElement>; className?: string }
 
 export default function FilmLoop({ loop, videoRef, className }: Props) {
   const [x, y, w, h] = loop.box;
-  const mask = `url(${loop.src}-mask.png)`;
+  const mask = `url(${filmUrl(`${loop.src}-mask.png`)})`;
   const pct = (v: number) => `${(v * 100).toFixed(4)}%`;
   return (
     <div className={className ? `${styles.wrap} ${className}` : styles.wrap} aria-hidden="true">
@@ -42,9 +43,9 @@ export default function FilmLoop({ loop, videoRef, className }: Props) {
   );
 }
 
-/** A loop's video file: "hd" is full size, "m" half. */
+/** A loop's video file, as the URL to load it from: "hd" is full size, "m" half. */
 export function loopFile(loop: Loop, part: "hd" | "m") {
-  return `${loop.src}-${part}.mp4`;
+  return filmUrl(`${loop.src}-${part}.mp4`);
 }
 
 /**

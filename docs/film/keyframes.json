@@ -161,7 +161,7 @@
       "seconds": 10,
       "credits": 80,
       "start": "rockies-plant-hd.mp4 frame 0",
-      "used": "0 to 2.5 s, ping-pong; the camera kept flying forward, so later frames don't line up",
+      "used": "0 to 4.8 s as an overlap loop (2.4 s); the camera flies forward, so frames after about 5 s don't line up. Was ping-pong until Josh saw it run backward.",
       "prompt": "Locked-off tripod shot of a Rocky Mountain valley at dawn, seen from a snowy ridge. The camera never moves: no pan, no zoom, no push, no drift, no shake. Low clouds and mist drift continuously along the mountainsides and through the valley from left to right, curling and thinning, at the same steady, clearly visible pace from the first second to the last. The lake surface ripples gently. The mountains, snow, forest, ridge and sky stay perfectly still. Photorealistic documentary footage, natural light, no people, no birds, no cuts."
     },
     {
@@ -170,7 +170,7 @@
       "seconds": 10,
       "credits": 80,
       "start": "sf-towns-hd.mp4 frame 0",
-      "used": "0 to 4 s, ping-pong; the camera zooms about 1% a second and the fog on the right drains away",
+      "used": "0 to 6 s as an overlap loop (3 s); the camera zooms about 0.4% a second and the fog thins as it goes, which the overlap evens out. Was ping-pong until Josh saw it run backward.",
       "prompt": "Locked-off tripod shot of the Golden Gate Bridge at blue hour above a sea of fog. The camera never moves: no pan, no zoom, no push, no drift, no shake. The thick fog flows continuously under and around the bridge from left to right, rolling, billowing and curling around the tower, at the same steady, clearly visible pace from the first second to the last. Car headlights move along the bridge deck. The bridge towers, cables, city skyline, hills and sky stay perfectly still. Photorealistic documentary footage, natural light, no cuts."
     }
   ]

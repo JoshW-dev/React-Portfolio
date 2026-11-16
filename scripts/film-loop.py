@@ -10,8 +10,9 @@ This script:
   1. holds the camera still: each frame is moved back by the drift of the 'stable' box,
   2. matches its colour to the frame (each channel's mean and spread, over the top half),
   3. crossfades its last seconds into its first, so the end runs into the start with no jump,
-     or, with "loop": "pingpong", plays it forward then backward (for fog and clouds that
-     drift one way over the clip, which a crossfade would show as a pulse),
+     or, with "loop": "overlap", mixes every frame from two moments half the clip apart (for
+     fog and clouds that drift one way and build or thin over the clip: the motion always
+     runs forward, and a steady build or thinning cancels out, so nothing resets),
   4. crops it to the loop's box and writes public/film/loops/<name>-hd.mp4 (full size) and
      <name>-m.mp4 (half size),
   5. writes <name>-mask.png: white, with the alpha saying where the loop shows,
@@ -26,6 +27,7 @@ from pathlib import Path
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
+from scipy.ndimage import gaussian_filter
 
 ROOT = Path(__file__).resolve().parent.parent
 SPEC = ROOT / "scripts" / "film-loops.json"
@@ -54,10 +56,13 @@ def frames(path, w, h):
 
 
 def encoder(path, w, h, fps, crf):
+    # One keyframe, at the start, and the same quality on every frame: by default x264 gives
+    # keyframes more detail than the frames between, which shows as a tick at each keyframe
+    # and at the wrap back to the start (measured: a step 2.3 times the usual frame step).
     return subprocess.Popen(
         ["ffmpeg", "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{w}x{h}", "-r", f"{fps:g}", "-i", "-",
          "-an", "-c:v", "libx264", "-preset", "slow", "-crf", str(crf), "-profile:v", "high", "-pix_fmt", "yuv420p",
-         "-g", str(round(fps * 2)), "-movflags", "+faststart", str(path)],
+         "-g", "9999", "-x264-params", "ipratio=1.0:pbratio=1.0:mbtree=0:scenecut=0", "-movflags", "+faststart", str(path)],
         stdin=subprocess.PIPE,
     )
 
@@ -95,6 +100,21 @@ def blurred(a, w, h):
     return np.asarray(Image.fromarray(a).resize((w, h), Image.BILINEAR).filter(ImageFilter.GaussianBlur(4)), np.float32)
 
 
+def mix(a, b, w, s=20.0):
+    """a * (1 - w) + b * w, with the fine detail kept as strong as it was in a and b. Two
+    different frames of fog, averaged, lose about a third of their fine texture at the
+    halfway point, which shows as a soft pulse; the detail (finer than s px) is lifted back to
+    the strength the two frames had. Where a and b agree (the still mountains) nothing is lifted."""
+    a, b = a.astype(np.float32), b.astype(np.float32)
+    la, lb = gaussian_filter(a, (s, s, 0)), gaussian_filter(b, (s, s, 0))
+    ha, hb = a - la, b - lb
+    h = ha * (1 - w) + hb * w
+    energy = lambda x: gaussian_filter((x * x).mean(2), s)
+    want = energy(ha) * (1 - w) + energy(hb) * w
+    gain = np.clip(np.sqrt((want + 1) / (energy(h) + 1)), 1, 1.6)
+    return la * (1 - w) + lb * w + h * gain[..., None]
+
+
 def poly_mask(polys, box, w, h, feather):
     x0, y0, x1, y1 = box
     big = Image.new("L", (w * SS, h * SS), 0)
@@ -124,9 +144,14 @@ def main():
     if "use" in spec:
         u0, u1 = spec["use"]
         clip = clip[round(u0 * fps) : round(u1 * fps)]
+    overlap = spec.get("loop") == "overlap"
+    if overlap:
+        # The loop is half the clip long, and frame j mixes frame j + half (fading out) with
+        # frame j (fading in), in straight proportion. Each moment of the clip fades in, plays
+        # and fades out, and the two halves hand over so the loop's last frame runs into its first.
+        clip = clip[: len(clip) // 2 * 2]
     n = len(clip)
-    pingpong = spec.get("loop") == "pingpong"
-    k = 0 if pingpong else round(spec["crossfade"] * fps)
+    k = n // 2 if overlap else round(spec["crossfade"] * fps)
 
     # Hold the camera still. Video models drift and zoom a little even when told not to, so
     # each frame is lined up with the stop's frame itself: patches of things that never move
@@ -203,10 +228,16 @@ def main():
     OUT.mkdir(parents=True, exist_ok=True)
     hd = encoder(OUT / f"{name}-hd.mp4", cw, ch, fps, 20)
     m = encoder(OUT / f"{name}-m.mp4", cw // 2, ch // 2, fps, 23)
-    order = list(range(n)) + list(range(n - 2, 0, -1)) if pingpong else list(range(n - k))
+    order = list(range(n - k))
+    # The mixing is done on the crop and a margin round it, which is all that is kept.
+    mg = 64
+    ry = slice(max(0, cy0 - mg), min(H, cy0 + ch + mg))
+    rx = slice(max(0, cx0 - mg), min(W, cx0 + cw + mg))
     for j, i in enumerate(order):
         f = clip[i].astype(np.float32)
-        if j < k:
+        if overlap:
+            f[ry, rx] = mix(clip[k + j][ry, rx], clip[j][ry, rx], j / k)
+        elif j < k:
             w = (j + 0.5) / k
             w = w * w * (3 - 2 * w)
             f = clip[n - k + j].astype(np.float32) * (1 - w) + f * w

@@ -122,7 +122,7 @@ export const STOPS: Stop[] = [
     spots: [
       { x: 0.57, y: 0.205, label: "Bottleneck Radar", href: "/projects/bottleneck-radar" },
       { x: 0.414, y: 0.4, label: "Insider Signal", href: "/projects/insider-signal" },
-      { x: 0.6, y: 0.43, label: "HALATION", href: "/projects/halation" },
+      { x: 0.5, y: 0.6, label: "HALATION", href: "/projects/halation" },
     ],
     place: "New York, at night",
     short: "New York",

@@ -1,6 +1,7 @@
 import type * as THREE from "three";
 import { buildCubeSat } from "./cubesat";
 import { TEXTURES, earthFragment, earthVertex, latLon, loadImage, makeTexture, type Tier } from "./earth";
+import { slowLink } from "@/lib/netRate";
 
 /*
   The film's opening shot: Earth from low orbit with a 3U CubeSat drifting in, tumbling,
@@ -526,13 +527,23 @@ export function createOrbitScene(T: Three, opts: OrbitSceneOptions): OrbitScene 
   // ---- Textures ------------------------------------------------------------------------
   const maxTex = renderer.capabilities.maxTextureSize;
   // Phones and small windows start on the 2k set and move up to 4k; desktops start on 4k
-  // and move up to the 8k day and lights maps once the first frame is on screen.
+  // and move up to the 8k day and lights maps once the first frame is on screen. On a slow
+  // link the planet keeps to the 2k set, so the film's first clip has the line to itself
+  // (the 4k and 8k sets are 3.8 MB, as much as that clip).
   const coarse = window.matchMedia("(pointer: coarse)").matches;
   const phone = coarse && Math.min(window.screen.width, window.screen.height) < 600;
   const smallView = Math.max(window.innerWidth, window.innerHeight) < 1000;
-  const firstTier: Tier = phone || smallView || maxTex < 4096 ? "2k" : "4k";
-  const upgradeTier: Tier | null =
-    firstTier === "2k" ? (maxTex >= 4096 ? "4k" : null) : maxTex >= 8192 && !coarse ? "8k" : null;
+  const slow = slowLink();
+  const firstTier: Tier = slow || phone || smallView || maxTex < 4096 ? "2k" : "4k";
+  const upgradeTier: Tier | null = slow
+    ? null
+    : firstTier === "2k"
+      ? maxTex >= 4096
+        ? "4k"
+        : null
+      : maxTex >= 8192 && !coarse
+        ? "8k"
+        : null;
   const textures: THREE.Texture[] = [];
   const abort = new AbortController();
 
@@ -718,7 +729,8 @@ export function createOrbitScene(T: Three, opts: OrbitSceneOptions): OrbitScene 
       }
       return;
     }
-    if (!earth || !upgradeTier) return;
+    // Checked again here: the first set's own download may have shown the link is slow.
+    if (!earth || !upgradeTier || slowLink()) return;
     try {
       await loadSet(upgradeTier);
       if (!running && ready && !disposed) draw(0);

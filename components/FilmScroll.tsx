@@ -7,6 +7,7 @@ import { MotionFade, MovingStill, loadPicture, motionAllowed, type Motion, type 
 import FilmLoop, { keepLoop, keptFile, keptLoop, loopFile, startLoop } from "@/components/film/FilmLoop";
 import { HOPS, SCROLL, STOPS, VEILS, clipFile, motionForFrame, type ClipPart, type Hop, type Loop } from "@/lib/film";
 import { filmUrl } from "@/lib/filmUrl";
+import { slowLink as measuredSlow } from "@/lib/netRate";
 import { setHandoff, type Handoff } from "@/lib/handoff";
 import styles from "./FilmScroll.module.css";
 
@@ -150,6 +151,13 @@ const SPOT_FADE = 4;
 /** The moving still draws at most this often, about 30 times a second. */
 const MOVE_DRAW_MS = 30;
 const LOOP_SETTLE = 0.6; // s the film rests on a stop before its loop may fade in
+const LOOP_SETTLE_AGAIN = 0.12; // the same, on a return to a stop whose loop already showed
+/**
+ * Loops (by base path) and moving stills (by map) that have shown in full in this page load.
+ * Coming back to their stop, they show again at once: no long rest, a short fade, and a loop
+ * picks up where it paused instead of rewinding (its file is already in memory).
+ */
+const motionShown = new Set<string>();
 
 /** How long the film rests on a stop before it loads the pictures of the projects it opens. */
 const FRAMES_AFTER_MS = 800;
@@ -1157,6 +1165,14 @@ export default function FilmScroll({ frames = NO_FRAMES }: { frames?: Record<str
             tierFixed = true;
             if (tier === "low") t = "low";
           }
+          // The page's own files already show a slow link: skip the big file's test, which
+          // costs seconds there (lib/netRate.ts).
+          if (t === "high" && !tierFixed && measuredSlow()) {
+            tier = "low";
+            keptTier = "low";
+            tierFixed = true;
+            t = "low";
+          }
           const ac = new AbortController();
           c.fetchAbort = ac;
           c.state = "loading";
@@ -1424,7 +1440,9 @@ export default function FilmScroll({ frames = NO_FRAMES }: { frames?: Record<str
       }
 
       const was = fade.opacity;
+      if (mShown) fade.quick = motionShown.has(mShown.motion.map);
       fade.step(dt, want, p === goal && waitHop === null && !leaving);
+      if (mShown && fade.opacity >= 1 && fade.amp >= 1) motionShown.add(mShown.motion.map);
       if (fade.drawNow && moving && mShown && (was === 0 || now - mLastDraw >= MOVE_DRAW_MS)) {
         const drawn = moving.draw({
           a: mShown.a,
@@ -1480,11 +1498,13 @@ export default function FilmScroll({ frames = NO_FRAMES }: { frames?: Record<str
       const waiting = file?.state === "loading";
       if (wanted && file?.state === "idle") file.state = "direct";
       const steady = p === goal && waitHop === null && !leaving;
+      const again = motionShown.has(loop.src);
+      loopFade.quick = again;
       lRest = wanted && steady ? lRest + dt : wanted && loopFade.opacity > 0 ? lRest : 0;
       if (wanted && !lPlaying && !lStarting && !waiting) {
         lStarting = true;
         const src = file?.url ?? loopFile(loop, tier === "high" ? "hd" : "m");
-        void startLoop(el, src, loopFade.opacity === 0, loop.rate).then((r) => {
+        void startLoop(el, src, loopFade.opacity === 0 && !again, loop.rate).then((r) => {
           lStarting = false;
           if (r === "playing") lPlaying = true;
           else if (r === "blocked") loopOff = true;
@@ -1495,8 +1515,9 @@ export default function FilmScroll({ frames = NO_FRAMES }: { frames?: Record<str
       // It shows only once its frames are coming. Once showing it stays: at each restart Chrome
       // drops readyState for a moment (to 1 on the preview), and a stall only holds a frame.
       const flowing = el.readyState >= 3 || loopFade.opacity > 0;
-      const want = wanted && lPlaying && flowing && lRest >= LOOP_SETTLE;
+      const want = wanted && lPlaying && flowing && lRest >= (again ? LOOP_SETTLE_AGAIN : LOOP_SETTLE);
       loopFade.step(dt, want, steady);
+      if (loopFade.opacity >= 1) motionShown.add(loop.src);
       put(el, "opacity", loopFade.opacity.toFixed(3));
       put(el, "visibility", loopFade.opacity > 0 ? "visible" : "hidden");
       if (!wanted && loopFade.opacity === 0 && (lPlaying || !el.paused)) pauseLoop();

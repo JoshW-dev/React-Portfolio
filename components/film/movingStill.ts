@@ -97,8 +97,10 @@ export function motionAllowed(): boolean {
 
 // Timing for MotionFade.
 const FADE_IN = 0.9; // s to fade in
+const QUICK_FADE_IN = 0.3; // s to fade in on a return to a stop whose motion already showed
 const FADE_OUT = 0.15; // s to fade out
 const RAMP = 1.8; // s for the motion to grow from none to full
+const QUICK_RAMP = 0.7; // s for the same on a return
 const PROBE_FRAMES = 24; // frames drawn unseen before it may show
 const PROBE_MAX = 1 / 40; // s: the test fails above this average frame time
 const SLOW = 1 / 24; // s: frames slower than this on average...
@@ -115,6 +117,11 @@ let probed: "unknown" | "pass" | "fail" = "unknown";
 export class MotionFade {
   opacity = 0;
   amp = 0;
+  /**
+   * A return to a stop whose motion already showed in this page load: it fades in and grows
+   * in well under a second, so it reads as already there. The first showing stays slow.
+   */
+  quick = false;
   /** Off for the rest of the page load: the machine could not keep up. */
   off = probed === "fail";
   private probeFrames = 0;
@@ -150,11 +157,11 @@ export class MotionFade {
       this.probeFrames = 0;
       this.probeSum = 0;
     }
-    this.opacity = want ? Math.min(1, this.opacity + dt / FADE_IN) : Math.max(0, this.opacity - dt / FADE_OUT);
+    this.opacity = want ? Math.min(1, this.opacity + dt / (this.quick ? QUICK_FADE_IN : FADE_IN)) : Math.max(0, this.opacity - dt / FADE_OUT);
     if (this.opacity === 0) {
       this.amp = 0;
       this.shownFor = 0;
-    } else if (want) this.amp = Math.min(1, this.amp + dt / RAMP);
+    } else if (want) this.amp = Math.min(1, this.amp + dt / (this.quick ? QUICK_RAMP : RAMP));
     if (this.opacity === 1 && steady) {
       this.shownFor += dt;
       if (this.shownFor > SETTLE) {

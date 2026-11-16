@@ -212,6 +212,33 @@ type Mode = "loading" | "live" | "fallback";
  * and disposes everything on unmount. With reduced motion there is no loop: the scene
  * draws once per scroll change.
  */
+/** Resolves once the page has loaded and is idle, and the element is within a screen of view. */
+function whenNear(el: Element, cleanups: (() => void)[]): Promise<void> {
+  const loaded = new Promise<void>((r) => {
+    if (document.readyState === "complete") r();
+    else window.addEventListener("load", () => r(), { once: true });
+  });
+  const idle = () =>
+    new Promise<void>((r) => {
+      if (typeof window.requestIdleCallback === "function") window.requestIdleCallback(() => r(), { timeout: 1500 });
+      else setTimeout(r, 200);
+    });
+  const near = new Promise<void>((r) => {
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          io.disconnect();
+          r();
+        }
+      },
+      { rootMargin: "100% 0px" },
+    );
+    io.observe(el);
+    cleanups.push(() => io.disconnect());
+  });
+  return Promise.all([loaded.then(idle), near]).then(() => undefined);
+}
+
 export function useBreakdownCanvas(hostRef: RefObject<HTMLElement | null>, api: BreakdownApi, load: () => Promise<SceneFactory>): Mode {
   const [mode, setMode] = useState<Mode>("loading");
   const loadRef = useRef(load);
@@ -248,6 +275,10 @@ export function useBreakdownCanvas(hostRef: RefObject<HTMLElement | null>, api: 
     };
 
     (async () => {
+      // three.js and the scene wait until the page has loaded and gone quiet, and until the
+      // stage is within a screen of view, so the page's own picture and words paint first.
+      await whenNear(host, cleanups);
+      if (cancelled) return;
       let T: typeof import("three");
       let factory: SceneFactory;
       try {

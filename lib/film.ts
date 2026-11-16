@@ -130,10 +130,13 @@ export const STOPS: Stop[] = [
   {
     still: "/film/09-doha.webp",
     link: { href: "/about", label: "More about me" },
-    spots: [{ x: 0.54, y: 0.37, label: "About me", href: "/about" }],
+    spots: [
+      { x: 0.54, y: 0.37, label: "Wade's Game of Society", href: "/projects/game-of-society" },
+      { x: 0.21, y: 0.42, label: "Forty Love", href: "/projects/forty-love" },
+    ],
     place: "Doha, November 2026",
     short: "Doha",
-    text: "I’m writing this from Doha. I’m based in Toronto and usually somewhere else.",
+    text: "I’m writing this from Doha, where this month I built a society simulator and a site for a private tennis club. I’m based in Toronto and usually somewhere else.",
   },
 ];
 

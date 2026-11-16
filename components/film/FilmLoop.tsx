@@ -42,13 +42,18 @@ export default function FilmLoop({ loop, videoRef, className }: Props) {
   );
 }
 
+/** A loop's video file: "hd" is full size, "m" half. */
+export function loopFile(loop: Loop, part: "hd" | "m") {
+  return `${loop.src}-${part}.mp4`;
+}
+
 /**
  * Starts a loop's video playing: sets its source on first use and rewinds it when it was
  * hidden. "blocked" means the browser won't play it (a phone's low power mode, say);
  * "stopped" means it was paused or unloaded before it started.
  */
-export function startLoop(el: HTMLVideoElement, loop: Loop, part: "hd" | "m", rewind: boolean): Promise<"playing" | "blocked" | "stopped"> {
-  if (!el.getAttribute("src")) el.src = `${loop.src}-${part}.mp4`;
+export function startLoop(el: HTMLVideoElement, src: string, rewind: boolean): Promise<"playing" | "blocked" | "stopped"> {
+  if (!el.getAttribute("src")) el.src = src;
   if (rewind && el.currentTime > 0) el.currentTime = 0;
   return el.play().then(
     () => "playing" as const,

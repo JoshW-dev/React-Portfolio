@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useEffect, useLayoutEffect, useRef } from "react";
 import { takeDive, whenShown, type Dive } from "@/lib/dive";
 import type { Loop } from "@/lib/film";
-import FilmLoop, { startLoop } from "./FilmLoop";
+import FilmLoop, { loopFile, startLoop } from "./FilmLoop";
 import { MotionFade, MovingStill, motionAllowed, type Motion } from "./movingStill";
 import styles from "./HeroFrame.module.css";
 
@@ -169,7 +169,7 @@ export default function HeroFrame({ src, alt, motion, loop }: Props) {
       const wanted = inView && !document.hidden && !fade.off;
       if (wanted && !playing && !starting) {
         starting = true;
-        void startLoop(el, loop, part, fade.opacity === 0).then((r) => {
+        void startLoop(el, loopFile(loop, part), fade.opacity === 0).then((r) => {
           starting = false;
           playing = r === "playing";
           if (r === "blocked") fade.off = true;

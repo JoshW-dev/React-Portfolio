@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import TransitionLink, { navigate } from "@/components/TransitionLink";
 import OrbitIntro, { type OrbitControl } from "@/components/orbit/OrbitIntro";
 import { MotionFade, MovingStill, motionAllowed, type Motion, type Source } from "@/components/film/movingStill";
-import FilmLoop, { startLoop } from "@/components/film/FilmLoop";
-import { HOPS, SCROLL, STOPS, VEILS, clipFile, type ClipPart, type Hop, type Spot } from "@/lib/film";
+import FilmLoop, { loopFile, startLoop } from "@/components/film/FilmLoop";
+import { HOPS, SCROLL, STOPS, VEILS, clipFile, type ClipPart, type Hop, type Loop, type Spot } from "@/lib/film";
 import { setDive } from "@/lib/dive";
 import styles from "./FilmScroll.module.css";
 
@@ -971,9 +971,18 @@ export default function FilmScroll() {
 
     let fetching: Clip | null = null;
 
+    // Each stop's cinemagraph loop is fetched in the same line as the clips, placed at its
+    // stop's hold: after the clip that flies in, before the one that flies on. Arriving
+    // before it is in, the loop plays straight from the network instead ("direct").
+    type LoopFile = { k: number; state: "idle" | "loading" | "fetched" | "direct" | "failed"; url: string | null; abort: AbortController | null };
+    const loopFiles: LoopFile[] = motionAllowed()
+      ? STOPS.flatMap((s, k) => (s.loop ? [{ k, state: "idle" as const, url: null, abort: null }] : []))
+      : [];
+    let loopFetching = false;
+
     /** Next clip to fetch: the one at the playhead, then those ahead of it, then behind. */
     const pickNext = () => {
-      let best: Clip | null = null;
+      let best: Clip | LoopFile | null = null;
       let bestScore = Infinity;
       for (const c of clips) {
         if (c.state !== "idle") continue;
@@ -990,15 +999,55 @@ export default function FilmScroll() {
           bestScore = score;
         }
       }
+      for (const l of loopFiles) {
+        if (l.state !== "idle") continue;
+        const h = HOLD_SEG[l.k];
+        const end = h.start + h.len;
+        let score: number;
+        if (p >= h.start && p <= end) score = -0.5;
+        else {
+          const gapAhead = dir > 0 ? h.start - p : p - end;
+          score = gapAhead >= 0 ? gapAhead : 1e6 - gapAhead;
+        }
+        if (score < bestScore) {
+          best = l;
+          bestScore = score;
+        }
+      }
       return best;
     };
 
     const pump = () => {
-      if (fetching || disposed || videoOff()) return;
+      if (fetching || loopFetching || disposed || videoOff()) return;
       // The intro's planet gets the line first, briefly.
       if (intro.phase === "waiting" && performance.now() - intro.mount < EARTH_FIRST_MS) return;
       const next = pickNext();
-      if (next) void fetchClip(next);
+      if (!next) return;
+      if ("hop" in next) void fetchClip(next);
+      else void fetchLoop(next);
+    };
+
+    const fetchLoop = async (l: LoopFile) => {
+      loopFetching = true;
+      const ac = new AbortController();
+      l.abort = ac;
+      l.state = "loading";
+      try {
+        const res = await fetch(loopFile(STOPS[l.k].loop as Loop, tier === "high" ? "hd" : "m"), { signal: ac.signal });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const blob = await res.blob();
+        l.url = URL.createObjectURL(new Blob([blob], { type: "video/mp4" }));
+        l.state = "fetched";
+      } catch {
+        // An aborted fetch goes back in the line; a failed one plays from the network.
+        l.state = ac.signal.aborted ? "idle" : "failed";
+      } finally {
+        l.abort = null;
+        loopFetching = false;
+      }
+      if (disposed) return;
+      pump();
+      kick();
     };
 
     const fetchClip = async (c: Clip) => {
@@ -1324,11 +1373,16 @@ export default function FilmScroll() {
       const loop = lShown >= 0 ? STOPS[lShown].loop : undefined;
       if (!el || !loop) return false;
       const wanted = lShown === target && inView && !document.hidden;
+      const file = loopFiles.find((f) => f.k === lShown);
+      // Still coming down the line: wait for it rather than fetch it twice.
+      const waiting = file?.state === "loading";
+      if (wanted && file?.state === "idle") file.state = "direct";
       const steady = p === goal && waitHop === null;
       lRest = wanted && steady ? lRest + dt : wanted && loopFade.opacity > 0 ? lRest : 0;
-      if (wanted && !lPlaying && !lStarting) {
+      if (wanted && !lPlaying && !lStarting && !waiting) {
         lStarting = true;
-        void startLoop(el, loop, tier === "high" ? "hd" : "m", loopFade.opacity === 0).then((r) => {
+        const src = file?.url ?? loopFile(loop, tier === "high" ? "hd" : "m");
+        void startLoop(el, src, loopFade.opacity === 0).then((r) => {
           lStarting = false;
           if (r === "playing") lPlaying = true;
           else if (r === "blocked") loopOff = true;
@@ -1422,7 +1476,10 @@ export default function FilmScroll() {
 
     const onReduce = () => {
       reduced = reduceQuery.matches;
-      if (reduced) fetching?.fetchAbort?.abort();
+      if (reduced) {
+        fetching?.fetchAbort?.abort();
+        for (const l of loopFiles) l.abort?.abort();
+      }
       kick();
     };
     reduceQuery.addEventListener("change", onReduce);
@@ -1483,7 +1540,7 @@ export default function FilmScroll() {
           return lastShot;
         },
         get loop() {
-          return { opacity: loopFade.opacity, stop: lShown, playing: lPlaying, off: loopOff || loopFade.off, t: loopEl(lShown)?.currentTime ?? null };
+          return { opacity: loopFade.opacity, stop: lShown, playing: lPlaying, off: loopOff || loopFade.off, t: loopEl(lShown)?.currentTime ?? null, files: loopFiles.map((f) => `${f.k}:${f.state}`).join(" ") };
         },
         get moving() {
           return { opacity: fade.opacity, amp: fade.amp, probing: fade.probing, mix: mMix, off: movingOff || fade.off, stop: mShown?.k ?? null, avgMs: fade.frameMs };
@@ -1525,6 +1582,13 @@ export default function FilmScroll() {
         if (c.state === "attaching" || c.state === "ready") detach(c);
         if (c.url) URL.revokeObjectURL(c.url);
         c.url = null;
+      }
+      for (const l of loopFiles) {
+        l.abort?.abort();
+        const el = loopRefs.current[l.k];
+        if (el && l.url && el.src === l.url) el.removeAttribute("src");
+        if (l.url) URL.revokeObjectURL(l.url);
+        l.url = null;
       }
       if (process.env.NODE_ENV !== "production") delete (window as unknown as { __film?: unknown }).__film;
     };

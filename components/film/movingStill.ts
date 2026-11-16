@@ -71,7 +71,7 @@ export function motionAllowed(): boolean {
 // Timing for MotionFade.
 const FADE_IN = 0.9; // s to fade in
 const FADE_OUT = 0.15; // s to fade out
-const RAMP = 2.5; // s for the motion to grow from none to full
+const RAMP = 1.8; // s for the motion to grow from none to full
 const PROBE_FRAMES = 24; // frames drawn unseen before it may show
 const PROBE_MAX = 1 / 40; // s: the test fails above this average frame time
 const SLOW = 1 / 24; // s: frames slower than this on average...
@@ -201,21 +201,21 @@ void main() {
   // Billow: two broad noises drifting apart, so the warp keeps changing shape.
   // The noise has 128 cells a tile, so 0.09 tiles across puts about 11 cells on the picture.
   vec2 buv = ua * vec2(0.09, 0.06);
-  vec2 bn = texture2D(uNoise, buv + vec2(uTime * 0.0028, -uTime * 0.004)).rg - 0.5;
-  bn += 0.6 * (texture2D(uNoise, buv * 2.1 + vec2(-uTime * 0.0035, -uTime * 0.0022)).ba - 0.5);
+  vec2 bn = texture2D(uNoise, buv + vec2(uTime * 0.0056, -uTime * 0.008)).rg - 0.5;
+  bn += 0.6 * (texture2D(uNoise, buv * 2.1 + vec2(-uTime * 0.007, -uTime * 0.0044)).ba - 0.5);
   vec2 billow = bn * (length(dir) * uBillow * uAmp) * vec2(1.0, uAspect);
 
   // Ripple: a soft displacement, finer across than down, drifting toward the viewer.
-  vec2 nuv = ua * vec2(0.32, 0.9) + vec2(0.0, -uTime * 0.012);
+  vec2 nuv = ua * vec2(0.32, 0.9) + vec2(0.0, -uTime * 0.02);
   float lean = 0.6;
   if (uHorizon > 0.0) {
     // On the water's plane: across is x over depth, along is one over depth.
     float d = max(ua.y - uHorizon, 0.02);
-    nuv = vec2((ua.x - 0.5) / d * 0.047, 0.037 / d) + vec2(0.0, uTime * 0.02);
+    nuv = vec2((ua.x - 0.5) / d * 0.047, 0.037 / d) + vec2(0.0, uTime * 0.035);
     lean = 0.35;
   }
   vec2 n = texture2D(uNoise, nuv).rg - 0.5;
-  n += 0.5 * (texture2D(uNoise, nuv * 2.3 + vec2(uTime * 0.009, -uTime * 0.017)).rg - 0.5);
+  n += 0.5 * (texture2D(uNoise, nuv * 2.3 + vec2(uTime * 0.015, -uTime * 0.028)).rg - 0.5);
   vec2 rip = n * (s * uRipple) * vec2(1.0, uAspect * lean) + billow;
 
   // Two phases of the flow, half a cycle apart, each reset while its weight is zero. A slow
@@ -237,8 +237,8 @@ void main() {
   // Twinkle: small bright things brighten and dim, each on its own beat.
   float lum = dot(c, vec3(0.2126, 0.7152, 0.0722));
   vec2 tuv = ua * vec2(3.2, 1.8);
-  float tw = texture2D(uNoise, tuv + vec2(uTime * 0.021, uTime * 0.013)).a;
-  tw *= texture2D(uNoise, tuv * 1.37 - vec2(uTime * 0.017, uTime * 0.011)).g;
+  float tw = texture2D(uNoise, tuv + vec2(uTime * 0.034, uTime * 0.021)).a;
+  tw *= texture2D(uNoise, tuv * 1.37 - vec2(uTime * 0.027, uTime * 0.018)).g;
   c *= 1.0 + (tw - 0.25) * 2.4 * uTwinkle * s * smoothstep(0.3, 0.8, lum);
 
   // Only the parts that move are drawn; the rest is left clear, so the picture under the

@@ -55,6 +55,32 @@ export type Source = string | { key: string; video: HTMLVideoElement };
 const keyOf = (s: Source) => (typeof s === "string" ? s : s.key);
 
 /**
+ * Pictures and maps loaded and decoded once per page load, by path, and kept. The film loads
+ * a stop's pictures here, and a project page opened from it reads them back at once. A second
+ * new Image() of the same path would ask the server again (the site's files are served with
+ * max-age=0), which took 2.3 s on a slow link.
+ */
+const pictures = new Map<string, Promise<HTMLImageElement>>();
+const decodedPictures = new Map<string, HTMLImageElement>();
+
+export function loadPicture(src: string): Promise<HTMLImageElement> {
+  let p = pictures.get(src);
+  if (!p) {
+    const img = new Image();
+    img.decoding = "async";
+    img.src = src;
+    p = img.decode().then(() => {
+      decodedPictures.set(src, img);
+      return img;
+    });
+    // A failed load may be tried again later.
+    p.catch(() => pictures.delete(src));
+    pictures.set(src, p);
+  }
+  return p;
+}
+
+/**
  * Whether this visit should try moving stills at all: motion allowed, no data saver, and
  * not a machine that says it is small. MotionFade's test decides the rest.
  */
@@ -396,13 +422,14 @@ export class MovingStill {
       this.upload(key, v, v.videoWidth, v.videoHeight);
       return this.textures.has(key);
     }
+    const decoded = decodedPictures.get(src);
+    if (decoded) {
+      this.upload(key, decoded, decoded.naturalWidth, decoded.naturalHeight);
+      return this.textures.has(key);
+    }
     this.textures.set(key, "loading");
-    const img = new Image();
-    img.decoding = "async";
-    img.src = src;
-    img
-      .decode()
-      .then(() => this.upload(key, img, img.naturalWidth, img.naturalHeight))
+    loadPicture(src)
+      .then((img) => this.upload(key, img, img.naturalWidth, img.naturalHeight))
       .catch(() => this.textures.set(key, "failed"));
     return false;
   }

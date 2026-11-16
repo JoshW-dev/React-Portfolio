@@ -3,7 +3,7 @@
 import { Fragment, useCallback, useEffect, useRef, useState, type CSSProperties, type MouseEvent } from "react";
 import TransitionLink from "@/components/TransitionLink";
 import OrbitIntro, { type OrbitControl } from "@/components/orbit/OrbitIntro";
-import { MotionFade, MovingStill, motionAllowed, type Motion, type Source } from "@/components/film/movingStill";
+import { MotionFade, MovingStill, loadPicture, motionAllowed, type Motion, type Source } from "@/components/film/movingStill";
 import FilmLoop, { keepLoop, keptLoop, loopFile, startLoop } from "@/components/film/FilmLoop";
 import { HOPS, SCROLL, STOPS, VEILS, clipFile, motionForFrame, type ClipPart, type Hop, type Loop } from "@/lib/film";
 import { setHandoff, type Handoff } from "@/lib/handoff";
@@ -1707,9 +1707,7 @@ export default function FilmScroll({ frames = NO_FRAMES }: { frames?: Record<str
         for (const file of [src, motionForFrame(src)?.map]) {
           if (!file || framesAsked.has(file)) continue;
           framesAsked.add(file);
-          const img = new Image();
-          img.decoding = "async";
-          img.src = file;
+          void loadPicture(file).catch(() => undefined);
         }
       }
     }, FRAMES_AFTER_MS);

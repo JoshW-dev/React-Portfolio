@@ -28,8 +28,48 @@
   Dark pages: a project whose film frame is dark (space, night) keeps that dark ground down
   the page. The project page marks its article data-theme="dark", and the whole document,
   nav and footer included, takes the dark tokens while it is on screen.
+
+  A breakdown can turn a dark page into a white drawing sheet part way down
+  (components/orbit/blueprint.ts): it marks the article data-blueprint="on", and the tokens
+  ease to the white set. They are registered as colours so they can ease.
 */
-:root:has(article[data-theme="dark"]) {
+@property --bg {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #ffffff;
+}
+@property --ink {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #000000;
+}
+@property --muted {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #5d6168;
+}
+@property --faint {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #9a9ea6;
+}
+@property --line {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #e5e5e5;
+}
+@property --agent {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #2540f5;
+}
+@property --agent-pale {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #eef1ff;
+}
+
+:root:has(article[data-theme="dark"]:not([data-blueprint="on"])) {
   --bg: #05070b;
   --ink: #f2f4f7;
   --muted: #a3a9b3;
@@ -38,6 +78,25 @@
   --agent: #6f86ff;
   --agent-pale: #141a33;
   color-scheme: dark;
+}
+
+/* Same time and curve as BLUEPRINT_MS and blueprintAt() in components/orbit/blueprint.ts. */
+:root:has(article[data-blueprint]) {
+  --blueprint-ease: 0.9s cubic-bezier(0.45, 0, 0.55, 1);
+  transition:
+    --bg var(--blueprint-ease),
+    --ink var(--blueprint-ease),
+    --muted var(--blueprint-ease),
+    --faint var(--blueprint-ease),
+    --line var(--blueprint-ease),
+    --agent var(--blueprint-ease),
+    --agent-pale var(--blueprint-ease);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root:has(article[data-blueprint]) {
+    transition: none;
+  }
 }
 
 *,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useRef } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import ScrollBreakdown, {
   BreakdownCanvas,
   type BreakdownApi,
@@ -9,6 +9,7 @@ import ScrollBreakdown, {
 } from "@/components/breakdown/ScrollBreakdown";
 import type { Callout } from "@/components/breakdown/kit";
 import type { CalloutKey, CubeSatDom, NoteKey } from "./cubesatBreakdownScene";
+import { createBlueprint, steerBlueprint } from "./blueprint";
 import styles from "./CubeSatBreakdown.module.css";
 
 const STEPS: BreakdownStep[] = [
@@ -118,7 +119,7 @@ type Refs = {
   limbs: (SVGPathElement | null)[];
   earthImage: (SVGGraphicsElement | null)[];
   stars: (HTMLCanvasElement | null)[];
-  svg: Partial<Record<"earth" | "station" | "uplink" | "rays" | "wedge" | "tracks" | "sight" | "cone" | "light", SVGPathElement>> & {
+  svg: Partial<Record<"earth" | "grid" | "air" | "station" | "uplink" | "rays" | "wedge" | "tracks" | "sight" | "cone" | "light", SVGPathElement>> & {
     sun?: SVGGElement;
     target?: SVGGElement;
   };
@@ -147,6 +148,7 @@ function collect(r: Refs): CubeSatDom {
     limbs,
     earthImage,
     stars: s0 && s1 ? [s0, s1] : undefined,
+    globe: r.svg.grid && r.svg.air ? { grid: r.svg.grid, air: r.svg.air } : undefined,
     station: need(r.svg.station, "station"),
     uplink: need(r.svg.uplink, "uplink"),
     sun: need(r.svg.sun, "sun"),
@@ -171,8 +173,35 @@ const SUN_TICKS = Array.from({ length: 8 }, (_, i) => {
   return `M ${(c * 15).toFixed(1)} ${(s * 15).toFixed(1)} L ${(c * 20).toFixed(1)} ${(s * 20).toFixed(1)}`;
 }).join(" ");
 
+/** The drawing's grid: a line every 24px, a heavier one every 120px. */
+const GRID_MINOR = [1, 2, 3, 4].map((i) => `M ${i * 24 + 0.5} 0 V 120 M 0 ${i * 24 + 0.5} H 120`).join(" ");
+const GRID_MAJOR = "M 0.5 0 V 120 M 0 0.5 H 120";
+
 function Visual({ api }: { api: BreakdownApi }) {
-  const refs = useRef<Refs>({ limbs: [null, null], earthImage: [null, null], stars: [null, null], svg: {}, particles: [null, null, null], lines: {}, dots: {}, tags: {}, notes: {} });
+  const hostRef = useRef<HTMLDivElement>(null);
+  const [blueprint] = useState(createBlueprint);
+  const { position, subscribe } = api;
+
+  // Space at the first step, the drawing from there on: the article's mark turns the page's
+  // colours (globals.css), and the scene follows the same switch.
+  useEffect(() => {
+    const article = hostRef.current?.closest("article");
+    if (!article) return;
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const steer = () => {
+      blueprint.reduced = reduce.matches;
+      steerBlueprint(blueprint, position.current ?? 0, performance.now());
+      article.dataset.blueprint = blueprint.on ? "on" : "off";
+    };
+    steer();
+    const off = subscribe(steer);
+    return () => {
+      off();
+      delete article.dataset.blueprint;
+    };
+  }, [blueprint, position, subscribe]);
+
+  const refs = useRef<Refs>({ limbs: [null, null, null, null], earthImage: [null, null], stars: [null, null], svg: {}, particles: [null, null, null], lines: {}, dots: {}, tags: {}, notes: {} });
   const r = refs.current;
   const path = (name: keyof Refs["svg"]) => (el: SVGPathElement | null) => {
     if (el) (r.svg as Record<string, unknown>)[name] = el;
@@ -186,7 +215,7 @@ function Visual({ api }: { api: BreakdownApi }) {
       import("three/examples/jsm/lines/LineMaterial.js"),
     ]);
     const fat = { LineSegments2: seg.LineSegments2, LineSegmentsGeometry: geo.LineSegmentsGeometry, LineMaterial: mat.LineMaterial };
-    return (T, ctx) => mod.createCubeSatBreakdown(T, ctx, collect(refs.current), fat);
+    return (T, ctx) => mod.createCubeSatBreakdown(T, ctx, collect(refs.current), fat, blueprint);
   };
   // Ids in url() references must be plain.
   const uid = useId().replace(/[^a-zA-Z0-9_-]/g, "");
@@ -194,23 +223,31 @@ function Visual({ api }: { api: BreakdownApi }) {
   const clipId = `earth-${uid}`;
   const shadeId = `shade-${uid}`;
   const glowId = `glow-${uid}`;
+  const gridId = `grid-${uid}`;
 
   return (
-    <BreakdownCanvas api={api} load={load} fallback="The 3D drawing of the satellite needs WebGL." className={styles.host}>
+    <BreakdownCanvas
+      api={api}
+      load={load}
+      fallback="The 3D drawing of the satellite needs WebGL."
+      className={styles.host}
+      hostRef={hostRef}
+    >
       {/* Stars, on a dark page only. The second canvas holds the few that twinkle. */}
-      {[0, 1].map((i) => (
-        <canvas
-          key={i}
-          aria-hidden="true"
-          className={i === 0 ? styles.stars : `${styles.stars} ${styles.twinkle}`}
-          ref={(el) => {
-            r.stars[i] = el;
-          }}
-        />
-      ))}
-      {/* Earth's limb, behind the canvas. On a dark page it shows the planet from orbit: the
-          day side over the Rockies, the night side's city lights to the east, and a thin
-          atmosphere along the edge. */}
+      <div className={styles.sky} aria-hidden="true">
+        {[0, 1].map((i) => (
+          <canvas
+            key={i}
+            className={i === 0 ? styles.stars : `${styles.stars} ${styles.twinkle}`}
+            ref={(el) => {
+              r.stars[i] = el;
+            }}
+          />
+        ))}
+      </div>
+      {/* Earth's limb, behind the canvas. In space it shows the planet from orbit: the day side
+          over the Rockies, the night side's city lights to the east, and a thin atmosphere
+          along the edge. In the drawing it is a globe's grid on a gridded sheet. */}
       <svg className={styles.ground} aria-hidden="true">
         <defs>
           <linearGradient id={tintId} x1="0" y1="0" x2="0" y2="1">
@@ -234,30 +271,53 @@ function Visual({ api }: { api: BreakdownApi }) {
           <filter id={glowId} x="-5%" y="-50%" width="110%" height="200%">
             <feGaussianBlur stdDeviation="5" />
           </filter>
+          <pattern id={gridId} width="120" height="120" patternUnits="userSpaceOnUse">
+            <path d={GRID_MINOR} className={styles.gridMinor} />
+            <path d={GRID_MAJOR} className={styles.gridMajor} />
+          </pattern>
         </defs>
-        <g className={styles.planet} clipPath={`url(#${clipId})`}>
-          <image
-            href="/work/cubesat/earth-strip.webp"
-            preserveAspectRatio="xMidYMin slice"
+        <g className={styles.space}>
+          <g className={styles.planet} clipPath={`url(#${clipId})`}>
+            <image
+              href="/work/cubesat/earth-strip.webp"
+              preserveAspectRatio="xMidYMin slice"
+              ref={(el) => {
+                r.earthImage[0] = el;
+              }}
+            />
+            <rect
+              fill={`url(#${shadeId})`}
+              ref={(el) => {
+                r.earthImage[1] = el;
+              }}
+            />
+          </g>
+          <path
+            className={styles.atmosphere}
+            filter={`url(#${glowId})`}
             ref={(el) => {
-              r.earthImage[0] = el;
+              r.limbs[1] = el;
             }}
           />
-          <rect
-            fill={`url(#${shadeId})`}
-            ref={(el) => {
-              r.earthImage[1] = el;
-            }}
-          />
+          <path ref={path("earth")} className={styles.earth} fill={`url(#${tintId})`} />
         </g>
-        <path
-          className={styles.atmosphere}
-          filter={`url(#${glowId})`}
-          ref={(el) => {
-            r.limbs[1] = el;
-          }}
-        />
-        <path ref={path("earth")} className={styles.earth} fill={`url(#${tintId})`} />
+        <g className={styles.sheet}>
+          <rect width="100%" height="100%" fill={`url(#${gridId})`} className={styles.paperGrid} />
+          <path
+            className={styles.globe}
+            ref={(el) => {
+              r.limbs[2] = el;
+            }}
+          />
+          <path ref={path("grid")} className={styles.graticule} />
+          <path
+            className={styles.horizon}
+            ref={(el) => {
+              r.limbs[3] = el;
+            }}
+          />
+          <path ref={path("air")} className={styles.air} />
+        </g>
       </svg>
       <svg className={styles.overlay} aria-hidden="true">
         <path ref={path("station")} className={styles.station} />

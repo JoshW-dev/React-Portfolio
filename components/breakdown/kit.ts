@@ -45,6 +45,9 @@ const FALLBACK: Palette = {
   paper: "#ffffff",
 };
 
+/** The white page's palette, for a drawing that a dark page turns into (orbit/blueprint.ts). */
+export const LIGHT_PALETTE: Readonly<Palette> = FALLBACK;
+
 /** The same family inverted for a dark page: dark grey parts under light ink edges. */
 const DARK: Palette = {
   dark: true,

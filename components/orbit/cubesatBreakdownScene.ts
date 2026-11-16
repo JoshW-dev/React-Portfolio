@@ -6,11 +6,11 @@ import {
   createRenderer,
   disposeRenderer,
   isWideStage,
+  LIGHT_PALETTE,
   lerp,
   near,
   placeCallouts,
   ramp,
-  readPalette,
   remeasureCallouts,
   sizeRenderer,
   track,
@@ -21,6 +21,7 @@ import {
   type Side,
 } from "@/components/breakdown/kit";
 import type { BreakdownScene, SceneContext } from "@/components/breakdown/ScrollBreakdown";
+import { blueprintAt, type Blueprint } from "./blueprint";
 
 /*
   The CubeSat breakdown. Scroll position (0 to 5, one per step) drives everything:
@@ -34,12 +35,16 @@ import type { BreakdownScene, SceneContext } from "@/components/breakdown/Scroll
      the lens and image sensor in blue, light from the target through the lens onto the sensor
 
   Blue marks the part each step is about. Overlays (sun, particles, sight line) are SVG over
-  the canvas, placed from projected 3D points every frame. Earth's limb is one faint arc low
+  the canvas, placed from projected 3D points every frame. Earth's limb is one wide arc low
   on the stage, behind the canvas, the same in every step, so the satellite is always in orbit
   over it; the ground station and the target sit on it.
 
-  The drawing look keeps the parts solid: light grey faces under modelled light, the cells
-  their own dark blue, and ink edges a little over a pixel wide, heavier on the subject.
+  Step 0 is the real thing in space: metal and glass, stars, Earth's picture under the limb.
+  Scrolling on turns the page into a drawing (blueprint.ts): a white sheet with a grid, Earth
+  as a globe's grid of latitude and longitude, and the satellite in its drawing look, which
+  keeps the parts solid: light grey faces under modelled light, the cells their own dark blue,
+  and ink edges a little over a pixel wide, heavier on the subject. It stays a drawing to the
+  last step.
 */
 
 type Three = typeof THREE;
@@ -62,6 +67,8 @@ export type CubeSatDom = {
   earthImage?: SVGGraphicsElement[];
   /** Star canvases: every star but the twinkling ones, then the twinkling ones. */
   stars?: [HTMLCanvasElement, HTMLCanvasElement];
+  /** The drawing's Earth: its grid of latitude and longitude, and the top of the air above it. */
+  globe?: { grid: SVGPathElement; air: SVGPathElement };
   station: SVGPathElement;
   uplink: SVGPathElement;
   sun: SVGGElement;
@@ -154,9 +161,16 @@ const COMPUTER_PARTS: Role[] = ["pcb", "chip", "gold"];
 const CAMERA_PARTS: Role[] = ["black", "glass", "sensor"];
 const ALL_SETS: SetIndex[] = [SET.payload, SET.adcs, SET.power, SET.wings];
 
-export function createCubeSatBreakdown(T: Three, ctx: SceneContext, dom: CubeSatDom, fat?: LineModules): BreakdownScene {
+export function createCubeSatBreakdown(
+  T: Three,
+  ctx: SceneContext,
+  dom: CubeSatDom,
+  fat?: LineModules,
+  blueprint?: Blueprint,
+): BreakdownScene {
   const { canvas, host, position, reducedMotion, invalidate } = ctx;
-  const palette = readPalette(host);
+  // The satellite is only drawn in its drawing look on the white sheet.
+  const palette = LIGHT_PALETTE;
   const renderer = createRenderer(T, canvas, { toneMapping: "neutral" });
 
   const scene = new T.Scene();
@@ -300,10 +314,9 @@ export function createCubeSatBreakdown(T: Three, ctx: SceneContext, dom: CubeSat
   }
 
   // ---- State from scroll position -----------------------------------------------------
-  function apply(p: number) {
-    // Into the drawing look while the satellite turns to the sun, back for the photo, and
-    // into it again for the camera.
-    const schematic = p < 1 ? ramp(p, 0.12, 0.45) : track([1, 1, 1, 0, 1], p - 1);
+  /** p is the step position, b how far the page is into the drawing. */
+  function apply(p: number, b: number) {
+    const schematic = b;
     const explode = track([0, 0, 1, 1, 0, 0], p);
     // The wings fold in against the sides and open out flat again on the way to step 1.
     const deploy = p < 1.5 ? 1 - ramp(p, 0.28, 0.5) + ramp(p, 0.58, 0.92) : 1;
@@ -531,7 +544,8 @@ export function createCubeSatBreakdown(T: Three, ctx: SceneContext, dom: CubeSat
     const H = height;
 
     // Earth's limb: one wide arc low on the stage, the same in every step. It sits behind the
-    // canvas, so the satellite passes in front of it.
+    // canvas, so the satellite passes in front of it. The drawing adds a globe's grid under it
+    // and the top of the air just above it.
     const R = Math.max(W, H) * 2.4;
     const yTop = H * (wide ? LIMB.wide : LIMB.tall);
     const ex = W / 2;
@@ -551,6 +565,12 @@ export function createCubeSatBreakdown(T: Three, ctx: SceneContext, dom: CubeSat
         el.setAttribute("height", f1(H - yTop + 4));
       }
       if (dom.stars) drawStars(dom.stars, W, H, yAt);
+      if (dom.globe) {
+        dom.globe.grid.setAttribute("d", globeGrid(ex, ey, R, W, H));
+        const r = R + AIR;
+        const yAir = (x: number) => ey - Math.sqrt(r * r - (x - ex) * (x - ex));
+        dom.globe.air.setAttribute("d", `M -2 ${f1(yAir(-2))} A ${f1(r)} ${f1(r)} 0 0 1 ${f1(W + 2)} ${f1(yAir(W + 2))}`);
+      }
     }
 
     // Step 0: a ground station radios the coordinates up to the antennas.
@@ -735,6 +755,7 @@ export function createCubeSatBreakdown(T: Three, ctx: SceneContext, dom: CubeSat
   const eSway = new T.Euler();
   let time = 0;
   let lastP = -1;
+  let lastB = -1;
 
   function frame(dt: number) {
     time += dt;
@@ -753,7 +774,13 @@ export function createCubeSatBreakdown(T: Three, ctx: SceneContext, dom: CubeSat
       velY *= k;
     }
 
-    const explode = apply(p);
+    const b = blueprint ? blueprintAt(blueprint, performance.now()) : 0;
+    if (b !== lastB) {
+      lastB = b;
+      // The ground under the canvas crossfades from space to the sheet on this (see the CSS).
+      host.style.setProperty("--bp", b.toFixed(3));
+    }
+    const explode = apply(p, b);
     if (!reducedMotion) {
       sat.spin(dt * (0.25 + 0.75 * explode));
       eSway.set(0.022 * Math.sin(time * 0.45), 0.035 * Math.sin(time * 0.31 + 1), 0);
@@ -785,12 +812,55 @@ export function createCubeSatBreakdown(T: Three, ctx: SceneContext, dom: CubeSat
       canvas.removeEventListener("pointermove", onMove);
       canvas.removeEventListener("pointerup", onUp);
       canvas.removeEventListener("pointercancel", onUp);
+      host.style.removeProperty("--bp");
       sat.dispose();
       envTarget.dispose();
       pmrem.dispose();
       disposeRenderer(renderer);
     },
   };
+}
+
+/** The drawing's air: a dashed arc this many pixels above the limb. */
+const AIR = 16;
+/** The globe under the limb: tipped so the north pole is just behind the horizon, so the
+    lines of longitude fan out toward the viewer, with a line every few degrees. */
+const GLOBE_TILT = (-16 * Math.PI) / 180;
+const GLOBE_STEP = 5;
+const GLOBE_SAMPLE = 0.2;
+
+/**
+ * Lines of latitude and longitude on Earth's near side, seen side on: the sphere of radius R
+ * centred at (ex, ey) on the stage, its pole tipped by GLOBE_TILT. Only the part on the stage
+ * is drawn.
+ */
+function globeGrid(ex: number, ey: number, R: number, W: number, H: number) {
+  const sb = Math.sin(GLOBE_TILT);
+  const cb = Math.cos(GLOBE_TILT);
+  const rad = Math.PI / 180;
+  const parts: string[] = [];
+  let pen = false;
+  const at = (lat: number, lon: number) => {
+    const cp = Math.cos(lat * rad);
+    const sp = Math.sin(lat * rad);
+    const cl = Math.cos(lon * rad);
+    const x = ex + R * cp * Math.sin(lon * rad);
+    const y = ey - R * (sp * cb - cp * cl * sb);
+    const z = sp * sb + cp * cl * cb;
+    if (z > 0 && y < H + 2 && x > -2 && x < W + 2) {
+      parts.push(`${pen ? "L" : "M"}${x.toFixed(1)} ${y.toFixed(1)}`);
+      pen = true;
+    } else pen = false;
+  };
+  for (let lat = -90 + GLOBE_STEP; lat < 90; lat += GLOBE_STEP) {
+    pen = false;
+    for (let lon = -180; lon <= 180; lon += GLOBE_SAMPLE) at(lat, lon);
+  }
+  for (let lon = -180; lon < 180; lon += GLOBE_STEP) {
+    pen = false;
+    for (let lat = -90; lat <= 90; lat += GLOBE_SAMPLE) at(lat, lon);
+  }
+  return parts.join("");
 }
 
 /** A small seeded random number source, so the stars sit in the same places on every visit. */

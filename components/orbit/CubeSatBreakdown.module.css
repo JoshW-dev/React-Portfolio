@@ -13,11 +13,30 @@
   --limb-tint: #0f1729;
 }
 
+/*
+  Space turns into the drawing (blueprint.ts): the scene sets --bp on the host, 0 in space and
+  1 in the drawing, and the sky and Earth's picture fade out as the sheet fades in.
+*/
+.sky {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  opacity: calc(1 - var(--bp, 0));
+}
+
+.space {
+  opacity: calc(1 - var(--bp, 0));
+}
+
+.sheet {
+  opacity: var(--bp, 0);
+}
+
 /* Stars behind everything. Only a dark page shows them. */
 .stars {
   position: absolute;
   inset: 0;
-  z-index: -2;
   width: 100%;
   height: 100%;
   pointer-events: none;
@@ -295,7 +314,53 @@
   white-space: nowrap;
 }
 
+/* The drawing: a gridded sheet, Earth a globe's grid under an ink horizon, the top of the
+   air dashed above it. Greys, so blue stays for the part each step is about. The grid comes
+   in last, once the page is nearly white, so it never shows as light lines on the grey of
+   the page part way through. */
+.paperGrid {
+  opacity: clamp(0, calc(var(--bp, 0) * 2.5 - 1.5), 1);
+}
+
+.gridMinor,
+.gridMajor {
+  fill: none;
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+
+.gridMinor {
+  stroke: #f0f1f3;
+}
+
+.gridMajor {
+  stroke: #e1e3e7;
+}
+
+.globe {
+  fill: var(--bg);
+}
+
+.graticule {
+  fill: none;
+  stroke: #b9bdc4;
+  stroke-width: 0.75;
+}
+
+.horizon {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.25;
+}
+
+.air {
+  fill: none;
+  stroke: #9a9ea6;
+  stroke-width: 1;
+  stroke-dasharray: 2 5;
+}
+
 /* Notes on the planet's picture keep a dark edge so they read on land and city lights. */
-:global([data-theme="dark"]) .note {
+:global([data-theme="dark"]:not([data-blueprint="on"])) .note {
   text-shadow: 0 1px 6px rgb(0 0 0 / 0.9), 0 0 2px rgb(0 0 0 / 0.8);
 }

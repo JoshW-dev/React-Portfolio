@@ -172,6 +172,30 @@
       "start": "sf-towns-hd.mp4 frame 0",
       "used": "0 to 6 s as an overlap loop (3 s); the camera zooms about 0.4% a second and the fog thins as it goes, which the overlap evens out. Was ping-pong until Josh saw it run backward.",
       "prompt": "Locked-off tripod shot of the Golden Gate Bridge at blue hour above a sea of fog. The camera never moves: no pan, no zoom, no push, no drift, no shake. The thick fog flows continuously under and around the bridge from left to right, rolling, billowing and curling around the tower, at the same steady, clearly visible pace from the first second to the last. Car headlights move along the bridge deck. The bridge towers, cables, city skyline, hills and sky stay perfectly still. Photorealistic documentary footage, natural light, no cuts."
+    },
+    {
+      "loop": "04-line",
+      "job": "2ea36a34-7c50-4dd9-9df4-ad51fc4682d6",
+      "seconds": 5,
+      "credits": 40,
+      "start": "plant-line-hd.mp4 last frame",
+      "used": "Not used. The camera held, but the cartons change spacing as they move, so no loop length repeats (best match 24 levels off against a 9.8 frame step) and a loop jumps or doubles the cartons."
+    },
+    {
+      "loop": "05-twin",
+      "job": "e628c312-0320-4ba3-9e20-bd4bc47810e8",
+      "seconds": 5,
+      "credits": 40,
+      "start": "twin-sf-hd.mp4 frame 0",
+      "used": "Not used, for the same reason as 04-line; the camera also drifted 8 px over 5 s."
+    },
+    {
+      "loop": "07-towns",
+      "job": "97ea87f8-cf91-4794-aa18-796e4f315098",
+      "seconds": 5,
+      "credits": 40,
+      "start": "towns-nyc-hd.mp4 frame 0",
+      "used": "Not used: almost nothing moved (0.1 levels a frame on the land). The stop got a moving still instead (scripts/film-motion.json stop 6): the lights twinkle and the river shimmers."
     }
   ]
 }

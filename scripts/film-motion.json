@@ -1,6 +1,66 @@
 {
-  "_about": "Motion maps for the film's moving stills. scripts/film-motion.py turns each stop here into public/film/motion/<name>.png. Coordinates are shares of the image named in 'image' (the frame the stop rests on). A region's flow is a direction scaled by speed (0 to 1), or radial from 'center'. 'shimmer' (0 to 1) drives the ripple and the twinkle. 'key' keeps only pixels whose luminance is between lo and hi and whose saturation is under sat. 'exclude' polygons hold their area still. Only stops whose motion reads as real are here: water ripples and traffic sliding along a road. Smoke, clouds, fog and belts wobbled, so they were taken out (in git history before this note).",
+  "_about": "Motion maps for the film's moving stills. scripts/film-motion.py turns each stop here into public/film/motion/<name>.png. Coordinates are shares of the image named in 'image' (the frame the stop rests on). A region's flow is a direction scaled by speed (0 to 1), or radial from 'center'. 'shimmer' (0 to 1) drives the ripple and the twinkle. 'key' keeps only pixels whose luminance is between lo and hi and whose saturation is under sat. 'exclude' polygons hold their area still. Only stops whose motion reads as real are here: water ripples, traffic sliding along a road, and town lights twinkling at night with the river shimmering under the moon. Smoke, clouds, fog and belts wobbled, so they were taken out (in git history before this note).",
   "stops": {
+    "6": {
+      "name": "07-towns",
+      "image": "public/film/clips/sf-towns-last.webp",
+      "feather": 0.006,
+      "regions": [
+        {
+          "poly": [
+            [
+              0.0,
+              0.335
+            ],
+            [
+              1.0,
+              0.335
+            ],
+            [
+              1.0,
+              1.0
+            ],
+            [
+              0.0,
+              1.0
+            ]
+          ],
+          "shimmer": 0.55,
+          "ramp": [
+            0.335,
+            0.4,
+            0.55,
+            1.0
+          ]
+        },
+        {
+          "poly": [
+            [
+              0.0,
+              0.335
+            ],
+            [
+              1.0,
+              0.335
+            ],
+            [
+              1.0,
+              1.0
+            ],
+            [
+              0.0,
+              1.0
+            ]
+          ],
+          "shimmer": 1,
+          "key": {
+            "lo": 0.2,
+            "hi": 1.01,
+            "sat": 0.38
+          }
+        }
+      ]
+    },
     "7": {
       "name": "08-nyc",
       "image": "public/film/clips/towns-nyc-last.webp",

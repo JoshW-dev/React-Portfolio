@@ -158,6 +158,8 @@ export const STOPS: Stop[] = [
   },
   {
     still: "/film/07-towns.webp",
+    // Town and road lights twinkle; the moonlit river shimmers (scripts/film-motion.json).
+    motion: { map: "/film/motion/07-towns.png", ripple: 0.004, twinkle: 0.32, horizon: 0.335 },
     link: { href: "/projects/alltus", label: "Open the Alltus project" },
     spots: [
       { x: 0.868, y: 0.665, label: "Alltus", href: "/projects/alltus" },

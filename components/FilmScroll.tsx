@@ -1,11 +1,11 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState, type CSSProperties, type MouseEvent } from "react";
 import TransitionLink from "@/components/TransitionLink";
 import OrbitIntro, { type OrbitControl } from "@/components/orbit/OrbitIntro";
 import { MotionFade, MovingStill, motionAllowed, type Motion, type Source } from "@/components/film/movingStill";
 import FilmLoop, { keepLoop, keptLoop, loopFile, startLoop } from "@/components/film/FilmLoop";
-import { HOPS, SCROLL, STOPS, VEILS, clipFile, type ClipPart, type Hop, type Loop } from "@/lib/film";
+import { HOPS, SCROLL, STOPS, VEILS, clipFile, motionForFrame, type ClipPart, type Hop, type Loop } from "@/lib/film";
 import { setHandoff, type Handoff } from "@/lib/handoff";
 import styles from "./FilmScroll.module.css";
 
@@ -1173,6 +1173,8 @@ export default function FilmScroll({ frames = NO_FRAMES }: { frames?: Record<str
     let lastHandover = -1;
     /** The picture's push-in as last drawn, for the hand-off to a project page. */
     let lastScale = 1;
+    /** A project link was clicked and the page is changing. */
+    let leaving = false;
     const apply = (s: Shot, now: number) => {
       paintStill(s.base);
       if (s.top) paintStill(s.top);
@@ -1339,7 +1341,7 @@ export default function FilmScroll({ frames = NO_FRAMES }: { frames?: Record<str
       }
 
       const was = fade.opacity;
-      fade.step(dt, want, p === goal && waitHop === null);
+      fade.step(dt, want, p === goal && waitHop === null && !leaving);
       if (fade.drawNow && moving && mShown && (was === 0 || now - mLastDraw >= MOVE_DRAW_MS)) {
         const drawn = moving.draw({
           a: mShown.a,
@@ -1394,7 +1396,7 @@ export default function FilmScroll({ frames = NO_FRAMES }: { frames?: Record<str
       // Still coming down the line: wait for it rather than fetch it twice.
       const waiting = file?.state === "loading";
       if (wanted && file?.state === "idle") file.state = "direct";
-      const steady = p === goal && waitHop === null;
+      const steady = p === goal && waitHop === null && !leaving;
       lRest = wanted && steady ? lRest + dt : wanted && loopFade.opacity > 0 ? lRest : 0;
       if (wanted && !lPlaying && !lStarting && !waiting) {
         lStarting = true;
@@ -1421,6 +1423,11 @@ export default function FilmScroll({ frames = NO_FRAMES }: { frames?: Record<str
     // A link to a project records what the film shows: the push-in, and the loop or moving
     // still if one shows at full strength, so the project's hero carries them on.
     handOffRef.current = () => {
+      // The page is about to change: slow frames from here on are the new page loading, so
+      // they no longer count against the machine.
+      leaving = true;
+      // A page that never changes (a failed load, say) leaves the film working as before.
+      timers.push(window.setTimeout(() => (leaving = false), 5000));
       const h: Handoff = { scale: lastScale, at: performance.now() };
       const el = loopEl(lShown);
       const loop = lShown >= 0 ? STOPS[lShown].loop : undefined;
@@ -1695,17 +1702,25 @@ export default function FilmScroll({ frames = NO_FRAMES }: { frames?: Record<str
     const t = window.setTimeout(() => {
       for (const href of hrefs) {
         const src = href ? frames[href] : undefined;
-        if (!src || framesAsked.has(src)) continue;
-        framesAsked.add(src);
-        const img = new Image();
-        img.decoding = "async";
-        img.src = src;
+        if (!src) continue;
+        // The picture, and the map its moving still uses on the project page.
+        for (const file of [src, motionForFrame(src)?.map]) {
+          if (!file || framesAsked.has(file)) continue;
+          framesAsked.add(file);
+          const img = new Image();
+          img.decoding = "async";
+          img.src = file;
+        }
       }
     }, FRAMES_AFTER_MS);
     return () => window.clearTimeout(t);
   }, [stop, frames]);
 
-  const handOff = () => handOffRef.current?.();
+  /** A plain click on a project link hands the film's picture on; one opening a new tab doesn't. */
+  const handOff = (e: MouseEvent<HTMLAnchorElement>) => {
+    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    handOffRef.current?.();
+  };
 
   const here = STOPS[stop];
   const spots = STOPS[spotStop].spots ?? [];

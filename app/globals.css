@@ -308,6 +308,7 @@ body:has([data-film]) > header {
   close: back to the home page or the projects list from a project. The same wipe from the
          bottom, over 550ms.
   fade:  every other page, a 250ms cross-fade.
+  dive:  a ring in the film to its project, a 420ms cross-fade (below).
   The line is .vt-edge, a white sheet rendered by PageTransition. data-vt-edge is set after
   the old page is captured, so the sheet is only in the new picture. Its picture is clipped to
   a 1px row by a clip-path animation with the wipe's timing, so the row and the wipe run on
@@ -377,6 +378,14 @@ html[data-vt="fade"]::view-transition-old(root),
 html[data-vt="fade"]::view-transition-new(root) {
   animation-duration: 250ms;
   animation-timing-function: ease;
+}
+
+/* dive: from a ring in the film, zoomed into the ring, to the project's hero zoomed into the
+   same point. A cross-fade while the hero eases back out (lib/dive.ts). */
+html[data-vt="dive"]::view-transition-old(root),
+html[data-vt="dive"]::view-transition-new(root) {
+  animation-duration: 420ms;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* The wipe and the line share one property, duration and ease, so the line stays on the edge. */

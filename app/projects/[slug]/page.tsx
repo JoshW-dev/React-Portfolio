@@ -8,6 +8,8 @@ import CallReplay from "@/components/CallReplay";
 import TwinCompare from "@/components/TwinCompare";
 import TransitionLink from "@/components/TransitionLink";
 import HeroNudge from "@/components/HeroNudge";
+import HeroFrame from "@/components/film/HeroFrame";
+import { motionForFrame } from "@/lib/film";
 import { breakdowns } from "@/components/breakdown/registry";
 import styles from "./project.module.css";
 
@@ -125,8 +127,8 @@ export default async function ProjectPage({ params }: Props) {
         // The film's frame for this project, with the title where the film's caption sat.
         // data-film puts the site header over it in white (see globals.css).
         <header className={styles.hero} data-film>
-          <Image src={frame.src} alt={frame.alt} fill preload sizes="100vw" className={styles.heroImage} />
-          <div className={`wrap ${styles.heroText}`}>
+          <HeroFrame src={frame.src} alt={frame.alt} motion={motionForFrame(frame.src)} />
+          <div className={`wrap ${styles.heroText}`} data-hero-text>
             <TransitionLink href="/projects" className={`link small ${styles.back}`}>
               All projects
             </TransitionLink>

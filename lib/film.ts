@@ -16,7 +16,12 @@
 
   Hotspots (spots) are rings on things in a stop's picture that open a project. x and y are
   shares of the picture's width and height, read off the frame the hold shows.
+
+  A stop's motion makes one thing in its picture move while the film rests there. Its map
+  comes from scripts/film-motion.py, which reads the regions in scripts/film-motion.json.
 */
+
+import type { Motion } from "@/components/film/movingStill";
 
 export type Stop = {
   /** The stop's own frame, used by the still fallback and reduced motion. */
@@ -32,6 +37,8 @@ export type Stop = {
   spots?: Spot[];
   /** Flown through without a rest or a push-in; its words show during the flight. */
   pass?: boolean;
+  /** What moves in the picture while the film rests here (components/film/movingStill.ts). */
+  motion?: Motion;
 };
 
 export type Spot = {
@@ -67,6 +74,7 @@ export const STOPS: Stop[] = [
   },
   {
     still: "/film/02-rockies.webp",
+    motion: { map: "/film/motion/02-rockies.png", flow: 0.006, period: 5, billow: 0.006, ripple: 0.0012, twinkle: 0.08 },
     link: { href: "/projects/ai-education-assistant", label: "Open the education assistant project" },
     spots: [{ x: 0.6, y: 0.27, label: "AI tutor, 2019", href: "/projects/ai-education-assistant" }],
     place: "Alberta, Canada",
@@ -75,6 +83,7 @@ export const STOPS: Stop[] = [
   },
   {
     still: "/film/03-plant.webp",
+    motion: { map: "/film/motion/03-plant.png", flow: 0.01, period: 3.5, billow: 0.011 },
     link: { href: "/projects/hydrogen-plant", label: "Open the hydrogen plant project" },
     spots: [{ x: 0.458, y: 0.25, label: "Clean hydrogen plant", href: "/projects/hydrogen-plant" }],
     place: "Hydrogen plant, Alberta",
@@ -83,6 +92,7 @@ export const STOPS: Stop[] = [
   },
   {
     still: "/film/04-line.webp",
+    motion: { map: "/film/motion/04-line.png", flow: 0.0517, period: 1.6, jitter: 0 },
     link: { href: "/projects/production-lines", label: "Open the production lines project" },
     spots: [{ x: 0.46, y: 0.15, label: "Two production lines", href: "/projects/production-lines" }],
     place: "Production lines, Texas and California",
@@ -91,6 +101,7 @@ export const STOPS: Stop[] = [
   },
   {
     still: "/film/05-twin.webp",
+    motion: { map: "/film/motion/05-twin.png", flow: 0.03, period: 2.5 },
     link: { href: "/projects/disco", label: "Open the Disco project" },
     spots: [{ x: 0.457, y: 0.14, label: "Disco", href: "/projects/disco" }],
     place: "The same line, as software",
@@ -99,6 +110,7 @@ export const STOPS: Stop[] = [
   },
   {
     still: "/film/06-sf.webp",
+    motion: { map: "/film/motion/06-sf.png", flow: 0.012, period: 6, billow: 0.007, ripple: 0.0006, twinkle: 0.3 },
     link: { href: "/projects/alltus", label: "Open the Alltus project" },
     spots: [{ x: 0.612, y: 0.35, label: "Alltus", href: "/projects/alltus" }],
     place: "San Francisco Bay",
@@ -107,6 +119,7 @@ export const STOPS: Stop[] = [
   },
   {
     still: "/film/07-towns.webp",
+    motion: { map: "/film/motion/07-towns.png", flow: 0.006, period: 6, billow: 0.005, ripple: 0.0004, twinkle: 0.5 },
     link: { href: "/projects/alltus", label: "Open the Alltus project" },
     spots: [
       { x: 0.868, y: 0.665, label: "Alltus", href: "/projects/alltus" },
@@ -118,6 +131,7 @@ export const STOPS: Stop[] = [
   },
   {
     still: "/film/08-nyc.webp",
+    motion: { map: "/film/motion/08-nyc.png", flow: 0.03, period: 3, billow: 0.002 },
     link: { href: "/projects", label: "See all my projects" },
     spots: [
       { x: 0.57, y: 0.205, label: "Bottleneck Radar", href: "/projects/bottleneck-radar" },
@@ -130,6 +144,7 @@ export const STOPS: Stop[] = [
   },
   {
     still: "/film/09-doha.webp",
+    motion: { map: "/film/motion/09-doha.png", flow: 0.01, period: 8, billow: 0.004, ripple: 0.006, twinkle: 0.1, horizon: 0.535 },
     link: { href: "/about", label: "More about me" },
     spots: [
       { x: 0.54, y: 0.37, label: "Game of Society", href: "/projects/game-of-society" },
@@ -180,3 +195,19 @@ export const SCROLL = {
 export type ClipPart = "hd.mp4" | "d.mp4" | "m.mp4" | "first.webp" | "last.webp";
 
 export const clipFile = (clip: string, part: ClipPart) => `/film/clips/${clip}-${part}`;
+
+/**
+ * The motion for a project page's hero frame: a stop's own still, or the frame a stop rests
+ * on. Each has its own map, keyed on its own pixels.
+ */
+export function motionForFrame(src: string): Motion | undefined {
+  for (let k = 1; k < STOPS.length; k++) {
+    const s = STOPS[k];
+    if (!s.motion) continue;
+    const hop = HOPS.find((h) => h.from === k - 1 && h.to === k);
+    const arrive = hop?.kind === "video" && hop.clip ? clipFile(hop.clip, "last.webp") : s.still;
+    if (src === arrive) return s.motion;
+    if (src === s.still) return { ...s.motion, map: s.motion.map.replace(/\.png$/, "-still.png") };
+  }
+  return undefined;
+}

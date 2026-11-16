@@ -1,9 +1,12 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
-import TransitionLink from "@/components/TransitionLink";
+import { Fragment, useCallback, useEffect, useRef, useState, type CSSProperties, type MouseEvent } from "react";
+import { useRouter } from "next/navigation";
+import TransitionLink, { navigate } from "@/components/TransitionLink";
 import OrbitIntro, { type OrbitControl } from "@/components/orbit/OrbitIntro";
-import { HOPS, SCROLL, STOPS, VEILS, clipFile, type ClipPart, type Hop } from "@/lib/film";
+import { MotionFade, MovingStill, motionAllowed, type Motion, type Source } from "@/components/film/movingStill";
+import { HOPS, SCROLL, STOPS, VEILS, clipFile, type ClipPart, type Hop, type Spot } from "@/lib/film";
+import { setDive } from "@/lib/dive";
 import styles from "./FilmScroll.module.css";
 
 /*
@@ -45,6 +48,11 @@ import styles from "./FilmScroll.module.css";
   heads for the next stop in the way the page last scrolled, wherever the scroll stops. When
   the gesture ends, the page is moved to that stop too, so the next scroll starts from there.
   The film is pinned, so the move does not show.
+
+  Once the film rests on a stop, one thing in its picture starts to move (film/movingStill.ts):
+  a canvas over the layers fades in drawing the same frames, then lets its motion grow. It
+  fades out as a flight starts. With reduced motion, without WebGL, or on a machine that
+  can't keep up, it stays off and the stop shows its still as before.
 */
 
 type Kind = "video" | "wipe" | "fade";
@@ -137,6 +145,13 @@ const PASS_FADE = 0.08;
 
 /** vh at each end of a hold's hops over which its hotspots fade. */
 const SPOT_FADE = 4;
+
+/** The moving still draws at most this often, about 30 times a second. */
+const MOVE_DRAW_MS = 30;
+
+// The dive into a ring: the film zooms this far into it over this long, then the page opens.
+const DIVE_SCALE = 2.4;
+const DIVE_MS = 650;
 
 /** A pass stop's words slow the flight under them to this share of its speed, so they can be read. */
 const PASS_PACE = 0.82;
@@ -455,6 +470,10 @@ export default function FilmScroll() {
   const mediaRef = useRef<HTMLDivElement>(null);
   const veilRef = useRef<HTMLDivElement>(null);
   const scanRef = useRef<HTMLDivElement>(null);
+  const movingRef = useRef<HTMLCanvasElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const diving = useRef(false);
+  const router = useRouter();
   const spotsRef = useRef<HTMLDivElement>(null);
   const captionRef = useRef<HTMLDivElement>(null);
   const cueRef = useRef<HTMLDivElement>(null);
@@ -1178,6 +1197,96 @@ export default function FilmScroll() {
       }
     };
 
+    // ---- Moving still -----------------------------------------------------------------------
+
+    const canvas = movingRef.current;
+    let moving: MovingStill | null = null;
+    let movingOff = !canvas || !motionAllowed();
+    const fade = new MotionFade();
+    let mMix = 0;
+    let mLastDraw = 0;
+    const mStart = performance.now();
+    /** The stop the canvas is drawing, kept through its fade-out. */
+    let mShown: { k: number; a: Source; b: Source | null; motion: Motion } | null = null;
+
+    /** The two layers a stop's hold blends, as compose() picks them: arrival, then departure. */
+    const holdLayers = (k: number) => {
+      const kindH = (h: number) => kindOf(HOP_LIST[h]);
+      const isClip = (h: number) => h >= 0 && h < LAST && kindH(h) === "video";
+      const startOf = (h: number) => (ready(h) ? `video-${h}` : `first-${h}`);
+      const endOf = (h: number) => (ready(h) ? `video-${h}` : `last-${h}`);
+      const a = k > 0 && kindH(k - 1) === "wipe" ? `stop-${k}` : isClip(k - 1) ? endOf(k - 1) : isClip(k) ? startOf(k) : `stop-${k}`;
+      const b = k < LAST && kindH(k) === "wipe" ? `stop-${k}` : isClip(k) ? startOf(k) : isClip(k - 1) ? endOf(k - 1) : `stop-${k}`;
+      return { a, b: b === a ? null : b };
+    };
+    /** What a layer shows, as something the canvas can draw: a video's frame, or a still. */
+    const sourceOf = (key: string): Source => {
+      const [kind, n] = key.split("-") as [string, string];
+      const i = Number(n);
+      if (kind === "video") {
+        const c = clipOf[i] as Clip;
+        const el = videoOf(c);
+        if (el) return { key: `${key}@${Math.round(targetOf(c) * 1000)}`, video: el };
+        return clipFile(c.name, targetOf(c) > 0 ? "last.webp" : "first.webp");
+      }
+      if (kind === "last") return clipFile(HOP_LIST[i].clip as string, "last.webp");
+      if (kind === "first") return clipFile(HOP_LIST[i].clip as string, "first.webp");
+      return STOPS[i].still;
+    };
+    const keyOf = (s: Source | null) => (s === null ? "" : typeof s === "string" ? s : s.key);
+
+    /** Draws the moving still for this frame. True while it needs more frames. */
+    const drawMoving = (now: number, dt: number) => {
+      if (!canvas) return false;
+      const seg = locate(p);
+      const k = seg.hop === null && seg.stop > 0 && !isPass(seg.stop) ? seg.stop : -1;
+      const motion = k > 0 ? STOPS[k].motion : undefined;
+      let want = false;
+      if (!movingOff && !fade.off && !reduced && !jumping && motion) {
+        if (!moving) {
+          moving = new MovingStill(canvas);
+          if (!moving.ok) movingOff = true;
+        }
+        if (moving?.live) {
+          const l = holdLayers(k);
+          const a = sourceOf(l.a);
+          const b = l.b ? sourceOf(l.b) : null;
+          // A new stop waits until the last one has faded out. On the same stop, a layer that
+          // switches from a still to its video switches here too.
+          const free = !mShown || mShown.k === k || fade.opacity === 0;
+          if (free && moving.prepare(a, b, motion.map)) {
+            if (!mShown || mShown.k !== k || keyOf(mShown.a) !== keyOf(a) || keyOf(mShown.b) !== keyOf(b)) {
+              mShown = { k, a, b, motion };
+              moving.keepOnly(b ? [a, b, motion.map] : [a, motion.map]);
+            }
+            want = true;
+          } else if (mShown?.k === k && fade.opacity > 0) want = true;
+        } else movingOff = true;
+      }
+      if (want && mShown) {
+        const u = clamp01((p - HOLD_SEG[k].start) / HOLD_SEG[k].len);
+        mMix = ease(clamp01((u - 0.25) / 0.5));
+      }
+
+      const was = fade.opacity;
+      fade.step(dt, want, p === goal && waitHop === null);
+      if (fade.drawNow && moving && mShown && (was === 0 || now - mLastDraw >= MOVE_DRAW_MS)) {
+        const drawn = moving.draw({
+          a: mShown.a,
+          b: mShown.b,
+          map: mShown.motion.map,
+          mix: mMix,
+          amp: fade.strength,
+          time: (now - mStart) / 1000,
+          motion: mShown.motion,
+        });
+        if (drawn) mLastDraw = now;
+      }
+      put(canvas, "opacity", fade.opacity.toFixed(3));
+      put(canvas, "visibility", fade.opacity > 0 ? "visible" : "hidden");
+      return want || fade.opacity > 0;
+    };
+
     // ---- Loop -----------------------------------------------------------------------------
 
     let raf = 0;
@@ -1239,6 +1348,7 @@ export default function FilmScroll() {
       const shot = compose(p, ready, reduced);
       lastShot = shot;
       apply(shot, now);
+      if (drawMoving(now, dt)) busy = true;
       // The breath animates for as long as a hold is in view, and the intro's words until up.
       if (shot.rest > 0) busy = true;
       if (intro.phase === "playing" && introCaption(now) < 1) busy = true;
@@ -1308,6 +1418,9 @@ export default function FilmScroll() {
         get shot() {
           return lastShot;
         },
+        get moving() {
+          return { opacity: fade.opacity, amp: fade.amp, probing: fade.probing, mix: mMix, off: movingOff || fade.off, stop: mShown?.k ?? null, avgMs: fade.frameMs };
+        },
         total: TOTAL,
         segs: SEGS,
         clips,
@@ -1337,6 +1450,7 @@ export default function FilmScroll() {
       window.removeEventListener("touchend", onTouchEnd);
       window.removeEventListener("touchcancel", onTouchEnd);
       if (idleTimer) clearTimeout(idleTimer);
+      (moving as MovingStill | null)?.dispose();
       for (const c of clips) {
         c.fetchAbort?.abort();
         if (c.state === "attaching" || c.state === "ready") detach(c);
@@ -1407,12 +1521,50 @@ export default function FilmScroll() {
     };
   }, [spotStop, stop]);
 
+  /**
+   * A ring's click: the picture zooms into the ring while the words, the map and the other
+   * rings fade, then the project opens on its hero zoomed into the same point (lib/dive.ts).
+   * A modified click, reduced motion or a browser without Web Animations opens it plainly.
+   */
+  const dive = (e: MouseEvent<HTMLAnchorElement>, s: Spot) => {
+    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    const stage = stageRef.current;
+    const screen = screenRef.current;
+    if (!stage || !screen || typeof stage.animate !== "function") return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    e.preventDefault();
+    if (diving.current) return;
+    diving.current = true;
+    const ring = (e.currentTarget.firstElementChild as HTMLElement).getBoundingClientRect();
+    const box = screen.getBoundingClientRect();
+    stage.style.transformOrigin = `${ring.left + ring.width / 2 - box.left}px ${ring.top + ring.height / 2 - box.top}px`;
+    const zoom = stage.animate([{ transform: "scale(1)" }, { transform: `scale(${DIVE_SCALE})` }], {
+      duration: DIVE_MS,
+      easing: "cubic-bezier(0.5, 0, 0.75, 0)",
+      fill: "forwards",
+    });
+    const fades = [captionRef.current, mapRef.current, cueRef.current, spotsRef.current?.firstElementChild ?? null].map((el) =>
+      el?.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 220, easing: "ease-out", fill: "forwards" }),
+    );
+    setDive({ x: s.x, y: s.y, scale: DIVE_SCALE, at: performance.now() });
+    window.setTimeout(() => navigate(router, s.href, { kind: "dive" }), DIVE_MS - 60);
+    // If the page never changes, the film comes back as it was.
+    window.setTimeout(() => {
+      if (!stage.isConnected) return;
+      zoom.cancel();
+      fades.forEach((a) => a?.cancel());
+      diving.current = false;
+    }, 4000);
+  };
+
   const here = STOPS[stop];
   const spots = STOPS[spotStop].spots ?? [];
 
   return (
     <div className={styles.film} data-film ref={wrapRef} style={{ height: `${TOTAL + 100}vh` }}>
       <div ref={screenRef} className={styles.screen}>
+        {/* Everything that zooms when a ring is clicked: the picture, the planet and the rings. */}
+        <div ref={stageRef} className={styles.stage}>
         <div ref={mediaRef} className={styles.media} aria-hidden="true">
           {STOPS.map((s, i) => (
             <div key={`stop-${i}`} ref={layer(`stop-${i}`)} className={styles.layer} />
@@ -1437,6 +1589,7 @@ export default function FilmScroll() {
               />
             </Fragment>
           ))}
+          <canvas ref={movingRef} className={styles.moving} aria-hidden="true" />
           <div ref={scanRef} className={styles.scan} />
         </div>
 
@@ -1460,6 +1613,7 @@ export default function FilmScroll() {
                 data-spot=""
                 data-prefer={s.x > 0.6 ? "left" : "right"}
                 style={{ left: `${(s.x * 100).toFixed(2)}%`, top: `${(s.y * 100).toFixed(2)}%` }}
+                onClick={(e) => dive(e, s)}
               >
                 <span className={styles.ring} aria-hidden="true" />
                 <span className={styles.leader} aria-hidden="true" />
@@ -1467,6 +1621,7 @@ export default function FilmScroll() {
               </TransitionLink>
             ))}
           </div>
+        </div>
         </div>
 
         <div ref={captionRef} className={styles.caption}>

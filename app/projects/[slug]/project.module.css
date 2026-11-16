@@ -39,10 +39,6 @@
   color: #fff;
 }
 
-.heroImage {
-  object-fit: cover;
-}
-
 /* Darkens the bottom and left so white words read on any frame, and the top for the nav. */
 .hero::after {
   content: "";

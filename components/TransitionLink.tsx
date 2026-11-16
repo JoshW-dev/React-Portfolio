@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, type ComponentProps, type MouseEvent } from "react";
+import { setShown } from "@/lib/dive";
 import { routeRendered } from "./PageTransition";
 
 type LinkProps = ComponentProps<typeof Link>;
@@ -13,9 +14,11 @@ type NavigateEvent = Parameters<NonNullable<LinkProps["onNavigate"]>>[0];
   "open"  any project page. The new page wipes in from the top over the old one.
   "close" the home page or the projects list, from a project. The same wipe from the bottom.
   "fade"  everything else, a short cross-fade.
+  "dive"  a ring in the film (FilmScroll calls navigate itself after zooming into the ring).
+          A cross-fade into the project's hero, which eases out from the same point.
   globals.css reads the name from data-vt on <html>.
 */
-type Kind = "open" | "close" | "fade";
+type Kind = "open" | "close" | "fade" | "dive";
 
 const PROJECT = /^\/projects\/[^/]+\/?$/;
 
@@ -35,6 +38,47 @@ function transitionsOn(): StartViewTransition | null {
   if (typeof start !== "function") return null;
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return null;
   return start;
+}
+
+type Router = ReturnType<typeof useRouter>;
+
+/**
+  Moves to a page of this site with a page transition, or plainly when the browser has no
+  View Transitions API or reduced motion is on.
+*/
+export function navigate(router: Router, href: string, o: { kind: Kind; replace?: boolean; scroll?: boolean }) {
+  const start = transitionsOn();
+  const options = { scroll: o.scroll !== false };
+  const go = () => (o.replace ? router.replace(href, options) : router.push(href, options));
+  if (!start) {
+    go();
+    return;
+  }
+
+  const id = ++current;
+  const root = document.documentElement;
+  const kind = o.kind;
+  root.dataset.vt = kind;
+  delete root.dataset.vtEdge;
+
+  const transition = start.call(document, async () => {
+    const rendered = routeRendered();
+    // The line exists only in the new picture, so it is set after the old one is taken.
+    if (kind === "open" || kind === "close") root.dataset.vtEdge = "";
+    go();
+    // On a timeout the snapshot would still be the old page, so the animation is dropped.
+    if (!(await rendered)) transition.skipTransition();
+  });
+
+  const clear = () => {
+    if (id !== current) return;
+    delete root.dataset.vt;
+    delete root.dataset.vtEdge;
+  };
+  setShown(transition.ready);
+  transition.ready.catch(() => undefined);
+  transition.updateCallbackDone.catch(() => undefined);
+  transition.finished.then(clear, clear);
 }
 
 /**
@@ -72,36 +116,13 @@ export default function TransitionLink({ onClick, onNavigate, ...props }: LinkPr
     target.current = null;
     if (stopped || !url) return;
 
-    const start = transitionsOn();
-    if (!start) return;
+    if (!transitionsOn()) return;
     event.preventDefault();
-
-    const id = ++current;
-    const root = document.documentElement;
-    const kind = kindOf(window.location.pathname, url.pathname);
-    const href = url.pathname + url.search + url.hash;
-    const options = { scroll: props.scroll !== false };
-    root.dataset.vt = kind;
-    delete root.dataset.vtEdge;
-
-    const transition = start.call(document, async () => {
-      const rendered = routeRendered();
-      // The line exists only in the new picture, so it is set after the old one is taken.
-      if (kind !== "fade") root.dataset.vtEdge = "";
-      if (props.replace) router.replace(href, options);
-      else router.push(href, options);
-      // On a timeout the snapshot would still be the old page, so the animation is dropped.
-      if (!(await rendered)) transition.skipTransition();
+    navigate(router, url.pathname + url.search + url.hash, {
+      kind: kindOf(window.location.pathname, url.pathname),
+      replace: !!props.replace,
+      scroll: props.scroll !== false,
     });
-
-    const clear = () => {
-      if (id !== current) return;
-      delete root.dataset.vt;
-      delete root.dataset.vtEdge;
-    };
-    transition.ready.catch(() => undefined);
-    transition.updateCallbackDone.catch(() => undefined);
-    transition.finished.then(clear, clear);
   }
 
   return <Link {...props} onClick={handleClick} onNavigate={handleNavigate} />;

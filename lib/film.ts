@@ -102,7 +102,12 @@ export const STOPS: Stop[] = [
       aspect: 1920 / 1088,
     },
     link: { href: "/projects/ai-education-assistant", label: "Open the education assistant project" },
-    spots: [{ x: 0.6, y: 0.27, label: "AI tutor, 2019", href: "/projects/ai-education-assistant" }],
+    spots: [
+      { x: 0.6, y: 0.27, label: "AI tutor, 2019", href: "/projects/ai-education-assistant" },
+      // The river's braids where they run into the lake: above the caption on a desktop, and
+      // inside a phone's crop with room for its label on the left of the map.
+      { x: 0.53, y: 0.44, label: "AI news artist", href: "/projects/adam" },
+    ],
     place: "Alberta, Canada",
     short: "Alberta",
     text: "In 2019, three years before ChatGPT, I built an AI tutor for Athabasca University. It wrote quiz questions from course material and answered students\u2019 questions.",

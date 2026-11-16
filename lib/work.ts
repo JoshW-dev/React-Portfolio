@@ -494,22 +494,35 @@ const entries: Work[] = [
   {
     slug: "adam",
     title: "Adam, the AI news artist",
-    summary: "An agent that reads the day's news and posts a painting about it.",
-    kind: "Art",
+    summary: "A content engine that turned news headlines into AI art posts, on a schedule.",
+    kind: "Tool",
+    industry: "Media",
+    years: "2022 to 2023",
     image: {
       src: "/work/adam.webp",
       width: 1000,
       height: 620,
       alt: "A post from the Adam bot with two AI-painted portraits beside a news caption",
     },
-    stack: ["Python", "Twitter API", "Stable Diffusion", "GPT"],
+    stack: ["Python", "Midjourney", "Make.com", "GPT-3.5 Turbo", "DALL-E 2", "NewsAPI"],
+    // The film's Alberta frame, which the Alberta loop lines up with, so the hero carries it on.
+    frame: {
+      src: "/film/clips/orbit-rockies-last.webp",
+      alt: "The Rockies at dawn from above a ridge, a blue lake below and the plains of Alberta on the horizon",
+    },
     links: [
+      {
+        label: "Read the write-up",
+        href: "https://medium.com/@wadan/how-to-build-an-automated-content-system-with-openai-and-make-com-a4aa70b81d9f",
+      },
       { label: "See it on X", href: "https://twitter.com/ai_adam_" },
       { label: "View the code", href: "https://github.com/JoshW-dev/adam" },
     ],
     body: [
-      "Fully autonomous AI agent, sharing digital paintings and daily news. The Adam bot webscrapes and reads news articles, creates art and shares relevant content on social media platforms.",
-      "Operation and social media posting created with Python, using Twitter API, stable diffusion and GPT.",
+      "Adam was a content engine that ran itself. It read the news, wrote a caption about a story, made a picture to match and posted the two together.",
+      "I first built it with Python and Midjourney, and it posted on X as @ai_adam_. In November 2023 I wrote up on Medium how to build the same kind of engine with OpenAI and Make.com, a no-code automation tool.",
+      "Each run of that version asks NewsAPI for the newest article from BBC, CNN or Fox News. GPT-3.5 Turbo writes a caption from the headline and summary, and DALL-E 2 draws an image from the headline. Make.com then posts both as a pin on a Pinterest board called AI Generated News, with the article’s author and link in the description.",
+      "With scheduling on, it runs every day by itself. Accounts on X, Instagram, Facebook or Reddit can join the same flow, so one image goes out to all of them at once.",
     ],
   },
   {

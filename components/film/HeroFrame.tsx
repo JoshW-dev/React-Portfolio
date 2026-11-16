@@ -180,7 +180,8 @@ export default function HeroFrame({ src, alt, motion, loop }: Props) {
         el.pause();
         playing = false;
       }
-      fade.step(dt, wanted && playing && el.readyState >= 3 && !el.error, true);
+      const flowing = el.readyState >= 3 || fade.opacity > 0;
+      fade.step(dt, wanted && playing && flowing && !el.error, true);
       el.style.opacity = fade.opacity.toFixed(3);
       el.style.visibility = fade.opacity > 0 ? "visible" : "hidden";
       if (!fade.off && (wanted || fade.opacity > 0)) raf = requestAnimationFrame(frame);

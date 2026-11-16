@@ -1390,8 +1390,10 @@ export default function FilmScroll() {
         });
       }
       if (el.error) loopOff = true;
-      // It shows only once its frames are coming.
-      const want = wanted && lPlaying && el.readyState >= 3 && lRest >= LOOP_SETTLE;
+      // It shows only once its frames are coming. Once showing it stays: at each restart Chrome
+      // drops readyState for a moment (to 1 on the preview), and a stall only holds a frame.
+      const flowing = el.readyState >= 3 || loopFade.opacity > 0;
+      const want = wanted && lPlaying && flowing && lRest >= LOOP_SETTLE;
       loopFade.step(dt, want, steady);
       put(el, "opacity", loopFade.opacity.toFixed(3));
       put(el, "visibility", loopFade.opacity > 0 ? "visible" : "hidden");

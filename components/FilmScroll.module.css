@@ -19,7 +19,7 @@
 }
 
 /* Every frame of the film. Scaled as one for the slow push-in; never takes clicks. */
-/* What zooms into a ring when one is clicked (FilmScroll's dive). */
+/* The picture, the planet and the rings, under the words and the side map. */
 .stage {
   position: absolute;
   inset: 0;

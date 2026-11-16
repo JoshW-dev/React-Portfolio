@@ -48,6 +48,26 @@ export function loopFile(loop: Loop, part: "hd" | "m") {
 }
 
 /**
+ * Loop files fetched whole, as object URLs, by file path. Kept for the page's life (each is
+ * 0.1 to 2 MB), so a project page opened from the film, or the film shown again, plays the
+ * file already in memory.
+ */
+const kept = new Map<string, string>();
+
+export function keepLoop(file: string, url: string) {
+  kept.set(file, url);
+}
+
+/** The loop's file already in memory, hd first, if the film fetched one. */
+export function keptLoop(loop: Loop): string | undefined {
+  return kept.get(loopFile(loop, "hd")) ?? kept.get(loopFile(loop, "m"));
+}
+
+export function keptFile(file: string): string | undefined {
+  return kept.get(file);
+}
+
+/**
  * Starts a loop's video playing: sets its source on first use and rewinds it when it was
  * hidden. "blocked" means the browser won't play it (a phone's low power mode, say);
  * "stopped" means it was paused or unloaded before it started.

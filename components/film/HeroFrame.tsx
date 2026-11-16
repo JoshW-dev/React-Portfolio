@@ -2,29 +2,27 @@
 
 import Image from "next/image";
 import { useEffect, useLayoutEffect, useRef } from "react";
-import { takeDive, whenShown, type Dive } from "@/lib/dive";
+import { sameMotion, takeHandoff, whenShown, type Handoff } from "@/lib/handoff";
 import type { Loop } from "@/lib/film";
-import FilmLoop, { loopFile, startLoop } from "./FilmLoop";
+import FilmLoop, { keptLoop, loopFile, startLoop } from "./FilmLoop";
 import { MotionFade, MovingStill, motionAllowed, type Motion } from "./movingStill";
 import styles from "./HeroFrame.module.css";
 
 /*
-  A project page's hero frame: the film's picture for the project, full-bleed.
+  A project page's hero frame: the film's picture for the project, framed the way the film
+  frames it (the whole screen, under object-fit: cover). The hero shows the top of it.
 
   It always shows as a plain picture first. Once the page has opened and settled, a moving
   still (movingStill.ts) tests the machine unseen, then fades in over the picture and lets one
   thing in it move, the same way the film does at that stop. A frame with a cinemagraph loop
   (FilmLoop.tsx) plays that loop the same way.
 
-  Opened from a ring in the film, it starts zoomed into the ring's point and eases back out
-  while the title comes up (lib/dive.ts).
+  Opened from the film (lib/handoff.ts), it holds the film's push-in, and a loop or moving still
+  that was showing there carries on at once, from the same moment and the same file.
 */
 
 type Props = { src: string; alt: string; motion?: Motion; loop?: Loop };
 
-/** The frames are 16:9 near enough (1344 x 752 and 1600 x 906). */
-const ASPECT = 16 / 9;
-const OUT_MS = 1300; // the ease back out of a dive
 const SETTLE_MS = 700; // the page settles this long before the moving still may start
 const DRAW_MS = 30;
 
@@ -34,51 +32,21 @@ export default function HeroFrame({ src, alt, motion, loop }: Props) {
   const boxRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const loopRef = useRef<HTMLVideoElement>(null);
-  const dived = useRef(false);
-  // Taken once per mount and kept, because React may run the effect below twice.
-  const diveRef = useRef<Dive | null | undefined>(undefined);
+  // Taken once per mount and kept, because React may run the effects below twice.
+  const handRef = useRef<Handoff | null | undefined>(undefined);
+  const hand = () => {
+    if (handRef.current === undefined) handRef.current = takeHandoff();
+    return handRef.current;
+  };
 
-  // The dive: zoomed into the ring's point before the first paint, eased out once the page shows.
+  // The film's push-in, set before the first paint, so the wipe shows the picture where it was.
   useLayoutEffect(() => {
     const box = boxRef.current;
-    if (!box || typeof box.animate !== "function") return;
-    if (diveRef.current === undefined) diveRef.current = takeDive();
-    const d = diveRef.current;
-    if (!d) return;
-    dived.current = true;
-    const r = box.getBoundingClientRect();
-    const w = Math.max(r.width, r.height * ASPECT);
-    const h = w / ASPECT;
-    const px = (r.width - w) / 2 + d.x * w;
-    const py = (r.height - h) / 2 + d.y * h;
-    const from = Math.max(1.2, d.scale * 0.8);
-    box.style.transformOrigin = `${px.toFixed(1)}px ${py.toFixed(1)}px`;
-    box.style.transform = `scale(${from})`;
-    const words = box.parentElement?.querySelector<HTMLElement>("[data-hero-text]");
-    if (words) words.style.opacity = "0";
-    let gone = false;
-    whenShown().then(() => {
-      if (gone) return;
-      box.style.transform = "";
-      box.animate([{ transform: `scale(${from})` }, { transform: "scale(1)" }], {
-        duration: OUT_MS,
-        easing: "cubic-bezier(0.16, 1, 0.3, 1)",
-      });
-      if (words) {
-        words.style.opacity = "";
-        words.animate(
-          [
-            { opacity: 0, transform: "translateY(14px)" },
-            { opacity: 1, transform: "none" },
-          ],
-          { duration: 700, delay: 380, easing: "cubic-bezier(0.16, 1, 0.3, 1)", fill: "backwards" },
-        );
-      }
-    });
+    const h = hand();
+    if (!box || !h || Math.abs(h.scale - 1) < 1e-4) return;
+    box.style.transform = `scale(${h.scale.toFixed(4)})`;
     return () => {
-      gone = true;
       box.style.transform = "";
-      if (words) words.style.opacity = "";
     };
   }, []);
 
@@ -87,6 +55,10 @@ export default function HeroFrame({ src, alt, motion, loop }: Props) {
     const canvas = canvasRef.current;
     const box = boxRef.current;
     if (!motion || !canvas || !box || !motionAllowed()) return;
+    const h = hand();
+    // The film showed this motion in full a moment ago: carry it on, on the film's clock.
+    const carried = h?.motion && sameMotion(h.motion.map, motion.map) ? h.motion : null;
+    let resume = !!carried;
     let disposed = false;
     let still: MovingStill | null = null;
     const fade = new MotionFade();
@@ -103,6 +75,10 @@ export default function HeroFrame({ src, alt, motion, loop }: Props) {
       prev = now;
       const ready = still.prepare(src, null, motion.map);
       const want = ready && inView && !document.hidden;
+      if (resume && ready) {
+        fade.resume();
+        resume = false;
+      }
       const was = fade.opacity;
       fade.step(dt, want, true);
       if (fade.drawNow && (was === 0 || now - lastDraw >= DRAW_MS)) {
@@ -127,12 +103,14 @@ export default function HeroFrame({ src, alt, motion, loop }: Props) {
     document.addEventListener("visibilitychange", kick);
 
     (async () => {
-      await whenShown();
-      await later(dived.current ? OUT_MS : SETTLE_MS);
+      if (!carried) {
+        await whenShown();
+        await later(SETTLE_MS);
+      }
       if (disposed) return;
       still = new MovingStill(canvas);
       if (!still.ok) return;
-      t0 = performance.now();
+      t0 = carried && h ? h.at - carried.time * 1000 : performance.now();
       kick();
     })();
 
@@ -150,6 +128,10 @@ export default function HeroFrame({ src, alt, motion, loop }: Props) {
     const el = loopRef.current;
     const box = boxRef.current;
     if (!loop || !el || !box || !motionAllowed()) return;
+    const h = hand();
+    // The film showed this loop in full a moment ago: play its file on from the same moment.
+    const carried = h?.loop?.src === loop.src ? h.loop : null;
+    let resume = !!carried;
     let disposed = false;
     let started = false;
     let starting = false;
@@ -158,9 +140,19 @@ export default function HeroFrame({ src, alt, motion, loop }: Props) {
     let raf = 0;
     let prev = 0;
     let inView = true;
-    // Phones and slow links take the half-size loop.
+    const rate = loop.rate ?? 1;
+    // Phones and slow links take the half-size loop, unless the film has a file in memory.
     const conn = (navigator as Navigator & { connection?: { effectiveType?: string } }).connection;
     const part = ["slow-2g", "2g", "3g"].includes(conn?.effectiveType ?? "") ? "m" : "hd";
+    const file = carried?.url ?? keptLoop(loop) ?? loopFile(loop, part);
+    const onMeta = () => {
+      if (!carried || !h || !(el.duration > 0)) return;
+      el.currentTime = (carried.time + ((performance.now() - h.at) / 1000) * rate) % el.duration;
+    };
+    if (carried) {
+      el.src = carried.url;
+      el.addEventListener("loadedmetadata", onMeta, { once: true });
+    }
 
     const frame = (now: number) => {
       raf = 0;
@@ -169,7 +161,7 @@ export default function HeroFrame({ src, alt, motion, loop }: Props) {
       const wanted = inView && !document.hidden && !fade.off;
       if (wanted && !playing && !starting) {
         starting = true;
-        void startLoop(el, loopFile(loop, part), fade.opacity === 0, loop.rate).then((r) => {
+        void startLoop(el, file, fade.opacity === 0 && !resume, rate).then((r) => {
           starting = false;
           playing = r === "playing";
           if (r === "blocked") fade.off = true;
@@ -179,6 +171,10 @@ export default function HeroFrame({ src, alt, motion, loop }: Props) {
       if (!wanted && playing) {
         el.pause();
         playing = false;
+      }
+      if (resume && playing && el.readyState >= 2) {
+        fade.resume();
+        resume = false;
       }
       const flowing = el.readyState >= 3 || fade.opacity > 0;
       fade.step(dt, wanted && playing && flowing && !el.error, true);
@@ -201,8 +197,10 @@ export default function HeroFrame({ src, alt, motion, loop }: Props) {
     document.addEventListener("visibilitychange", kick);
 
     (async () => {
-      await whenShown();
-      await later(dived.current ? OUT_MS : SETTLE_MS);
+      if (!carried) {
+        await whenShown();
+        await later(SETTLE_MS);
+      }
       if (disposed) return;
       started = true;
       kick();
@@ -213,6 +211,7 @@ export default function HeroFrame({ src, alt, motion, loop }: Props) {
       if (raf) cancelAnimationFrame(raf);
       io.disconnect();
       document.removeEventListener("visibilitychange", kick);
+      el.removeEventListener("loadedmetadata", onMeta);
       el.pause();
     };
   }, [loop]);

@@ -5,6 +5,11 @@ import ProjectGrid from "@/components/ProjectGrid";
 import { work } from "@/lib/work";
 import styles from "./home.module.css";
 
+/** Each project page's hero picture, so the film can load it while it rests on the stop. */
+const frames: Record<string, string> = Object.fromEntries(
+  work.flatMap((w) => (w.frame ? [[`/projects/${w.slug}`, w.frame.src]] : [])),
+);
+
 const jobs = [
   {
     years: "2026 to now",
@@ -48,7 +53,7 @@ export default function Home() {
   return (
     <>
       <h1 className="sr">Josh Wade, AI engineer</h1>
-      <FilmScroll />
+      <FilmScroll frames={frames} />
 
       <section className={`wrap ${styles.more}`}>
         <div className={styles.head}>

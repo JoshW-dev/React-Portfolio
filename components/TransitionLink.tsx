@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, type ComponentProps, type MouseEvent } from "react";
-import { setShown } from "@/lib/dive";
+import { setShown } from "@/lib/handoff";
 import { routeRendered } from "./PageTransition";
 
 type LinkProps = ComponentProps<typeof Link>;
@@ -14,11 +14,10 @@ type NavigateEvent = Parameters<NonNullable<LinkProps["onNavigate"]>>[0];
   "open"  any project page. The new page wipes in from the top over the old one.
   "close" the home page or the projects list, from a project. The same wipe from the bottom.
   "fade"  everything else, a short cross-fade.
-  "dive"  a ring in the film (FilmScroll calls navigate itself after zooming into the ring).
-          A cross-fade into the project's hero, which eases out from the same point.
+  A project opened from the film wipes in the same way, over the same picture (lib/handoff.ts).
   globals.css reads the name from data-vt on <html>.
 */
-type Kind = "open" | "close" | "fade" | "dive";
+type Kind = "open" | "close" | "fade";
 
 const PROJECT = /^\/projects\/[^/]+\/?$/;
 

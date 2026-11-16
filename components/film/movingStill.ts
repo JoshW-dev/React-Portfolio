@@ -141,6 +141,13 @@ export class MotionFade {
     }
   }
 
+  /** Shows at once at full strength: the same motion was just showing in full (lib/handoff.ts). */
+  resume() {
+    if (this.off) return;
+    this.opacity = 1;
+    this.amp = 1;
+  }
+
   /** The motion's strength for the shader, eased. */
   get strength() {
     const t = this.amp;

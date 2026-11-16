@@ -1,7 +1,13 @@
-/* The hero frame fills the hero; the words and its shade sit over it (project.module.css). */
+/* The hero frame is the size of the screen, as the film's picture is, so a project opened from
+   the film shows the picture at the same size and place; the hero (86% of the screen) shows
+   its top. The words and its shade sit over it (project.module.css). */
 .box {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100vh;
+  height: max(100%, 100svh);
 }
 
 .image {

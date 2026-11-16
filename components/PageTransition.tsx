@@ -18,8 +18,6 @@ import { useEffect } from "react";
 
 const ROUTE_TIMEOUT = 1500;
 const IMAGE_TIMEOUT = 400;
-/** A dive from the film cross-fades straight into the hero, so it waits longer for the picture. */
-const DIVE_IMAGE_TIMEOUT = 1100;
 
 let settle: ((rendered: boolean) => void) | null = null;
 
@@ -52,9 +50,7 @@ function firstScreenImages(): Promise<unknown> {
   if (waits.length === 0) return Promise.resolve();
   return Promise.race([
     Promise.all(waits),
-    new Promise((resolve) =>
-      window.setTimeout(resolve, document.documentElement.dataset.vt === "dive" ? DIVE_IMAGE_TIMEOUT : IMAGE_TIMEOUT),
-    ),
+    new Promise((resolve) => window.setTimeout(resolve, IMAGE_TIMEOUT)),
   ]);
 }
 

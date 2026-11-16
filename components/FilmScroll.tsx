@@ -1,13 +1,12 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useRef, useState, type CSSProperties, type MouseEvent } from "react";
-import { useRouter } from "next/navigation";
-import TransitionLink, { navigate } from "@/components/TransitionLink";
+import { Fragment, useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import TransitionLink from "@/components/TransitionLink";
 import OrbitIntro, { type OrbitControl } from "@/components/orbit/OrbitIntro";
 import { MotionFade, MovingStill, motionAllowed, type Motion, type Source } from "@/components/film/movingStill";
-import FilmLoop, { loopFile, startLoop } from "@/components/film/FilmLoop";
-import { HOPS, SCROLL, STOPS, VEILS, clipFile, type ClipPart, type Hop, type Loop, type Spot } from "@/lib/film";
-import { setDive } from "@/lib/dive";
+import FilmLoop, { keepLoop, keptLoop, loopFile, startLoop } from "@/components/film/FilmLoop";
+import { HOPS, SCROLL, STOPS, VEILS, clipFile, type ClipPart, type Hop, type Loop } from "@/lib/film";
+import { setHandoff, type Handoff } from "@/lib/handoff";
 import styles from "./FilmScroll.module.css";
 
 /*
@@ -151,9 +150,10 @@ const SPOT_FADE = 4;
 const MOVE_DRAW_MS = 30;
 const LOOP_SETTLE = 0.6; // s the film rests on a stop before its loop may fade in
 
-// The dive into a ring: the film zooms this far into it over this long, then the page opens.
-const DIVE_SCALE = 2.4;
-const DIVE_MS = 650;
+/** How long the film rests on a stop before it loads the pictures of the projects it opens. */
+const FRAMES_AFTER_MS = 800;
+/** Project pictures already asked for, so each loads once per page load. */
+const framesAsked = new Set<string>();
 
 /** A pass stop's words slow the flight under them to this share of its speed, so they can be read. */
 const PASS_PACE = 0.82;
@@ -465,7 +465,14 @@ type Intro = {
   cue: boolean;
 };
 
-export default function FilmScroll() {
+/** No project pictures given. */
+const NO_FRAMES: Record<string, string> = {};
+
+/**
+ * frames: each project page's hero picture, by its path, so the film can load the pictures
+ * of the projects a stop opens while it rests there.
+ */
+export default function FilmScroll({ frames = NO_FRAMES }: { frames?: Record<string, string> }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const screenRef = useRef<HTMLDivElement>(null);
   const orbitRef = useRef<HTMLDivElement>(null);
@@ -475,9 +482,8 @@ export default function FilmScroll() {
   const movingRef = useRef<HTMLCanvasElement>(null);
   /** Each stop's loop video, by stop. */
   const loopRefs = useRef<(HTMLVideoElement | null)[]>([]);
-  const stageRef = useRef<HTMLDivElement>(null);
-  const diving = useRef(false);
-  const router = useRouter();
+  /** Records what the film shows, for the project page a link opens (lib/handoff.ts). */
+  const handOffRef = useRef<(() => void) | null>(null);
   const spotsRef = useRef<HTMLDivElement>(null);
   const captionRef = useRef<HTMLDivElement>(null);
   const cueRef = useRef<HTMLDivElement>(null);
@@ -976,7 +982,12 @@ export default function FilmScroll() {
     // before it is in, the loop plays straight from the network instead ("direct").
     type LoopFile = { k: number; state: "idle" | "loading" | "fetched" | "direct" | "failed"; url: string | null; abort: AbortController | null };
     const loopFiles: LoopFile[] = motionAllowed()
-      ? STOPS.flatMap((s, k) => (s.loop ? [{ k, state: "idle" as const, url: null, abort: null }] : []))
+      ? STOPS.flatMap((s, k): LoopFile[] => {
+          if (!s.loop) return [];
+          // Fetched on an earlier showing of the film in this page load: already in memory.
+          const url = keptLoop(s.loop) ?? null;
+          return [{ k, state: url ? "fetched" : "idle", url, abort: null }];
+        })
       : [];
     let loopFetching = false;
 
@@ -1033,10 +1044,13 @@ export default function FilmScroll() {
       l.abort = ac;
       l.state = "loading";
       try {
-        const res = await fetch(loopFile(STOPS[l.k].loop as Loop, tier === "high" ? "hd" : "m"), { signal: ac.signal });
+        const file = loopFile(STOPS[l.k].loop as Loop, tier === "high" ? "hd" : "m");
+        const res = await fetch(file, { signal: ac.signal });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const blob = await res.blob();
         l.url = URL.createObjectURL(new Blob([blob], { type: "video/mp4" }));
+        // Kept past this film, for the project page and for the film's next showing.
+        keepLoop(file, l.url);
         l.state = "fetched";
       } catch {
         // An aborted fetch goes back in the line; a failed one plays from the network.
@@ -1157,6 +1171,8 @@ export default function FilmScroll() {
     let lastSpotStop = -1;
     let lastSat = true;
     let lastHandover = -1;
+    /** The picture's push-in as last drawn, for the hand-off to a project page. */
+    let lastScale = 1;
     const apply = (s: Shot, now: number) => {
       paintStill(s.base);
       if (s.top) paintStill(s.top);
@@ -1195,7 +1211,8 @@ export default function FilmScroll() {
       }
 
       const breath = s.rest * DRIFT * (0.5 - 0.5 * Math.cos((2 * Math.PI * now) / DRIFT_MS));
-      const scale = `scale(${(s.scale + breath).toFixed(4)})`;
+      lastScale = s.scale + breath;
+      const scale = `scale(${lastScale.toFixed(4)})`;
       put(media, "transform", scale);
 
       // The hotspots ride the same push-in as the picture, so they stay on their things.
@@ -1401,6 +1418,19 @@ export default function FilmScroll() {
       return wanted || loopFade.opacity > 0;
     };
 
+    // A link to a project records what the film shows: the push-in, and the loop or moving
+    // still if one shows at full strength, so the project's hero carries them on.
+    handOffRef.current = () => {
+      const h: Handoff = { scale: lastScale, at: performance.now() };
+      const el = loopEl(lShown);
+      const loop = lShown >= 0 ? STOPS[lShown].loop : undefined;
+      if (el && loop && lPlaying && loopFade.opacity >= 0.99 && el.currentSrc) {
+        h.loop = { src: loop.src, url: el.currentSrc, time: el.currentTime };
+      }
+      if (mShown && fade.opacity >= 0.99) h.motion = { map: mShown.motion.map, time: (performance.now() - mStart) / 1000 };
+      setHandoff(h);
+    };
+
     // ---- Loop -----------------------------------------------------------------------------
 
     let raf = 0;
@@ -1585,13 +1615,14 @@ export default function FilmScroll() {
         if (c.url) URL.revokeObjectURL(c.url);
         c.url = null;
       }
+      // The loops' files stay in memory (FilmLoop.tsx keeps them), so they are not revoked.
       for (const l of loopFiles) {
         l.abort?.abort();
         const el = loopRefs.current[l.k];
         if (el && l.url && el.src === l.url) el.removeAttribute("src");
-        if (l.url) URL.revokeObjectURL(l.url);
         l.url = null;
       }
+      handOffRef.current = null;
       if (process.env.NODE_ENV !== "production") delete (window as unknown as { __film?: unknown }).__film;
     };
   }, []);
@@ -1656,41 +1687,25 @@ export default function FilmScroll() {
     };
   }, [spotStop, stop]);
 
-  /**
-   * A ring's click: the picture zooms into the ring while the words, the map and the other
-   * rings fade, then the project opens on its hero zoomed into the same point (lib/dive.ts).
-   * A modified click, reduced motion or a browser without Web Animations opens it plainly.
-   */
-  const dive = (e: MouseEvent<HTMLAnchorElement>, s: Spot) => {
-    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-    const stage = stageRef.current;
-    const screen = screenRef.current;
-    if (!stage || !screen || typeof stage.animate !== "function") return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    e.preventDefault();
-    if (diving.current) return;
-    diving.current = true;
-    const ring = (e.currentTarget.firstElementChild as HTMLElement).getBoundingClientRect();
-    const box = screen.getBoundingClientRect();
-    stage.style.transformOrigin = `${ring.left + ring.width / 2 - box.left}px ${ring.top + ring.height / 2 - box.top}px`;
-    const zoom = stage.animate([{ transform: "scale(1)" }, { transform: `scale(${DIVE_SCALE})` }], {
-      duration: DIVE_MS,
-      easing: "cubic-bezier(0.5, 0, 0.75, 0)",
-      fill: "forwards",
-    });
-    const fades = [captionRef.current, mapRef.current, cueRef.current, spotsRef.current?.firstElementChild ?? null].map((el) =>
-      el?.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 220, easing: "ease-out", fill: "forwards" }),
-    );
-    setDive({ x: s.x, y: s.y, scale: DIVE_SCALE, at: performance.now() });
-    window.setTimeout(() => navigate(router, s.href, { kind: "dive" }), DIVE_MS - 60);
-    // If the page never changes, the film comes back as it was.
-    window.setTimeout(() => {
-      if (!stage.isConnected) return;
-      zoom.cancel();
-      fades.forEach((a) => a?.cancel());
-      diving.current = false;
-    }, 4000);
-  };
+  // Once the film rests on a stop, the pictures of the projects it opens load quietly, so a
+  // project page opens on a picture already in memory.
+  useEffect(() => {
+    const s = STOPS[stop];
+    const hrefs = [s.link?.href, ...(s.spots ?? []).map((x) => x.href)];
+    const t = window.setTimeout(() => {
+      for (const href of hrefs) {
+        const src = href ? frames[href] : undefined;
+        if (!src || framesAsked.has(src)) continue;
+        framesAsked.add(src);
+        const img = new Image();
+        img.decoding = "async";
+        img.src = src;
+      }
+    }, FRAMES_AFTER_MS);
+    return () => window.clearTimeout(t);
+  }, [stop, frames]);
+
+  const handOff = () => handOffRef.current?.();
 
   const here = STOPS[stop];
   const spots = STOPS[spotStop].spots ?? [];
@@ -1698,8 +1713,8 @@ export default function FilmScroll() {
   return (
     <div className={styles.film} data-film ref={wrapRef} style={{ height: `${TOTAL + 100}vh` }}>
       <div ref={screenRef} className={styles.screen}>
-        {/* Everything that zooms when a ring is clicked: the picture, the planet and the rings. */}
-        <div ref={stageRef} className={styles.stage}>
+        {/* The picture, the planet and the rings. */}
+        <div className={styles.stage}>
         <div ref={mediaRef} className={styles.media} aria-hidden="true">
           {STOPS.map((s, i) => (
             <div key={`stop-${i}`} ref={layer(`stop-${i}`)} className={styles.layer} />
@@ -1760,7 +1775,7 @@ export default function FilmScroll() {
                 data-spot=""
                 data-prefer={s.x > 0.6 ? "left" : "right"}
                 style={{ left: `${(s.x * 100).toFixed(2)}%`, top: `${(s.y * 100).toFixed(2)}%` }}
-                onClick={(e) => dive(e, s)}
+                onClick={handOff}
               >
                 <span className={styles.ring} aria-hidden="true" />
                 <span className={styles.leader} aria-hidden="true" />
@@ -1776,7 +1791,7 @@ export default function FilmScroll() {
           <p className={styles.text}>{here.text}</p>
           {here.link ? (
             <div className={styles.links}>
-              <TransitionLink className={styles.open} href={here.link.href}>
+              <TransitionLink className={styles.open} href={here.link.href} onClick={handOff}>
                 {here.link.label}
               </TransitionLink>
             </div>

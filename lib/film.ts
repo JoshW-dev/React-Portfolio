@@ -131,8 +131,8 @@ export const STOPS: Stop[] = [
     still: "/film/09-doha.webp",
     link: { href: "/about", label: "More about me" },
     spots: [
-      { x: 0.54, y: 0.37, label: "Wade's Game of Society", href: "/projects/game-of-society" },
-      { x: 0.21, y: 0.42, label: "Forty Love", href: "/projects/forty-love" },
+      { x: 0.54, y: 0.37, label: "Game of Society", href: "/projects/game-of-society" },
+      { x: 0.4, y: 0.46, label: "Forty Love", href: "/projects/forty-love" },
     ],
     place: "Doha, November 2026",
     short: "Doha",

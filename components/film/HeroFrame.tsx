@@ -24,6 +24,12 @@ import styles from "./HeroFrame.module.css";
 type Props = { src: string; alt: string; motion?: Motion; loop?: Loop };
 
 const SETTLE_MS = 700; // the page settles this long before the moving still may start
+/**
+ * A carried-on loop or moving still that is ready this soon after the page mounts shows at
+ * full at once, while the wipe still covers the swap. Later than that it fades in as usual,
+ * so it never pops in on a page already showing.
+ */
+const CARRY_MS = 400;
 const DRAW_MS = 30;
 
 const later = (ms: number) => new Promise((r) => window.setTimeout(r, ms));
@@ -59,6 +65,7 @@ export default function HeroFrame({ src, alt, motion, loop }: Props) {
     // The film showed this motion in full a moment ago: carry it on, on the film's clock.
     const carried = h?.motion && sameMotion(h.motion.map, motion.map) ? h.motion : null;
     let resume = !!carried;
+    const mountAt = performance.now();
     let disposed = false;
     let still: MovingStill | null = null;
     const fade = new MotionFade();
@@ -76,7 +83,7 @@ export default function HeroFrame({ src, alt, motion, loop }: Props) {
       const ready = still.prepare(src, null, motion.map);
       const want = ready && inView && !document.hidden;
       if (resume && ready) {
-        fade.resume();
+        if (now - mountAt < CARRY_MS) fade.resume();
         resume = false;
       }
       const was = fade.opacity;
@@ -132,6 +139,7 @@ export default function HeroFrame({ src, alt, motion, loop }: Props) {
     // The film showed this loop in full a moment ago: play its file on from the same moment.
     const carried = h?.loop?.src === loop.src ? h.loop : null;
     let resume = !!carried;
+    const mountAt = performance.now();
     let disposed = false;
     let started = false;
     let starting = false;
@@ -173,7 +181,7 @@ export default function HeroFrame({ src, alt, motion, loop }: Props) {
         playing = false;
       }
       if (resume && playing && el.readyState >= 2) {
-        fade.resume();
+        if (now - mountAt < CARRY_MS) fade.resume();
         resume = false;
       }
       const flowing = el.readyState >= 3 || fade.opacity > 0;

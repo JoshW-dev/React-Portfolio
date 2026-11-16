@@ -52,8 +52,10 @@ export function loopFile(loop: Loop, part: "hd" | "m") {
  * hidden. "blocked" means the browser won't play it (a phone's low power mode, say);
  * "stopped" means it was paused or unloaded before it started.
  */
-export function startLoop(el: HTMLVideoElement, src: string, rewind: boolean): Promise<"playing" | "blocked" | "stopped"> {
+export function startLoop(el: HTMLVideoElement, src: string, rewind: boolean, rate = 1): Promise<"playing" | "blocked" | "stopped"> {
   if (!el.getAttribute("src")) el.src = src;
+  el.defaultPlaybackRate = rate;
+  el.playbackRate = rate;
   if (rewind && el.currentTime > 0) el.currentTime = 0;
   return el.play().then(
     () => "playing" as const,

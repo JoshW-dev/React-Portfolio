@@ -135,7 +135,7 @@
       "note": "Plant to Texas in one clip with two mid frames. Came back as a shot list with hard cuts at 2.08, 2.29, 6.63 and 6.92 s. Not used. Its last 3 s (far view of the Texas factory, the approach, the door, the line) are clean and can end a retake. Both mid frames are good and can be reused as the start or end frames of two shorter clips."
     }
   ],
-  "loops_note": "Cinemagraph loops (scripts/film-loops.json, scripts/film-loop.py): flux_3_video, 1080p, no audio, start and end image both the stop's frame, a locked-camera prompt. The raw clip is not kept in the repo; download it again from the job.",
+  "loops_note": "Cinemagraph loops (scripts/film-loops.json, scripts/film-loop.py): flux_3_video, 1080p, no audio, start image the stop's frame, a locked-camera prompt. A start and end image both set made the model hold the steam still. The raw clip is not kept in the repo; download it again from the job.",
   "loops": [
     {
       "loop": "03-plant",
@@ -143,7 +143,17 @@
       "seconds": 5,
       "credits": 40,
       "start_and_end": "plant-line-hd.mp4 frame 0 (= public/film/clips/plant-line-first.webp)",
-      "prompt": "Locked-off tripod shot of an industrial hydrogen plant at sunrise. The camera is completely static: no pan, no zoom, no push, no shake. Only the white steam moves: thick plumes rise from the tall stacks and billow slowly up and to the right in a light breeze, curling and thinning as they drift. The towers, pipes, frosted ground, snowy mountains and sky stay perfectly still. Real-time speed, calm, photorealistic documentary footage, natural light, no people, no birds, no cuts."
+      "prompt": "Locked-off tripod shot of an industrial hydrogen plant at sunrise. The camera is completely static: no pan, no zoom, no push, no shake. Only the white steam moves: thick plumes rise from the tall stacks and billow slowly up and to the right in a light breeze, curling and thinning as they drift. The towers, pipes, frosted ground, snowy mountains and sky stay perfectly still. Real-time speed, calm, photorealistic documentary footage, natural light, no people, no birds, no cuts.",
+      "replaced": "Barely moved (0.9 px/s): with the same start and end frame the model held the steam still."
+    },
+    {
+      "loop": "03-plant",
+      "job": "3cdd7fbc-7c89-41fd-aeb1-c3dc0384a96d",
+      "seconds": 10,
+      "credits": 80,
+      "start": "plant-line-hd.mp4 frame 0 (= public/film/clips/plant-line-first.webp)",
+      "used": "0 to 4.6 s; after that the camera cranes up and back with parallax",
+      "prompt": "Locked-off tripod shot of an industrial hydrogen plant at sunrise. The camera never moves: no pan, no zoom, no push, no drift, no shake. Thick white steam pours continuously from the stacks for the whole clip and rolls up and to the right on a steady breeze, billowing, curling and thinning as it rises, at the same lively pace from the first second to the last. Nothing else moves: the towers, pipes, frosted ground, snowy mountains and sky stay perfectly still. Photorealistic documentary footage, natural light, no people, no birds, no cuts."
     }
   ]
 }

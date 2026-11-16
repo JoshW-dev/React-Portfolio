@@ -1382,7 +1382,7 @@ export default function FilmScroll() {
       if (wanted && !lPlaying && !lStarting && !waiting) {
         lStarting = true;
         const src = file?.url ?? loopFile(loop, tier === "high" ? "hd" : "m");
-        void startLoop(el, src, loopFade.opacity === 0).then((r) => {
+        void startLoop(el, src, loopFade.opacity === 0, loop.rate).then((r) => {
           lStarting = false;
           if (r === "playing") lPlaying = true;
           else if (r === "blocked") loopOff = true;

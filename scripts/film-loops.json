@@ -1,9 +1,15 @@
 {
-  "_about": "Cinemagraph loops for the film's stops. Each loop is a short image-to-video clip made with the stop's frame as both its first and its last frame and a locked camera (docs/film/keyframes.json has the job). scripts/film-loop.py matches its colour to the frame, crossfades its last 'crossfade' seconds into its start so it loops without a seam, crops it to 'crop' and writes public/film/loops/<name>-hd.mp4, <name>-m.mp4 and <name>-mask.png. Coordinates are shares of 'frame'. Only the mask's area of the loop shows: 'regions' are what moves (feathered by 'feather'), and 'exclude' cuts out things that must stay sharp and still, like towers (feathered by 'exclude_feather').",
+  "_about": "Cinemagraph loops for the film's stops. Each loop is a short image-to-video clip made with the stop's frame as both its first and its last frame and a locked camera (docs/film/keyframes.json has the job). scripts/film-loop.py matches its colour to the frame, crossfades its last 'crossfade' seconds into its start so it loops without a seam, crops it to 'crop' and writes public/film/loops/<name>-hd.mp4, <name>-m.mp4 and <name>-mask.png. Coordinates are shares of 'frame'. 'use' picks the seconds of the clip where the camera holds still enough. 'stable' boxes hold still things (towers, plant, ground) the clip is lined up on, and 'probe' is a box of the moving thing whose speed is reported. Only the mask's area of the loop shows: 'regions' are what moves (feathered by 'feather'), and 'exclude' cuts out things that must stay sharp and still, like towers (feathered by 'exclude_feather').",
   "loops": {
     "03-plant": {
       "frame": "public/film/clips/plant-line-first.webp",
+      "use": [0.0, 4.6],
       "crossfade": 1.0,
+      "stable": [
+        [0.385, 0.05, 0.48, 0.3], [0.685, 0.14, 0.73, 0.3], [0.75, 0.13, 0.795, 0.3], [0.4, 0.3, 0.6, 0.45],
+        [0.6, 0.3, 0.8, 0.45], [0.82, 0.35, 0.99, 0.48], [0.05, 0.3, 0.24, 0.45]
+      ],
+      "probe": [0.807, 0.0, 0.99, 0.184],
       "crop": [0.24375, 0.0, 1.0, 0.430147],
       "feather": 0.012,
       "exclude_feather": 0.0025,

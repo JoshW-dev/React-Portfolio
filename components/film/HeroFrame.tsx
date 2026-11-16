@@ -169,7 +169,7 @@ export default function HeroFrame({ src, alt, motion, loop }: Props) {
       const wanted = inView && !document.hidden && !fade.off;
       if (wanted && !playing && !starting) {
         starting = true;
-        void startLoop(el, loopFile(loop, part), fade.opacity === 0).then((r) => {
+        void startLoop(el, loopFile(loop, part), fade.opacity === 0, loop.rate).then((r) => {
           starting = false;
           playing = r === "playing";
           if (r === "blocked") fade.off = true;

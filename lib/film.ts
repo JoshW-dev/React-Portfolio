@@ -58,6 +58,8 @@ export type Loop = {
   /** The picture the loop lines up with, and its width over its height. */
   frame: string;
   aspect: number;
+  /** Playback speed, when the clip's own motion is too slow to read (default 1). */
+  rate?: number;
 };
 
 export type Spot = {

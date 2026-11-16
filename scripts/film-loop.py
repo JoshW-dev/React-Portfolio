@@ -4,12 +4,16 @@ Makes a stop's cinemagraph loop from a generated clip, as set in scripts/film-lo
 
   python3 scripts/film-loop.py 03-plant path/to/generated.mp4 [--preview DIR]
 
-The clip should start and end on the stop's frame with the camera locked. This script:
-  1. matches its colour to the frame (each channel's mean and spread, over the top half),
-  2. crossfades its last seconds into its first, so the end runs into the start with no jump,
-  3. crops it to the loop's box and writes public/film/loops/<name>-hd.mp4 (full size) and
+The clip should start on the stop's frame with the camera locked and the moving thing moving
+the whole time. (Giving the model the same last frame makes it hold still near the end.)
+This script:
+  1. holds the camera still: each frame is moved back by the drift of the 'stable' box,
+  2. matches its colour to the frame (each channel's mean and spread, over the top half),
+  3. crossfades its last seconds into its first, so the end runs into the start with no jump,
+  4. crops it to the loop's box and writes public/film/loops/<name>-hd.mp4 (full size) and
      <name>-m.mp4 (half size),
-  4. writes <name>-mask.png: white, with the alpha saying where the loop shows.
+  5. writes <name>-mask.png: white, with the alpha saying where the loop shows,
+  6. reports how fast the 'probe' box moves, so a loop that barely moves is caught here.
 components/film/FilmLoop.tsx plays it over the frame.
 """
 
@@ -56,6 +60,35 @@ def encoder(path, w, h, fps, crf):
     )
 
 
+def phase_shift(a, b):
+    """How far b's content sits from a's, in pixels (x, y), to about a fifth of a pixel."""
+    h, w = a.shape
+    win = np.outer(np.hanning(h), np.hanning(w))
+    A = np.fft.fft2((a - a.mean()) * win)
+    B = np.fft.fft2((b - b.mean()) * win)
+    R = A * np.conj(B)
+    R /= np.abs(R) + 1e-9
+    r = np.fft.ifft2(R).real
+    y, x = np.unravel_index(np.argmax(r), r.shape)
+
+    def sub(m, c, p):
+        d = m - 2 * c + p
+        return 0.0 if abs(d) < 1e-12 else 0.5 * (m - p) / d
+
+    dy = y + sub(r[(y - 1) % h, x], r[y, x], r[(y + 1) % h, x])
+    dx = x + sub(r[y, (x - 1) % w], r[y, x], r[y, (x + 1) % w])
+    if dy > h / 2:
+        dy -= h
+    if dx > w / 2:
+        dx -= w
+    return -dx, -dy
+
+
+def box_px(box, w, h):
+    x0, y0, x1, y1 = box
+    return slice(round(y0 * h), round(y1 * h)), slice(round(x0 * w), round(x1 * w))
+
+
 def blurred(a, w, h):
     return np.asarray(Image.fromarray(a).resize((w, h), Image.BILINEAR).filter(ImageFilter.GaussianBlur(4)), np.float32)
 
@@ -84,8 +117,70 @@ def main():
     ref = np.asarray(Image.open(ROOT / spec["frame"]).convert("RGB").resize((W, H), Image.LANCZOS))
 
     clip = list(frames(raw, W, H))
+    # Only the stretch where the camera holds still enough to line up ('use', in seconds).
+    if "use" in spec:
+        u0, u1 = spec["use"]
+        clip = clip[round(u0 * fps) : round(u1 * fps)]
     n = len(clip)
     k = round(spec["crossfade"] * fps)
+
+    # Hold the camera still. Video models drift and zoom a little even when told not to, so
+    # each frame is lined up with the stop's frame itself: patches of things that never move
+    # ('stable') are matched, a zoom, turn and shift is fitted to them, and the frame is
+    # warped back by it. Two passes per frame, starting from the last frame's fit.
+    if "stable" in spec:
+        gray = lambda f: f.astype(np.float32) @ np.array([0.299, 0.587, 0.114], np.float32)
+        rgray = gray(ref)
+        boxes = [box_px(b, W, H) for b in spec["stable"]]
+        cx, cy = W / 2, H / 2
+        centres = np.array([((sx.start + sx.stop) / 2 - cx, (sy.start + sy.stop) / 2 - cy) for sy, sx in boxes])
+        pad = 96  # edge pixels repeated round the frame, so a warp never pulls in black
+
+        def warp(f, a, b, tx, ty):
+            big = np.pad(f, ((pad, pad), (pad, pad), (0, 0)), mode="edge")
+            coef = (a, -b, cx - a * cx + b * cy + tx + pad, b, a, cy - b * cx - a * cy + ty + pad)
+            return np.asarray(Image.fromarray(big).transform((W, H), Image.AFFINE, coef, resample=Image.BILINEAR))
+
+        fits = []
+        prm = np.array([1.0, 0.0, 0.0, 0.0])  # a = scale cos, b = scale sin, tx, ty
+        for f in clip:
+            for _ in range(2):
+                g = gray(warp(f, *prm))
+                rows, rhs = [], []
+                for (sy, sx), (px, py) in zip(boxes, centres):
+                    dx, dy = phase_shift(rgray[sy, sx], g[sy, sx])
+                    rows += [[px, -py, 1, 0], [py, px, 0, 1]]
+                    rhs += [dx, dy]
+                A, r = np.array(rows), np.array(rhs)
+                # Patches that disagree by more than 3 px (steam crossing them, a bad match)
+                # are dropped one at a time, worst first, while four or more are left.
+                keep = np.ones(len(boxes), bool)
+                while True:
+                    k2 = np.repeat(keep, 2)
+                    sol = np.linalg.lstsq(A[k2], r[k2], rcond=None)[0]
+                    res = np.abs(A @ sol - r).reshape(-1, 2).max(1)
+                    res[~keep] = 0
+                    if res.max() <= 3 or keep.sum() <= 4:
+                        break
+                    keep[res.argmax()] = False
+                # The residual is a small extra zoom, turn and shift on top of prm.
+                da, db, dtx, dty = sol
+                a, b, tx, ty = prm
+                na, nb = a * (1 + da) - b * db, b * (1 + da) + a * db
+                prm = np.array([na, nb, tx + a * dtx - b * dty, ty + b * dtx + a * dty])
+            fits.append(prm.copy())
+        fits = np.array(fits)
+        ker = np.ones(5) / 5
+        fits = np.stack([np.convolve(np.pad(fits[:, i], 2, mode="edge"), ker, "valid") for i in range(4)], 1)
+        zoom = np.hypot(fits[:, 0], fits[:, 1])
+        print(f"camera: zoom {zoom.min():.4f} to {zoom.max():.4f}, shift up to {np.abs(fits[:, 2:]).max(0).round(1)} px")
+        clip = [warp(f, *prm) for f, prm in zip(clip, fits)]
+        # What is left over, on the patches: should be well under a pixel.
+        left = []
+        for f in clip[:: max(1, len(clip) // 8)]:
+            g = gray(f)
+            left.append(np.median([np.hypot(*phase_shift(rgray[sy, sx], g[sy, sx])) for sy, sx in boxes]))
+        print(f"after: median patch off by {np.round(left, 2)} px")
 
     # Colour: each channel's mean and spread over the top half, measured on blurred frames so
     # the re-drawn detail doesn't count.
@@ -128,6 +223,17 @@ def main():
     rgba[..., :3] = 255
     rgba[..., 3] = np.clip(alpha * 255, 0, 255).round().astype(np.uint8)
     Image.fromarray(rgba).save(OUT / f"{name}-mask.png", optimize=True)
+
+    if "probe" in spec:
+        # How fast the moving thing moves: change per second over its own detail, in pixels a
+        # second at the clip's size. The first plant loop measured 0.6 and read as frozen.
+        py, px = box_px(spec["probe"], W, H)
+        g = [blurred(f[py, px], 240, 120).mean(2) for f in clip[: n - k]]
+        step = round(fps / 2)
+        change = np.mean([np.abs(g[i] - g[i + step]).mean() for i in range(0, len(g) - step, step)]) * 2
+        gy, gx = np.gradient(g[0])
+        scale = (px.stop - px.start) / 240
+        print(f"probe motion: about {change / max(1e-6, np.hypot(gx, gy).mean()) * scale:.1f} px/s")
 
     for f in sorted(OUT.glob(f"{name}-*")):
         print(f"{f.relative_to(ROOT)}  {f.stat().st_size // 1024} KB")

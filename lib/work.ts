@@ -91,7 +91,8 @@ const entries: Work[] = [
       alt: "Illustration of a hydrogen plant at sunrise, seen along a pipe rack with mountains behind",
     },
     frame: {
-      src: "/film/03-plant.webp",
+      // The film's own frame at the plant, which its steam loop lines up with.
+      src: "/film/clips/plant-line-first.webp",
       alt: "Illustration of a hydrogen plant at sunrise, seen along a pipe rack with mountains behind",
     },
     links: [],

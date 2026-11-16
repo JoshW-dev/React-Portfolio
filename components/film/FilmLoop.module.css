@@ -1,0 +1,28 @@
+/* A cinemagraph loop over a picture (FilmLoop.tsx). */
+.wrap {
+  position: absolute;
+  inset: 0;
+  container-type: size;
+  pointer-events: none;
+}
+
+/* The picture's own box under object-fit: cover; the size comes from the picture's shape. */
+.frame {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* Hidden until the parent has it playing and fades it in. Only the mask's area shows. */
+.video {
+  position: absolute;
+  display: block;
+  object-fit: fill;
+  opacity: 0;
+  visibility: hidden;
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}

@@ -61,6 +61,11 @@
   pointer-events: none;
 }
 
+/* A stop's cinemagraph loop, over the frame layers (z-index 1 and 2) (film/FilmLoop.tsx). */
+.loop {
+  z-index: 3;
+}
+
 /* The moving still: the resting frame with one thing in it moving (film/movingStill.ts). */
 .moving {
   position: absolute;

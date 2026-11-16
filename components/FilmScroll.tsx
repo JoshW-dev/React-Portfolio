@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import TransitionLink, { navigate } from "@/components/TransitionLink";
 import OrbitIntro, { type OrbitControl } from "@/components/orbit/OrbitIntro";
 import { MotionFade, MovingStill, motionAllowed, type Motion, type Source } from "@/components/film/movingStill";
+import FilmLoop, { startLoop } from "@/components/film/FilmLoop";
 import { HOPS, SCROLL, STOPS, VEILS, clipFile, type ClipPart, type Hop, type Spot } from "@/lib/film";
 import { setDive } from "@/lib/dive";
 import styles from "./FilmScroll.module.css";
@@ -148,6 +149,7 @@ const SPOT_FADE = 4;
 
 /** The moving still draws at most this often, about 30 times a second. */
 const MOVE_DRAW_MS = 30;
+const LOOP_SETTLE = 0.6; // s the film rests on a stop before its loop may fade in
 
 // The dive into a ring: the film zooms this far into it over this long, then the page opens.
 const DIVE_SCALE = 2.4;
@@ -471,6 +473,8 @@ export default function FilmScroll() {
   const veilRef = useRef<HTMLDivElement>(null);
   const scanRef = useRef<HTMLDivElement>(null);
   const movingRef = useRef<HTMLCanvasElement>(null);
+  /** Each stop's loop video, by stop. */
+  const loopRefs = useRef<(HTMLVideoElement | null)[]>([]);
   const stageRef = useRef<HTMLDivElement>(null);
   const diving = useRef(false);
   const router = useRouter();
@@ -1287,6 +1291,60 @@ export default function FilmScroll() {
       return want || fade.opacity > 0;
     };
 
+    // ---- Cinemagraph loops ----------------------------------------------------------------
+
+    // Like the moving still: the picture first, then the loop fades in once it plays and the
+    // machine has kept up, and it fades out the moment the film moves on.
+    const loopFade = new MotionFade();
+    let loopOff = !motionAllowed();
+    /** The stop whose loop is showing or fading out, or -1. */
+    let lShown = -1;
+    let lStarting = false;
+    let lPlaying = false;
+    /** Seconds the film has rested on the loop's stop; it fades in after LOOP_SETTLE. */
+    let lRest = 0;
+    const loopEl = (k: number) => (k >= 0 ? (loopRefs.current[k] ?? null) : null);
+    const pauseLoop = () => {
+      const el = loopEl(lShown);
+      if (el && !el.paused) el.pause();
+      lPlaying = false;
+    };
+
+    /** Plays and fades the resting stop's loop. True while it needs more frames. */
+    const stepLoop = (dt: number) => {
+      const seg = locate(p);
+      const k = seg.hop === null && seg.stop > 0 && !isPass(seg.stop) ? seg.stop : -1;
+      const target = k > 0 && STOPS[k].loop && !loopOff && !loopFade.off && !reduced && !jumping ? k : -1;
+      // A new stop's loop waits until the last one has faded out.
+      if (lShown !== target && loopFade.opacity === 0) {
+        pauseLoop();
+        lShown = target;
+      }
+      const el = loopEl(lShown);
+      const loop = lShown >= 0 ? STOPS[lShown].loop : undefined;
+      if (!el || !loop) return false;
+      const wanted = lShown === target && inView && !document.hidden;
+      const steady = p === goal && waitHop === null;
+      lRest = wanted && steady ? lRest + dt : wanted && loopFade.opacity > 0 ? lRest : 0;
+      if (wanted && !lPlaying && !lStarting) {
+        lStarting = true;
+        void startLoop(el, loop, tier === "high" ? "hd" : "m", loopFade.opacity === 0).then((r) => {
+          lStarting = false;
+          if (r === "playing") lPlaying = true;
+          else if (r === "blocked") loopOff = true;
+          kick();
+        });
+      }
+      if (el.error) loopOff = true;
+      // It shows only once its frames are coming.
+      const want = wanted && lPlaying && el.readyState >= 3 && lRest >= LOOP_SETTLE;
+      loopFade.step(dt, want, steady);
+      put(el, "opacity", loopFade.opacity.toFixed(3));
+      put(el, "visibility", loopFade.opacity > 0 ? "visible" : "hidden");
+      if (!wanted && loopFade.opacity === 0 && (lPlaying || !el.paused)) pauseLoop();
+      return wanted || loopFade.opacity > 0;
+    };
+
     // ---- Loop -----------------------------------------------------------------------------
 
     let raf = 0;
@@ -1349,6 +1407,7 @@ export default function FilmScroll() {
       lastShot = shot;
       apply(shot, now);
       if (drawMoving(now, dt)) busy = true;
+      if (stepLoop(dt)) busy = true;
       // The breath animates for as long as a hold is in view, and the intro's words until up.
       if (shot.rest > 0) busy = true;
       if (intro.phase === "playing" && introCaption(now) < 1) busy = true;
@@ -1370,9 +1429,14 @@ export default function FilmScroll() {
 
     const io = new IntersectionObserver(([entry]) => {
       inView = entry.isIntersecting;
+      if (!inView) pauseLoop();
       // One frame either way: off screen it lands the playhead on the scroll.
       kick(true);
     });
+    const onHidden = () => {
+      if (document.hidden) pauseLoop();
+    };
+    document.addEventListener("visibilitychange", onHidden);
     io.observe(wrap);
     document.addEventListener("visibilitychange", onKick);
     window.addEventListener("scroll", onScrollGate, { passive: true });
@@ -1418,6 +1482,9 @@ export default function FilmScroll() {
         get shot() {
           return lastShot;
         },
+        get loop() {
+          return { opacity: loopFade.opacity, stop: lShown, playing: lPlaying, off: loopOff || loopFade.off, t: loopEl(lShown)?.currentTime ?? null };
+        },
         get moving() {
           return { opacity: fade.opacity, amp: fade.amp, probing: fade.probing, mix: mMix, off: movingOff || fade.off, stop: mShown?.k ?? null, avgMs: fade.frameMs };
         },
@@ -1439,6 +1506,8 @@ export default function FilmScroll() {
       io.disconnect();
       reduceQuery.removeEventListener("change", onReduce);
       document.removeEventListener("visibilitychange", onKick);
+      document.removeEventListener("visibilitychange", onHidden);
+      pauseLoop();
       window.removeEventListener("scroll", onScrollGate);
       window.removeEventListener("scroll", onKick);
       window.removeEventListener("resize", onKick);
@@ -1589,6 +1658,18 @@ export default function FilmScroll() {
               />
             </Fragment>
           ))}
+          {STOPS.map((s, i) =>
+            s.loop ? (
+              <FilmLoop
+                key={`loop-${i}`}
+                loop={s.loop}
+                className={styles.loop}
+                videoRef={(el) => {
+                  loopRefs.current[i] = el;
+                }}
+              />
+            ) : null,
+          )}
           <canvas ref={movingRef} className={styles.moving} aria-hidden="true" />
           <div ref={scanRef} className={styles.scan} />
         </div>

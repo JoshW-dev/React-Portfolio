@@ -21,7 +21,11 @@
   comes from scripts/film-motion.py, which reads the regions in scripts/film-motion.json.
   Only Doha's water and New York's traffic move. Warping a still reads as real on water and
   on things that slide along a line, but smoke, clouds, fog and the belts wobble, so those
-  stops rest on the plain picture.
+  stops rest on the plain picture or play a loop.
+
+  A stop's loop is a cinemagraph: a short generated clip of its picture with the camera
+  locked, of which only the moving part shows, through a mask (scripts/film-loop.py and
+  scripts/film-loops.json, played by components/film/FilmLoop.tsx).
 */
 
 import type { Motion } from "@/components/film/movingStill";
@@ -42,6 +46,18 @@ export type Stop = {
   pass?: boolean;
   /** What moves in the picture while the film rests here (components/film/movingStill.ts). */
   motion?: Motion;
+  /** A cinemagraph loop played over the picture while the film rests here. */
+  loop?: Loop;
+};
+
+export type Loop = {
+  /** Base path of <src>-hd.mp4, <src>-m.mp4 (half size) and <src>-mask.png. */
+  src: string;
+  /** Where the loop sits in the picture, as shares of its width and height: left, top, width, height. */
+  box: [number, number, number, number];
+  /** The picture the loop lines up with, and its width over its height. */
+  frame: string;
+  aspect: number;
 };
 
 export type Spot = {
@@ -85,6 +101,12 @@ export const STOPS: Stop[] = [
   },
   {
     still: "/film/03-plant.webp",
+    loop: {
+      src: "/film/loops/03-plant",
+      box: [0.24375, 0, 0.75625, 0.430147],
+      frame: "/film/clips/plant-line-first.webp",
+      aspect: 1920 / 1088,
+    },
     link: { href: "/projects/hydrogen-plant", label: "Open the hydrogen plant project" },
     spots: [{ x: 0.458, y: 0.25, label: "Clean hydrogen plant", href: "/projects/hydrogen-plant" }],
     place: "Hydrogen plant, Alberta",
@@ -192,6 +214,11 @@ export const SCROLL = {
 export type ClipPart = "hd.mp4" | "d.mp4" | "m.mp4" | "first.webp" | "last.webp";
 
 export const clipFile = (clip: string, part: ClipPart) => `/film/clips/${clip}-${part}`;
+
+/** The loop for a project page's hero frame, when the frame is the one a loop lines up with. */
+export function loopForFrame(src: string): Loop | undefined {
+  return STOPS.find((s) => s.loop?.frame === src)?.loop;
+}
 
 /**
  * The motion for a project page's hero frame: a stop's own still, or the frame a stop rests

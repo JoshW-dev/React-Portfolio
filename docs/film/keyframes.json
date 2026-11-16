@@ -134,5 +134,16 @@
       ],
       "note": "Plant to Texas in one clip with two mid frames. Came back as a shot list with hard cuts at 2.08, 2.29, 6.63 and 6.92 s. Not used. Its last 3 s (far view of the Texas factory, the approach, the door, the line) are clean and can end a retake. Both mid frames are good and can be reused as the start or end frames of two shorter clips."
     }
+  ],
+  "loops_note": "Cinemagraph loops (scripts/film-loops.json, scripts/film-loop.py): flux_3_video, 1080p, no audio, start and end image both the stop's frame, a locked-camera prompt. The raw clip is not kept in the repo; download it again from the job.",
+  "loops": [
+    {
+      "loop": "03-plant",
+      "job": "b6164198-4045-4b6c-8e4d-a26334c098b3",
+      "seconds": 5,
+      "credits": 40,
+      "start_and_end": "plant-line-hd.mp4 frame 0 (= public/film/clips/plant-line-first.webp)",
+      "prompt": "Locked-off tripod shot of an industrial hydrogen plant at sunrise. The camera is completely static: no pan, no zoom, no push, no shake. Only the white steam moves: thick plumes rise from the tall stacks and billow slowly up and to the right in a light breeze, curling and thinning as they drift. The towers, pipes, frosted ground, snowy mountains and sky stay perfectly still. Real-time speed, calm, photorealistic documentary footage, natural light, no people, no birds, no cuts."
+    }
   ]
 }

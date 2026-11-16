@@ -3,6 +3,8 @@
 import Image from "next/image";
 import { useEffect, useLayoutEffect, useRef } from "react";
 import { takeDive, whenShown, type Dive } from "@/lib/dive";
+import type { Loop } from "@/lib/film";
+import FilmLoop, { startLoop } from "./FilmLoop";
 import { MotionFade, MovingStill, motionAllowed, type Motion } from "./movingStill";
 import styles from "./HeroFrame.module.css";
 
@@ -11,13 +13,14 @@ import styles from "./HeroFrame.module.css";
 
   It always shows as a plain picture first. Once the page has opened and settled, a moving
   still (movingStill.ts) tests the machine unseen, then fades in over the picture and lets one
-  thing in it move, the same way the film does at that stop.
+  thing in it move, the same way the film does at that stop. A frame with a cinemagraph loop
+  (FilmLoop.tsx) plays that loop the same way.
 
   Opened from a ring in the film, it starts zoomed into the ring's point and eases back out
   while the title comes up (lib/dive.ts).
 */
 
-type Props = { src: string; alt: string; motion?: Motion };
+type Props = { src: string; alt: string; motion?: Motion; loop?: Loop };
 
 /** The frames are 16:9 near enough (1344 x 752 and 1600 x 906). */
 const ASPECT = 16 / 9;
@@ -27,9 +30,10 @@ const DRAW_MS = 30;
 
 const later = (ms: number) => new Promise((r) => window.setTimeout(r, ms));
 
-export default function HeroFrame({ src, alt, motion }: Props) {
+export default function HeroFrame({ src, alt, motion, loop }: Props) {
   const boxRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const loopRef = useRef<HTMLVideoElement>(null);
   const dived = useRef(false);
   // Taken once per mount and kept, because React may run the effect below twice.
   const diveRef = useRef<Dive | null | undefined>(undefined);
@@ -141,11 +145,83 @@ export default function HeroFrame({ src, alt, motion }: Props) {
     };
   }, [src, motion]);
 
+  // The loop, on the same terms: after the page settles, once it plays and the machine keeps up.
+  useEffect(() => {
+    const el = loopRef.current;
+    const box = boxRef.current;
+    if (!loop || !el || !box || !motionAllowed()) return;
+    let disposed = false;
+    let started = false;
+    let starting = false;
+    let playing = false;
+    const fade = new MotionFade();
+    let raf = 0;
+    let prev = 0;
+    let inView = true;
+    // Phones and slow links take the half-size loop.
+    const conn = (navigator as Navigator & { connection?: { effectiveType?: string } }).connection;
+    const part = ["slow-2g", "2g", "3g"].includes(conn?.effectiveType ?? "") ? "m" : "hd";
+
+    const frame = (now: number) => {
+      raf = 0;
+      const dt = prev ? Math.min(0.1, (now - prev) / 1000) : 0;
+      prev = now;
+      const wanted = inView && !document.hidden && !fade.off;
+      if (wanted && !playing && !starting) {
+        starting = true;
+        void startLoop(el, loop, part, fade.opacity === 0).then((r) => {
+          starting = false;
+          playing = r === "playing";
+          if (r === "blocked") fade.off = true;
+          kick();
+        });
+      }
+      if (!wanted && playing) {
+        el.pause();
+        playing = false;
+      }
+      fade.step(dt, wanted && playing && el.readyState >= 3 && !el.error, true);
+      el.style.opacity = fade.opacity.toFixed(3);
+      el.style.visibility = fade.opacity > 0 ? "visible" : "hidden";
+      if (!fade.off && (wanted || fade.opacity > 0)) raf = requestAnimationFrame(frame);
+    };
+    const kick = () => {
+      if (!raf && started && !disposed && !document.hidden) {
+        prev = 0;
+        raf = requestAnimationFrame(frame);
+      }
+    };
+
+    const io = new IntersectionObserver(([entry]) => {
+      inView = entry.isIntersecting;
+      kick();
+    });
+    io.observe(box);
+    document.addEventListener("visibilitychange", kick);
+
+    (async () => {
+      await whenShown();
+      await later(dived.current ? OUT_MS : SETTLE_MS);
+      if (disposed) return;
+      started = true;
+      kick();
+    })();
+
+    return () => {
+      disposed = true;
+      if (raf) cancelAnimationFrame(raf);
+      io.disconnect();
+      document.removeEventListener("visibilitychange", kick);
+      el.pause();
+    };
+  }, [loop]);
+
   return (
     <div ref={boxRef} className={styles.box}>
       {/* The film's own files, already sized, so a page opened from the film has them cached. */}
       <Image src={src} alt={alt} fill preload unoptimized sizes="100vw" className={styles.image} />
       {motion && <canvas ref={canvasRef} className={styles.canvas} aria-hidden="true" />}
+      {loop && <FilmLoop loop={loop} videoRef={loopRef} />}
     </div>
   );
 }

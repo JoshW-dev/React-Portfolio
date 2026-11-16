@@ -33,7 +33,7 @@ import styles from "./FilmScroll.module.css";
   A pass stop is flown through: its short hold blends the clip before it into the clip after
   it, so the two clips play as one flight. Its words ride along on the flight.
 
-  Each stop can carry up to two hotspots, rings on things in the picture that open a
+  Each stop can carry up to three hotspots, rings on things in the picture that open a
   project. They show only while the playhead rests in the stop's hold.
 
   The scroll can run at most one stop ahead of where the film last landed. Past the middle of

@@ -28,7 +28,7 @@ export type Stop = {
   text?: string;
   /** The project this stop opens, as the caption's button. */
   link?: { href: string; label: string };
-  /** Up to two hotspots on things in the picture, each opening a project. */
+  /** Up to three hotspots on things in the picture, each opening a project. */
   spots?: Spot[];
   /** Flown through without a rest or a push-in; its words show during the flight. */
   pass?: boolean;
@@ -122,6 +122,7 @@ export const STOPS: Stop[] = [
     spots: [
       { x: 0.57, y: 0.205, label: "Bottleneck Radar", href: "/projects/bottleneck-radar" },
       { x: 0.414, y: 0.4, label: "Insider Signal", href: "/projects/insider-signal" },
+      { x: 0.6, y: 0.43, label: "HALATION", href: "/projects/halation" },
     ],
     place: "New York, at night",
     short: "New York",

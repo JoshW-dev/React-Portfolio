@@ -82,6 +82,9 @@ export default function HeroFrame({ src, alt, motion, loop }: Props) {
       prev = now;
       const ready = still.prepare(src, null, motion.map);
       const want = ready && inView && !document.hidden;
+      // For checks: where the moving still is (loading its pictures, ready, or turned off).
+      const state = fade.off ? "off" : ready ? "ready" : "loading";
+      if (canvas.dataset.state !== state) canvas.dataset.state = state;
       if (resume && ready) {
         if (now - mountAt < CARRY_MS) fade.resume();
         resume = false;

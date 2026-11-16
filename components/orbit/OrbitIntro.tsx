@@ -44,6 +44,19 @@ const EDGE = 14;
  * The film's opening shot: Earth from low orbit with Josh's CubeSat drifting in. three.js
  * loads inside the effect, so it stays out of the first bundle.
  */
+/**
+ * Lens-flare ghosts: t is how far along the line from the sun through the middle of the frame
+ * (1 is the middle, 2 the mirror of the sun), size in vmin, a tint and an opacity. Faint, so
+ * they read as glass catching the light rather than as shapes.
+ */
+const GHOSTS: { t: number; size: number; tint: string; o: number; ring?: boolean }[] = [
+  { t: 0.38, size: 2.4, tint: "255 214 170", o: 0.14 },
+  { t: 0.66, size: 7, tint: "150 200 255", o: 0.035, ring: true },
+  { t: 1.16, size: 3.6, tint: "190 255 220", o: 0.06 },
+  { t: 1.46, size: 12, tint: "170 150 255", o: 0.025, ring: true },
+  { t: 1.74, size: 1.7, tint: "255 236 200", o: 0.12 },
+];
+
 export default function OrbitIntro({ active = true, className, earth = true, poster = "/film/00-orbit-live.webp", control, onShown }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const labelRef = useRef<HTMLAnchorElement>(null);
@@ -207,7 +220,14 @@ export default function OrbitIntro({ active = true, className, earth = true, pos
       }
       const s = scene;
       const c = canvas;
-      if (control) control.current = { setHandover: (h) => s.setHandover(h) };
+      if (control)
+        control.current = {
+          setHandover: (h) => {
+            s.setHandover(h);
+            // The sun goes as the planet rolls into the film's first frame, which has none.
+            wrap.style.setProperty("--sun", (1 - h).toFixed(3));
+          },
+        };
 
       let onScreen = true;
       let shown = document.visibilityState === "visible";
@@ -312,6 +332,22 @@ export default function OrbitIntro({ active = true, className, earth = true, pos
       data-settled={settled ? "true" : "false"}
       data-hover={hover ? "true" : undefined}
     >
+      {/* The sun, low and to the left, where the planet's light comes from, with the faint
+          flare a lens makes of it: a streak through it and ghosts along the line from it
+          through the middle of the frame. */}
+      {earth ? (
+        <span className={styles.sky} aria-hidden="true">
+          <span className={styles.streak} />
+          <span className={styles.sun} />
+          {GHOSTS.map((g, i) => (
+            <span
+              key={i}
+              className={g.ring ? `${styles.ghost} ${styles.ghostRing}` : styles.ghost}
+              style={{ "--t": g.t, "--size": `${g.size}vmin`, "--tint": g.tint, "--o": g.o } as CSSProperties}
+            />
+          ))}
+        </span>
+      ) : null}
       <span ref={ringRef} className={styles.ring} aria-hidden="true">
         <span className={styles.pulse} />
       </span>

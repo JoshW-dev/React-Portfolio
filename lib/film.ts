@@ -95,6 +95,12 @@ export const STOPS: Stop[] = [
   },
   {
     still: "/film/02-rockies.webp",
+    loop: {
+      src: "/film/loops/02-rockies",
+      box: [0, 0.229779, 1, 0.301471],
+      frame: "/film/clips/orbit-rockies-last.webp",
+      aspect: 1920 / 1088,
+    },
     link: { href: "/projects/ai-education-assistant", label: "Open the education assistant project" },
     spots: [{ x: 0.6, y: 0.27, label: "AI tutor, 2019", href: "/projects/ai-education-assistant" }],
     place: "Alberta, Canada",
@@ -133,6 +139,12 @@ export const STOPS: Stop[] = [
   },
   {
     still: "/film/06-sf.webp",
+    loop: {
+      src: "/film/loops/06-sf",
+      box: [0, 0.389706, 1, 0.610294],
+      frame: "/film/clips/twin-sf-last.webp",
+      aspect: 1920 / 1088,
+    },
     link: { href: "/projects/alltus", label: "Open the Alltus project" },
     spots: [{ x: 0.612, y: 0.35, label: "Alltus", href: "/projects/alltus" }],
     place: "San Francisco Bay",

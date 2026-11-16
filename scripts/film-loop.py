@@ -10,6 +10,8 @@ This script:
   1. holds the camera still: each frame is moved back by the drift of the 'stable' box,
   2. matches its colour to the frame (each channel's mean and spread, over the top half),
   3. crossfades its last seconds into its first, so the end runs into the start with no jump,
+     or, with "loop": "pingpong", plays it forward then backward (for fog and clouds that
+     drift one way over the clip, which a crossfade would show as a pulse),
   4. crops it to the loop's box and writes public/film/loops/<name>-hd.mp4 (full size) and
      <name>-m.mp4 (half size),
   5. writes <name>-mask.png: white, with the alpha saying where the loop shows,
@@ -117,12 +119,14 @@ def main():
     ref = np.asarray(Image.open(ROOT / spec["frame"]).convert("RGB").resize((W, H), Image.LANCZOS))
 
     clip = list(frames(raw, W, H))
+    fits = None
     # Only the stretch where the camera holds still enough to line up ('use', in seconds).
     if "use" in spec:
         u0, u1 = spec["use"]
         clip = clip[round(u0 * fps) : round(u1 * fps)]
     n = len(clip)
-    k = round(spec["crossfade"] * fps)
+    pingpong = spec.get("loop") == "pingpong"
+    k = 0 if pingpong else round(spec["crossfade"] * fps)
 
     # Hold the camera still. Video models drift and zoom a little even when told not to, so
     # each frame is lined up with the stop's frame itself: patches of things that never move
@@ -192,13 +196,16 @@ def main():
     print(f"{n} frames at {fps:g} fps; colour scale {np.round(scale, 4)} offset {np.round(offset, 2)}")
 
     x0, y0, x1, y1 = spec["crop"]
+    # Even offsets, and sizes in fours so the half-size copy is even too (H.264 needs even).
     cx0, cy0 = round(x0 * W / 2) * 2, round(y0 * H / 2) * 2
-    cw, ch = round((x1 - x0) * W / 2) * 2, round((y1 - y0) * H / 2) * 2
+    cw, ch = min(W - cx0, round((x1 - x0) * W / 4) * 4), min(H - cy0, round((y1 - y0) * H / 4) * 4)
+    cw, ch = cw // 4 * 4, ch // 4 * 4
     OUT.mkdir(parents=True, exist_ok=True)
     hd = encoder(OUT / f"{name}-hd.mp4", cw, ch, fps, 20)
     m = encoder(OUT / f"{name}-m.mp4", cw // 2, ch // 2, fps, 23)
-    for j in range(n - k):
-        f = clip[j].astype(np.float32)
+    order = list(range(n)) + list(range(n - 2, 0, -1)) if pingpong else list(range(n - k))
+    for j, i in enumerate(order):
+        f = clip[i].astype(np.float32)
         if j < k:
             w = (j + 0.5) / k
             w = w * w * (3 - 2 * w)
@@ -219,6 +226,21 @@ def main():
     mw, mh = cw // 2, ch // 2
     alpha = poly_mask(spec["regions"], box, mw, mh, spec["feather"])
     alpha *= 1 - poly_mask(spec["exclude"], box, mw, mh, spec["exclude_feather"])
+    if fits is not None:
+        # Where a warp reached past the clip's edge it repeated edge pixels, which show as
+        # streaks; the loop shows only where every frame had real pixels, 6 px in.
+        ys, xs = np.mgrid[0:mh, 0:mw].astype(np.float32)
+        px = cx0 + (xs + 0.5) * cw / mw - W / 2
+        py = cy0 + (ys + 0.5) * ch / mh - H / 2
+        ok = np.ones((mh, mw), bool)
+        for a, b, tx, ty in fits:
+            sx_ = a * px - b * py + W / 2 + tx
+            sy_ = b * px + a * py + H / 2 + ty
+            ok &= (sx_ >= 6) & (sx_ <= W - 7) & (sy_ >= 6) & (sy_ <= H - 7)
+        edge = Image.fromarray((ok * 255).astype(np.uint8)).filter(ImageFilter.MinFilter(5))
+        edge = np.asarray(edge.filter(ImageFilter.GaussianBlur(3)), np.float32) / 255.0
+        alpha *= edge
+        print(f"edge cut: {100 * (1 - ok.mean()):.1f}% of the loop box had no real pixels in some frame")
     rgba = np.zeros((mh, mw, 4), np.uint8)
     rgba[..., :3] = 255
     rgba[..., 3] = np.clip(alpha * 255, 0, 255).round().astype(np.uint8)
@@ -238,7 +260,7 @@ def main():
     for f in sorted(OUT.glob(f"{name}-*")):
         print(f"{f.relative_to(ROOT)}  {f.stat().st_size // 1024} KB")
     print(f"box: left {box[0] * 100:.4f}%  top {box[1] * 100:.4f}%  width {(box[2] - box[0]) * 100:.4f}%  height {(box[3] - box[1]) * 100:.4f}%")
-    print(f"length {(n - k) / fps:.3f} s")
+    print(f"length {len(order) / fps:.3f} s")
 
 
 if __name__ == "__main__":

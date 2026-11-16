@@ -154,6 +154,24 @@
       "start": "plant-line-hd.mp4 frame 0 (= public/film/clips/plant-line-first.webp)",
       "used": "0 to 4.6 s; after that the camera cranes up and back with parallax",
       "prompt": "Locked-off tripod shot of an industrial hydrogen plant at sunrise. The camera never moves: no pan, no zoom, no push, no drift, no shake. Thick white steam pours continuously from the stacks for the whole clip and rolls up and to the right on a steady breeze, billowing, curling and thinning as it rises, at the same lively pace from the first second to the last. Nothing else moves: the towers, pipes, frosted ground, snowy mountains and sky stay perfectly still. Photorealistic documentary footage, natural light, no people, no birds, no cuts."
+    },
+    {
+      "loop": "02-rockies",
+      "job": "35ae4cd5-5c55-4804-8ee1-8ac80e5b48b4",
+      "seconds": 10,
+      "credits": 80,
+      "start": "rockies-plant-hd.mp4 frame 0",
+      "used": "0 to 2.5 s, ping-pong; the camera kept flying forward, so later frames don't line up",
+      "prompt": "Locked-off tripod shot of a Rocky Mountain valley at dawn, seen from a snowy ridge. The camera never moves: no pan, no zoom, no push, no drift, no shake. Low clouds and mist drift continuously along the mountainsides and through the valley from left to right, curling and thinning, at the same steady, clearly visible pace from the first second to the last. The lake surface ripples gently. The mountains, snow, forest, ridge and sky stay perfectly still. Photorealistic documentary footage, natural light, no people, no birds, no cuts."
+    },
+    {
+      "loop": "06-sf",
+      "job": "a95f019a-8b7e-44ec-8849-c5f240141cac",
+      "seconds": 10,
+      "credits": 80,
+      "start": "sf-towns-hd.mp4 frame 0",
+      "used": "0 to 4 s, ping-pong; the camera zooms about 1% a second and the fog on the right drains away",
+      "prompt": "Locked-off tripod shot of the Golden Gate Bridge at blue hour above a sea of fog. The camera never moves: no pan, no zoom, no push, no drift, no shake. The thick fog flows continuously under and around the bridge from left to right, rolling, billowing and curling around the tower, at the same steady, clearly visible pace from the first second to the last. Car headlights move along the bridge deck. The bridge towers, cables, city skyline, hills and sky stay perfectly still. Photorealistic documentary footage, natural light, no cuts."
     }
   ]
 }

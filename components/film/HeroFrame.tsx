@@ -145,7 +145,7 @@ export default function HeroFrame({ src, alt, motion }: Props) {
     <div ref={boxRef} className={styles.box}>
       {/* The film's own files, already sized, so a page opened from the film has them cached. */}
       <Image src={src} alt={alt} fill preload unoptimized sizes="100vw" className={styles.image} />
-      <canvas ref={canvasRef} className={styles.canvas} aria-hidden="true" />
+      {motion && <canvas ref={canvasRef} className={styles.canvas} aria-hidden="true" />}
     </div>
   );
 }

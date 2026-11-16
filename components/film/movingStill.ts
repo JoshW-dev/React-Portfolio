@@ -161,7 +161,11 @@ void main() {
 }`;
 
 const FRAG = `
+#ifdef GL_FRAGMENT_PRECISION_HIGH
+precision highp float;
+#else
 precision mediump float;
+#endif
 varying vec2 vUv;
 uniform sampler2D uA;
 uniform sampler2D uB;
@@ -208,14 +212,21 @@ void main() {
   // Ripple: a soft displacement, finer across than down, drifting toward the viewer.
   vec2 nuv = ua * vec2(0.32, 0.9) + vec2(0.0, -uTime * 0.02);
   float lean = 0.6;
+  float fine = 1.0;
   if (uHorizon > 0.0) {
-    // On the water's plane: across is x over depth, along is one over depth.
-    float d = max(ua.y - uHorizon, 0.02);
-    nuv = vec2((ua.x - 0.5) / d * 0.047, 0.037 / d) + vec2(0.0, uTime * 0.035);
+    // On the water's plane: across is x over depth, along is one over depth. Near the
+    // horizon that packs the rows finer than a pixel, which reads as grain, so closer than
+    // D0 to it the rows keep the spacing they have at D0 (about 3 pixels on a laptop), and
+    // the finer octave, which would fall under a pixel there, fades out.
+    const float D0 = 0.12;
+    float d = max(ua.y - uHorizon, 0.0);
+    float along = d > D0 ? 0.037 / d : 0.037 / D0 + (D0 - d) * 0.037 / (D0 * D0);
+    nuv = vec2((ua.x - 0.5) / max(d, 0.5 * D0) * 0.047, along) + vec2(0.0, uTime * 0.035);
     lean = 0.35;
+    fine = smoothstep(0.06, 0.16, d);
   }
   vec2 n = texture2D(uNoise, nuv).rg - 0.5;
-  n += 0.5 * (texture2D(uNoise, nuv * 2.3 + vec2(uTime * 0.015, -uTime * 0.028)).rg - 0.5);
+  n += 0.5 * fine * (texture2D(uNoise, nuv * 2.3 + vec2(uTime * 0.015, -uTime * 0.028)).rg - 0.5);
   vec2 rip = n * (s * uRipple) * vec2(1.0, uAspect * lean) + billow;
 
   // Two phases of the flow, half a cycle apart, each reset while its weight is zero. A slow

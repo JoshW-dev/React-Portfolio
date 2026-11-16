@@ -19,6 +19,9 @@
 
   A stop's motion makes one thing in its picture move while the film rests there. Its map
   comes from scripts/film-motion.py, which reads the regions in scripts/film-motion.json.
+  Only Doha's water and New York's traffic move. Warping a still reads as real on water and
+  on things that slide along a line, but smoke, clouds, fog and the belts wobble, so those
+  stops rest on the plain picture.
 */
 
 import type { Motion } from "@/components/film/movingStill";
@@ -74,7 +77,6 @@ export const STOPS: Stop[] = [
   },
   {
     still: "/film/02-rockies.webp",
-    motion: { map: "/film/motion/02-rockies.png", flow: 0.008, period: 3, billow: 0.014, ripple: 0.003, twinkle: 0.08 },
     link: { href: "/projects/ai-education-assistant", label: "Open the education assistant project" },
     spots: [{ x: 0.6, y: 0.27, label: "AI tutor, 2019", href: "/projects/ai-education-assistant" }],
     place: "Alberta, Canada",
@@ -83,7 +85,6 @@ export const STOPS: Stop[] = [
   },
   {
     still: "/film/03-plant.webp",
-    motion: { map: "/film/motion/03-plant.png", flow: 0.014, period: 2.5, billow: 0.022 },
     link: { href: "/projects/hydrogen-plant", label: "Open the hydrogen plant project" },
     spots: [{ x: 0.458, y: 0.25, label: "Clean hydrogen plant", href: "/projects/hydrogen-plant" }],
     place: "Hydrogen plant, Alberta",
@@ -92,7 +93,6 @@ export const STOPS: Stop[] = [
   },
   {
     still: "/film/04-line.webp",
-    motion: { map: "/film/motion/04-line.png", flow: 0.0517, period: 1, jitter: 0 },
     link: { href: "/projects/production-lines", label: "Open the production lines project" },
     spots: [{ x: 0.46, y: 0.15, label: "Two production lines", href: "/projects/production-lines" }],
     place: "Production lines, Texas and California",
@@ -101,7 +101,6 @@ export const STOPS: Stop[] = [
   },
   {
     still: "/film/05-twin.webp",
-    motion: { map: "/film/motion/05-twin.png", flow: 0.0517, period: 1, jitter: 0 },
     link: { href: "/projects/disco", label: "Open the Disco project" },
     spots: [{ x: 0.457, y: 0.14, label: "Disco", href: "/projects/disco" }],
     place: "The same line, as software",
@@ -110,7 +109,6 @@ export const STOPS: Stop[] = [
   },
   {
     still: "/film/06-sf.webp",
-    motion: { map: "/film/motion/06-sf.png", flow: 0.02, period: 3, billow: 0.016, ripple: 0.001, twinkle: 0.5 },
     link: { href: "/projects/alltus", label: "Open the Alltus project" },
     spots: [{ x: 0.612, y: 0.35, label: "Alltus", href: "/projects/alltus" }],
     place: "San Francisco Bay",
@@ -119,7 +117,6 @@ export const STOPS: Stop[] = [
   },
   {
     still: "/film/07-towns.webp",
-    motion: { map: "/film/motion/07-towns.png", flow: 0.008, period: 3.5, billow: 0.012, ripple: 0.0008, twinkle: 0.9 },
     link: { href: "/projects/alltus", label: "Open the Alltus project" },
     spots: [
       { x: 0.868, y: 0.665, label: "Alltus", href: "/projects/alltus" },
@@ -131,7 +128,7 @@ export const STOPS: Stop[] = [
   },
   {
     still: "/film/08-nyc.webp",
-    motion: { map: "/film/motion/08-nyc.png", flow: 0.04, period: 1.6, billow: 0.006 },
+    motion: { map: "/film/motion/08-nyc.png", flow: 0.04, period: 1.6 },
     link: { href: "/projects", label: "See all my projects" },
     spots: [
       { x: 0.57, y: 0.205, label: "Bottleneck Radar", href: "/projects/bottleneck-radar" },
@@ -144,7 +141,7 @@ export const STOPS: Stop[] = [
   },
   {
     still: "/film/09-doha.webp",
-    motion: { map: "/film/motion/09-doha.png", flow: 0.012, period: 5, billow: 0.01, ripple: 0.01, twinkle: 0.15, horizon: 0.535 },
+    motion: { map: "/film/motion/09-doha.png", ripple: 0.01, twinkle: 0.15, horizon: 0.535 },
     link: { href: "/about", label: "More about me" },
     spots: [
       { x: 0.54, y: 0.37, label: "Game of Society", href: "/projects/game-of-society" },

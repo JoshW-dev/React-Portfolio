@@ -127,10 +127,11 @@ export default async function ProjectPage({ params }: Props) {
       {frame ? (
         // The film's frame for this project, with the title where the film's caption sat.
         // data-film puts the site header over it in white (see globals.css).
-        <header className={styles.hero} data-film>
+        <header className={item.live ? `${styles.hero} ${styles.heroFull}` : styles.hero} data-film>
           {item.live === "rings" ? (
             // Framed a little left of centre, so narrow screens keep the funnel's edge in view.
-            <RingsBackdrop poster={frame.src} alt={frame.alt} position={[0.3, 0.5]} preload />
+            // A screen wider than 2:1 crops more from the top, so the outer red band stays in view.
+            <RingsBackdrop poster={frame.src} alt={frame.alt} position={[0.3, 0.7]} preload />
           ) : (
             <HeroFrame src={frame.src} alt={frame.alt} motion={motionForFrame(frame.src)} loop={loopForFrame(frame.src)} />
           )}

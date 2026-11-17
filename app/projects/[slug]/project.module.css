@@ -51,6 +51,24 @@
   pointer-events: none;
 }
 
+/*
+  A live scene fills the whole screen. The rings' outer red band ends inside it, and the
+  starry sky under the band fades into the page, so the picture has no bottom edge. Two
+  classes, so the shorter hero on narrow screens (below) does not apply here.
+*/
+.hero.heroFull {
+  height: 100vh;
+  height: 100svh;
+}
+
+.hero.heroFull::after {
+  background:
+    linear-gradient(to top, var(--bg), transparent 12%),
+    linear-gradient(to top, rgb(0 0 0 / 0.66), rgb(0 0 0 / 0.3) 30%, rgb(0 0 0 / 0) 58%),
+    linear-gradient(to right, rgb(0 0 0 / 0.28), rgb(0 0 0 / 0) 60%),
+    linear-gradient(to bottom, rgb(0 0 0 / 0.32), rgb(0 0 0 / 0) 18%);
+}
+
 .heroText {
   position: relative;
   z-index: 1;

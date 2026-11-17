@@ -9,6 +9,7 @@ import TwinCompare from "@/components/TwinCompare";
 import TransitionLink from "@/components/TransitionLink";
 import HeroNudge from "@/components/HeroNudge";
 import HeroFrame from "@/components/film/HeroFrame";
+import RingsBackdrop from "@/components/rings/RingsBackdrop";
 import { loopForFrame, motionForFrame } from "@/lib/film";
 import { breakdowns } from "@/components/breakdown/registry";
 import styles from "./project.module.css";
@@ -127,7 +128,12 @@ export default async function ProjectPage({ params }: Props) {
         // The film's frame for this project, with the title where the film's caption sat.
         // data-film puts the site header over it in white (see globals.css).
         <header className={styles.hero} data-film>
-          <HeroFrame src={frame.src} alt={frame.alt} motion={motionForFrame(frame.src)} loop={loopForFrame(frame.src)} />
+          {item.live === "rings" ? (
+            // Framed a little left of centre, so narrow screens keep the funnel's edge in view.
+            <RingsBackdrop poster={frame.src} alt={frame.alt} position={[0.3, 0.5]} preload />
+          ) : (
+            <HeroFrame src={frame.src} alt={frame.alt} motion={motionForFrame(frame.src)} loop={loopForFrame(frame.src)} />
+          )}
           <div className={`wrap ${styles.heroText}`} data-hero-text>
             <TransitionLink href="/projects" className={`link small ${styles.back}`}>
               All projects

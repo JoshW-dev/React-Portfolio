@@ -24,6 +24,11 @@ export type Work = {
   frame?: { src: string; alt: string };
   /** The page takes the dark theme, for a project whose frame is dark (space, night). */
   dark?: boolean;
+  /**
+   * The opening frame runs live instead of as a film still: "rings" is the Accretion Rings
+   * scene (components/rings), with `frame` as its first moment, shown until it starts.
+   */
+  live?: "rings";
   body: string[];
   stack?: string[];
   links: { label: string; href: string }[];
@@ -371,6 +376,12 @@ const entries: Work[] = [
     title: "Eigenvirtue",
     summary: "Pulls a single axis for virtue out of a language model's embedding space.",
     kind: "Research",
+    frame: {
+      src: "/work/eigenvirtue-rings.webp",
+      alt: "Rings of white, blue and red light turning around a dark funnel that rises out of the top of the frame",
+    },
+    live: "rings",
+    dark: true,
     image: {
       src: "/work/eigenvirtue.webp",
       width: 1000,

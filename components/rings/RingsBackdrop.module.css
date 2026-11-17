@@ -1,0 +1,26 @@
+/* The size of the screen from the top of its parent, as the film's hero frame is. */
+.box {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100vh;
+  height: max(100%, 100svh);
+  background: #000;
+}
+
+.image {
+  object-fit: cover;
+}
+
+/* The live scene: hidden until it has tested the machine, then it fades in. */
+.canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}

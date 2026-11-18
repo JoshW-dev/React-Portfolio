@@ -35,8 +35,8 @@ type Mode = "loading" | "live" | "fallback";
 const HREF = "/projects/cubesat";
 /** After this long without a planet, the poster stands in and the planet joins it later. */
 const LATE_MS = 2600;
-/** Over the lines, the planet waits this long from their start: they draw in first. */
-const LINES_MIN_MS = 2400;
+/** Over the lines, the planet waits this long from their start, so they have time to turn. */
+const LINES_MIN_MS = 4500;
 /** How long the planet takes to fade up over the lines (OrbitIntro.module.css). */
 const PLANET_OVER_LINES_MS = 1600;
 /** Gap between the ring and the leader line, the leader's length, and the gap to the label. */
@@ -300,9 +300,15 @@ export default function OrbitIntro({ active = true, className, earth = true, pos
             window.setTimeout(() => {
               if (cancelled) return;
               isLive = true;
+              if (lines) {
+                // The planet ran unseen under the lines: bring the satellite in from the start.
+                scene?.rewind();
+                wasSettled = false;
+                setSettled(false);
+                window.setTimeout(stopLines, PLANET_OVER_LINES_MS + 200);
+              }
               setMode("live");
               tell(true);
-              if (lines) window.setTimeout(stopLines, PLANET_OVER_LINES_MS + 200);
             }, wait);
           },
           onFail: toFallback,

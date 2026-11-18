@@ -99,6 +99,8 @@ export type OrbitSceneOptions = {
 
 export type OrbitScene = {
   setActive(active: boolean): void;
+  /** Starts the satellite's entrance again, for a planet that ran unseen under the lines. */
+  rewind(): void;
   resize(): void;
   /** True when a viewport point is over the satellite. */
   hitTest(clientX: number, clientY: number): boolean;
@@ -370,8 +372,10 @@ export function createOrbitScene(T: Three, opts: OrbitSceneOptions): OrbitScene 
   const KP = OMEGA * OMEGA;
   const KD = 2 * 0.72 * OMEGA;
   const MAX_ACC = 3.2;
-  const q = new T.Quaternion().setFromEuler(new T.Euler(0.7, 2.2, -0.5));
-  const w = new T.Vector3(0.62, -0.88, 0.42);
+  const Q0 = new T.Euler(0.7, 2.2, -0.5);
+  const W0 = new T.Vector3(0.62, -0.88, 0.42);
+  const q = new T.Quaternion().setFromEuler(Q0);
+  const w = W0.clone();
   let simT = T_ENTER;
   const qTarget = new T.Quaternion();
   const qGoal = new T.Quaternion();
@@ -750,6 +754,12 @@ export function createOrbitScene(T: Three, opts: OrbitSceneOptions): OrbitScene 
     },
     holdCapture() {
       lead0 = 0;
+    },
+    rewind() {
+      time = 0;
+      simT = T_ENTER;
+      q.setFromEuler(Q0);
+      w.copy(W0);
     },
     frameMs: () => avgMs,
     debug: {

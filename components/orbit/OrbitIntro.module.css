@@ -68,6 +68,18 @@
   --sy: 13%;
 }
 
+/* With the planet, the sun is up from the first paint, so the page never opens on black. */
+.wrap:not([data-earth="false"]) .sky {
+  opacity: var(--sun, 1);
+  animation: sky-in 0.8s var(--ease);
+}
+
+@keyframes sky-in {
+  from {
+    opacity: 0;
+  }
+}
+
 .wrap[data-mode="live"] .sky,
 .wrap[data-lines] .sky,
 .wrap[data-mode="fallback"] .sky,

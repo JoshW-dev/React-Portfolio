@@ -30,18 +30,29 @@ precision highp float;
 uniform int uDots;        // dots on the longest line; shorter lines use fewer
 uniform int uLines;
 uniform vec2 uBeta;       // latitude of the farthest (horizon) and nearest line, radians
-uniform float uTime, uPx, uOmega, uGain;
+uniform float uTime, uPx, uOmega, uGain, uStreak;
+uniform vec2 uViewPx;     // canvas size, device px
 uniform mat3 uToCam;      // world to camera
 uniform vec3 uCam;        // camera position, Earth radii
 uniform vec4 uProj;       // camera space to screen: x scale, y scale, y offset, unused
 uniform vec3 uSun;
 uniform vec4 uRevealAt;  // draw-in: front centre y, aspect, front radius, edge glow
 out vec3 vCol;
+flat out vec2 vDir;       // streak direction on screen
+flat out float vLen, vSz; // streak length and dot size, device px
 
 const float PI = 3.14159265;
 float hash(float n) { return fract(sin(n * 12.9898 + 4.1414) * 43758.5453); }
 
-void cull() { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); gl_PointSize = 0.0; vCol = vec3(0.0); }
+void cull() {
+  gl_Position = vec4(2.0, 2.0, 2.0, 1.0); gl_PointSize = 0.0;
+  vCol = vec3(0.0); vDir = vec2(1.0, 0.0); vLen = 0.0; vSz = 1.0;
+}
+vec2 toScreen(vec3 P, out float w) {
+  vec3 v = uToCam * (P - uCam);
+  w = -v.z;
+  return vec2(v.x / w * uProj.x, v.y / w * uProj.y + uProj.z);
+}
 
 void main() {
   int line = gl_VertexID / uDots;
@@ -70,11 +81,18 @@ void main() {
   vec3 P = vec3(r * cos(phi), r * sin(phi), z);
 
   float facing = dot(P, uCam) - 1.0;
-  vec3 v = uToCam * (P - uCam);
-  if (facing <= 0.0 || v.z > -1e-4) { cull(); return; }
+  float w;
+  vec2 ndc = toScreen(P, w);
+  if (facing <= 0.0 || w < 1e-4) { cull(); return; }
 
-  float w = -v.z;
-  vec2 ndc = vec2(v.x / w * uProj.x, v.y / w * uProj.y + uProj.z);
+  // A short streak along the way the dot is going (where it will be uStreak seconds on), so
+  // fast dots read as motion and never flicker between frames.
+  float speed = omega * (1.0 + surge * sin(rate * uTime + ph));
+  float w2;
+  vec2 ndc2 = toScreen(vec3(r * cos(phi + speed * uStreak), r * sin(phi + speed * uStreak), z), w2);
+  vec2 dpx = (ndc2 - ndc) * 0.5 * uViewPx;
+  float dl = length(dpx);
+  float len = min(dl, 30.0 * uPx);
 
   // Drawn in on arrival: a front spreads out from the top of the horizon across the screen,
   // so each line grows outward from the middle, with a brighter edge where it is drawing.
@@ -86,6 +104,11 @@ void main() {
   // A few bright lines among many faint ones, in loose bands, so each line reads on its own.
   float band = 0.6 + 0.4 * sin(beta * 47.0 + 2.0) * sin(beta * 13.0 + 0.7);
   bright *= (0.18 + 2.6 * pow(hash(fl * 5.3 + 9.1), 3.0)) * band;
+  // Brighter runs along each line travel with its dots, so the turning shows even where the
+  // dots blur into one line, and each dot varies a little on its own.
+  float runs = floor(mix(4.0, 12.0, h2));
+  float g = 0.5 + 0.5 * sin(2.0 * PI * (runs * (float(k) + 0.5) / n + h1));
+  bright *= (0.2 + 1.7 * g * g * g) * (0.6 + 0.8 * hash(fl * 3.7 + float(k) * 0.731));
 
   // Light from the planet's own sun.
   float l = dot(P, uSun);
@@ -103,18 +126,27 @@ void main() {
   float dist = length(P - uCam);
   float sz = uPx * 2.1 * clamp(0.42 / dist, 0.8, 1.8);
   float szc = max(sz, 1.0);
-  bright *= (sz * sz) / (szc * szc);
-  gl_PointSize = szc;
+  // The same light whether a dot is still or drawn out into a streak.
+  bright *= (sz * sz) / (szc * szc) * szc / (szc + len);
+  gl_PointSize = szc + len;
   gl_Position = vec4(ndc, 0.0, 1.0);
   vCol = col * bright * uGain;
+  vDir = dl > 1e-3 ? dpx / dl : vec2(1.0, 0.0);
+  vLen = len;
+  vSz = szc;
 }`;
 
 const POINT_FS = `#version 300 es
 precision mediump float;
 in vec3 vCol;
+flat in vec2 vDir;
+flat in float vLen, vSz;
 out vec4 o;
 void main() {
-  vec2 d = gl_PointCoord - 0.5;
+  // Distance from the streak's centre line, in dot widths (point coords run down the screen).
+  vec2 p = (gl_PointCoord - 0.5) * (vSz + vLen) * vec2(1.0, -1.0);
+  float a = clamp(dot(p, vDir), -0.5 * vLen, 0.5 * vLen);
+  vec2 d = (p - a * vDir) / vSz;
   o = vec4(vCol * exp(-dot(d, d) * 5.5), 1.0);
 }`;
 
@@ -198,9 +230,11 @@ export type EarthLinesOptions = {
 const LINES = 240;
 const DOTS = 900;
 /** Base pace along the circles, radians a second (the live planet drifts at 0.007). */
-const OMEGA = 0.016;
+const OMEGA = 0.045;
 /** Seconds the draw-in takes to reach the farthest corner. */
-const REVEAL = 1.9;
+const REVEAL = 0.85;
+/** Streak length, as seconds of each dot's own motion. */
+const STREAK = 0.03;
 
 export class EarthLines {
   readonly ok: boolean;
@@ -379,14 +413,16 @@ export class EarthLines {
     gl.uniform2fv(D.u.uBeta, this.beta);
     gl.uniform1f(D.u.uTime, t);
     // The draw-in front: from the top of the horizon to the farthest corner in REVEAL seconds.
-    const k = Math.min(1, Math.max(0, (t - 0.1) / REVEAL));
-    const e = 1 - Math.pow(1 - k, 2.2);
-    this.revealAt[2] = e * this.reach + 0.001;
+    const k = Math.min(1, Math.max(0, t / REVEAL));
+    const e = 1 - Math.pow(1 - k, 2.4);
+    this.revealAt[2] = 0.12 + e * this.reach;
     this.revealAt[3] = 1 - k;
     gl.uniform4fv(D.u.uRevealAt, this.revealAt);
     gl.uniform1f(D.u.uPx, this.dpr);
     gl.uniform1f(D.u.uOmega, OMEGA);
-    gl.uniform1f(D.u.uGain, (0.7 * DOTS) / this.dots);
+    gl.uniform1f(D.u.uStreak, STREAK);
+    gl.uniform2f(D.u.uViewPx, T.scene.w, T.scene.h);
+    gl.uniform1f(D.u.uGain, (0.95 * DOTS) / this.dots);
     gl.uniformMatrix3fv(D.u.uToCam, false, this.toCam);
     gl.uniform3fv(D.u.uCam, this.cam);
     gl.uniform4fv(D.u.uProj, this.proj);

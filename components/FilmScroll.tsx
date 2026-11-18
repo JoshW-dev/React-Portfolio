@@ -51,6 +51,12 @@ import styles from "./FilmScroll.module.css";
   the gesture ends, the page is moved to that stop too, so the next scroll starts from there.
   The film is pinned, so the move does not show.
 
+  On a touch screen one swipe moves one stop. Once a touch gesture has moved the page a short
+  way, it picks the next stop that way (mid-flight: the end of the flight, or back where it
+  came from) and the film flies there, however far the finger and the momentum carry the page.
+  When the gesture ends, the page is moved to that stop. A mouse wheel or trackpad still
+  scrolls through each hold as before.
+
   Once the film rests on a stop, one thing in its picture starts to move (film/movingStill.ts):
   a canvas over the layers fades in drawing the same frames, then lets its motion grow. It
   fades out as a flight starts. With reduced motion, without WebGL, or on a machine that
@@ -252,6 +258,8 @@ const destination = (pos: number, way: number) => {
 };
 /** No scroll for this long ends a gesture, and a page left between two stops moves on. */
 const IDLE_MS = 160;
+/** A touch gesture that moves the page this share of the screen flies one stop. */
+const SWIPE_SHARE = 0.08;
 /** How long a far jump stays on black waiting for the place's picture to load. */
 const DIP_WAIT_MAX = 3000;
 /**
@@ -607,6 +615,11 @@ export default function FilmScroll({ frames = NO_FRAMES }: { frames?: Record<str
     let snapNext = false; // the next frame puts the playhead on the scroll, for a jump
     let jumping = false;
     let lastScrollAt = performance.now();
+    // A touch gesture runs from a finger down until the page has been still for IDLE_MS after
+    // the last finger lifts, momentum included. swipe: where the page was when it started,
+    // until it picks a stop. aim: where it sends the film, kept until the page is still.
+    let swipe: { y0: number } | null = null;
+    let aim: number | null = null;
 
     const targetOf = (c: Clip) => Math.min(Math.max(0, c.dur - END_GUARD), clipProgress(c.hop, p) * c.dur);
 
@@ -713,6 +726,14 @@ export default function FilmScroll({ frames = NO_FRAMES }: { frames?: Record<str
       lastY = y0;
       idleSoon();
       if (!gateOn()) return;
+      // A swipe that has moved the page far enough picks its stop, once per gesture.
+      if (swipe) {
+        const moved = y0 - swipe.y0;
+        if (Math.abs(moved) >= SWIPE_SHARE * window.innerHeight) {
+          aimSwipe(moved > 0 ? 1 : -1);
+          swipe = null;
+        }
+      }
       const i = RESTS.indexOf(home);
       const lo = i > 0 ? yOf(gateAt(RESTS[i - 1])) : -Infinity;
       const hi = i < RESTS.length - 1 ? yOf(gateAt(RESTS[i + 1])) : Infinity;
@@ -725,22 +746,53 @@ export default function FilmScroll({ frames = NO_FRAMES }: { frames?: Record<str
     // to, so the next scroll starts there. A finger on the screen holds this off until it lifts.
     const settlePage = () => {
       idleTimer = 0;
-      if (disposed || !gateOn() || touching || !filmOnScreen()) return;
+      if (disposed || touching) return;
       const wait = IDLE_MS - (performance.now() - lastScrollAt);
       if (wait > 1) {
         idleTimer = window.setTimeout(settlePage, wait);
         return;
       }
+      // The gesture is over.
+      const aimed = aim;
+      aim = null;
+      swipe = null;
+      if (!gateOn() || !filmOnScreen()) return;
       const r = wrap.getBoundingClientRect();
       const at = clamp01(-r.top / Math.max(1, r.height - window.innerHeight)) * TOTAL;
-      const to = destination(at, way);
+      const to = aimed ?? destination(at, way);
       if (Math.abs(to - at) > 0.5) window.scrollTo({ top: yOf(to), behavior: "instant" });
     };
     function idleSoon() {
       if (!idleTimer && !disposed) idleTimer = window.setTimeout(settlePage, IDLE_MS);
     }
-    const onTouchStart = () => {
+
+    /**
+     * The rest stop a swipe in direction d flies to, or -1. From a stop it is the next one that
+     * way. Mid-flight, a swipe the same way keeps the flight, and the other way turns it back.
+     */
+    const swipeTarget = (d: number) => {
+      const to = restIn(goal);
+      if (to < 0) return -1;
+      if (restIn(p) !== to && Math.sign(goal - p) === d) return to;
+      return RESTS[RESTS.indexOf(to) + d] ?? -1;
+    };
+    const aimSwipe = (d: number) => {
+      const k = swipeTarget(d);
+      if (k < 0) return;
+      // The film is on a stop: it has landed there, whether or not it has settled yet.
+      const at = restIn(p);
+      if (at >= 0 && at === restIn(goal)) {
+        home = at;
+        settling = -1;
+      }
+      aim = d > 0 ? landAt(k) : backAt(k);
+      kick();
+    };
+
+    const onTouchStart = (e: TouchEvent) => {
       touching = true;
+      // One finger with the film on screen starts a swipe. A second finger (a pinch) ends it.
+      swipe = e.touches.length === 1 && filmOnScreen() ? { y0: window.scrollY } : null;
     };
     const onTouchEnd = (e: TouchEvent) => {
       if (e.touches.length) return;
@@ -758,6 +810,8 @@ export default function FilmScroll({ frames = NO_FRAMES }: { frames?: Record<str
     const jumpTo = (k: number) => {
       if (jumping || disposed) return;
       skipIntro();
+      aim = null;
+      swipe = null;
       const i = RESTS.indexOf(home);
       const j = RESTS.indexOf(k);
       if (j < 0) return;
@@ -1570,7 +1624,7 @@ export default function FilmScroll({ frames = NO_FRAMES }: { frames?: Record<str
       const rect = wrap.getBoundingClientRect();
       const span = Math.max(1, rect.height - window.innerHeight);
       x = clamp01(-rect.top / span) * TOTAL;
-      goal = gateOn() ? destination(x, way) : x;
+      goal = gateOn() ? (aim ?? destination(x, way)) : x;
 
       const waited = waitHop;
       // Nobody sees the playhead catch up on the first frame, with reduced motion, or off screen.
@@ -1690,6 +1744,9 @@ export default function FilmScroll({ frames = NO_FRAMES }: { frames?: Record<str
         },
         get home() {
           return home;
+        },
+        get aim() {
+          return aim;
         },
         jump: (k: number) => jumpTo(k),
         get waiting() {

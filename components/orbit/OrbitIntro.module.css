@@ -40,6 +40,25 @@
   opacity: 1;
 }
 
+/* The lines (earthLines.ts): on at once, under the planet's canvas. */
+.lines {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Over the lines, the planet comes up from the bottom of the screen: a wipe with a 28% soft
+   edge (WIPE_FEATHER in OrbitIntro.tsx) and a fade, driven frame by frame from OrbitIntro.
+   --wipe is how far up the planet reaches in percent of the height, --planet its opacity. */
+.wrap[data-lines] .canvas {
+  transition: none;
+  opacity: var(--planet, 0);
+  -webkit-mask-image: linear-gradient(to top, #000 calc(var(--wipe, 0) * 1% - 28%), transparent calc(var(--wipe, 0) * 1%));
+  mask-image: linear-gradient(to top, #000 calc(var(--wipe, 0) * 1% - 28%), transparent calc(var(--wipe, 0) * 1%));
+}
+
 /* The sun: a white disc with a wide bloom and six faint diffraction spikes, as a camera sees
    it in space, plus a thin streak and a few lens ghosts. It all comes up with the planet (or
    the poster) and goes as the planet rolls into the film's first frame, which has no sun
@@ -54,7 +73,20 @@
   --sy: 13%;
 }
 
+/* With the planet, the sun is up from the first paint, so the page never opens on black. */
+.wrap:not([data-earth="false"]) .sky {
+  opacity: var(--sun, 1);
+  animation: sky-in 0.8s var(--ease);
+}
+
+@keyframes sky-in {
+  from {
+    opacity: 0;
+  }
+}
+
 .wrap[data-mode="live"] .sky,
+.wrap[data-lines] .sky,
 .wrap[data-mode="fallback"] .sky,
 .wrap[data-late="true"] .sky {
   opacity: var(--sun, 1);

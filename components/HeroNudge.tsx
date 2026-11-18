@@ -9,7 +9,8 @@ import { useEffect } from "react";
   touched the page, if the page did not open at the top, or with reduced motion on.
 */
 
-const DELAY_MS = 900; // after the page transition has finished
+const DELAY_MS = 900; // after the page transition has finished and the hero's picture shows
+const WAIT_MAX_MS = 6000; // a picture still loading by then is not waited for
 const SCROLL_MS = 1100;
 const INPUTS = ["wheel", "touchstart", "keydown", "pointerdown"] as const;
 
@@ -46,11 +47,17 @@ export default function HeroNudge() {
       raf = requestAnimationFrame(step);
     };
 
-    // Waits out the page transition (TransitionLink marks <html> while it runs).
+    // Waits out the page transition (TransitionLink marks <html> while it runs) and the hero's
+    // sketch, until its picture has faded in (components/film/sketchReveal.ts).
+    const busy = () => {
+      if (document.documentElement.dataset.vt) return true;
+      const sketch = document.querySelector<HTMLElement>("article > header[data-film] [data-sketch]")?.dataset.sketch;
+      return !!sketch && sketch !== "none";
+    };
     const start = performance.now();
     const wait = () => {
       if (stopped) return;
-      if (document.documentElement.dataset.vt && performance.now() - start < 3000) {
+      if (busy() && performance.now() - start < WAIT_MAX_MS) {
         timer = window.setTimeout(wait, 100);
         return;
       }

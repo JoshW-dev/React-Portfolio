@@ -1,16 +1,19 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { whenShown } from "@/lib/handoff";
 import { MotionFade, motionAllowed } from "@/components/film/movingStill";
+import { firstState, useSketchReveal } from "@/components/film/sketchReveal";
+import sketchStyles from "@/components/film/HeroSketch.module.css";
 import { RingsEngine } from "./ringsEngine";
 import styles from "./RingsBackdrop.module.css";
 
 /*
-  The Accretion Rings scene as a backdrop. It always shows as a plain picture first: a still
-  of the scene at its first moment, framed by the same rules (object-fit: cover at
-  `position`). Once the page has settled, the live scene builds its dots, tests the machine
+  The Accretion Rings scene as a backdrop. On a fresh visit it opens on a vector sketch of its
+  picture (components/film/HeroSketch.tsx) that draws in while the picture loads. Then it
+  shows as a plain picture: a still of the scene at its first moment, framed by the same rules
+  (object-fit: cover at `position`). Once the page has settled, the live scene builds its dots, tests the machine
   unseen (MotionFade, shared with the film), then fades in over the picture and lets the
   rings start turning, slowly at first. A slow machine keeps the picture.
 */
@@ -23,15 +26,20 @@ type Props = {
   /** Sizes the box; by default it fills the screen's height from the top of its parent. */
   className?: string;
   preload?: boolean;
+  /** A vector sketch of the poster, shown until the poster has loaded. */
+  sketch?: ReactNode;
 };
 
 const SETTLE_MS = 700;
 const later = (ms: number) => new Promise((r) => window.setTimeout(r, ms));
 
-export default function RingsBackdrop({ poster, alt, position = [0.5, 0.5], className, preload }: Props) {
+export default function RingsBackdrop({ poster, alt, position = [0.5, 0.5], className, preload, sketch }: Props) {
   const boxRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
   const [px, py] = position;
+  // The swap from the sketch to the poster.
+  const { fromHtml, settled } = useSketchReveal(boxRef, imgRef, { settleMs: SETTLE_MS });
 
   useEffect(() => {
     const box = boxRef.current;
@@ -84,7 +92,7 @@ export default function RingsBackdrop({ poster, alt, position = [0.5, 0.5], clas
 
     (async () => {
       await whenShown();
-      await later(SETTLE_MS);
+      await later(await settled());
       if (disposed) return;
       const coarse = window.matchMedia("(pointer: coarse)").matches;
       engine = new RingsEngine(canvas, { position: [px, py], density: coarse ? 0.55 : 1, onReady: kick });
@@ -105,14 +113,22 @@ export default function RingsBackdrop({ poster, alt, position = [0.5, 0.5], clas
   }, [px, py]);
 
   return (
-    <div ref={boxRef} className={className ?? styles.box}>
+    <div
+      ref={boxRef}
+      className={className ?? styles.box}
+      data-sketch={sketch ? firstState(fromHtml) : undefined}
+      // The sketch's script may set data-sketch and data-js before the page hydrates.
+      suppressHydrationWarning
+    >
+      {sketch}
       <Image
+        ref={imgRef}
         src={poster}
         alt={alt}
         fill
         preload={preload}
         sizes="100vw"
-        className={styles.image}
+        className={`${styles.image} ${sketchStyles.photo}`}
         style={{ objectPosition: `${px * 100}% ${py * 100}%` }}
       />
       <canvas ref={canvasRef} className={styles.canvas} aria-hidden="true" />

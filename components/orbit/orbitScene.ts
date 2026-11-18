@@ -2,6 +2,7 @@ import type * as THREE from "three";
 import { buildCubeSat } from "./cubesat";
 import { TEXTURES, earthFragment, earthVertex, latLon, loadImage, makeTexture, type Tier } from "./earth";
 import { slowLink } from "@/lib/netRate";
+import { ALT, CAPTURE, HORIZON_Y, SUN_AZ, SUN_EL } from "./orbitFrame";
 
 /*
   The film's opening shot: Earth from low orbit with a 3U CubeSat drifting in, tumbling,
@@ -22,13 +23,10 @@ import { slowLink } from "@/lib/netRate";
 
 type Three = typeof THREE;
 
-/** Camera altitude in Earth radii: about 1,800 km. */
-const ALT = 0.28;
+// ALT, the sun, HORIZON_Y and CAPTURE live in orbitFrame.ts, shared with the lines drawn
+// while this scene loads (earthLines.ts).
 /** The point under the camera at the start and the heading it looks along (degrees). */
 const START = { lat: 38.5, lon: -116.5, heading: 10 };
-/** Sun azimuth (degrees from north, toward east) and elevation at the start point. */
-const SUN_AZ = 281;
-const SUN_EL = 6;
 /** The old steady ground drift in radians a second: about one frame-width every 75 seconds. */
 const SPIN = 0.007;
 /**
@@ -45,15 +43,6 @@ const GRADE: [number, number, number] = [1, 0.97, 1.09];
 const LEAD = SPIN * 12;
 /** Seconds for the remaining turn to fall to 37%: fast enough to see at once, then a creep. */
 const LEAD_TAU = 12;
-/** Where the top of the horizon sits, in normalised device coordinates (0.2 = 40% down). */
-const HORIZON_Y = 0.2;
-/**
- * How the still and clip 0 were made from this scene. The still is the top 810 rows of a
- * 1440 x 900 frame (vertical field of view 46 degrees); the clip keeps its full height and
- * crops its sides to the clip's 1920 x 1088 shape. Measured by fitting the still to frames
- * rendered here and the clip's first frame to the still.
- */
-const CAPTURE = { width: 1440, height: 900, fov: 46, clipRows: 810, clipAspect: 1920 / 1088 };
 
 /** Choreography, in seconds from the first frame (the planet's fade-up starts there). */
 const T_ENTER = 2.6;
@@ -110,6 +99,8 @@ export type OrbitSceneOptions = {
 
 export type OrbitScene = {
   setActive(active: boolean): void;
+  /** Starts the satellite's entrance again, for a planet that ran unseen under the lines. */
+  rewind(): void;
   resize(): void;
   /** True when a viewport point is over the satellite. */
   hitTest(clientX: number, clientY: number): boolean;
@@ -381,8 +372,10 @@ export function createOrbitScene(T: Three, opts: OrbitSceneOptions): OrbitScene 
   const KP = OMEGA * OMEGA;
   const KD = 2 * 0.72 * OMEGA;
   const MAX_ACC = 3.2;
-  const q = new T.Quaternion().setFromEuler(new T.Euler(0.7, 2.2, -0.5));
-  const w = new T.Vector3(0.62, -0.88, 0.42);
+  const Q0 = new T.Euler(0.7, 2.2, -0.5);
+  const W0 = new T.Vector3(0.62, -0.88, 0.42);
+  const q = new T.Quaternion().setFromEuler(Q0);
+  const w = W0.clone();
   let simT = T_ENTER;
   const qTarget = new T.Quaternion();
   const qGoal = new T.Quaternion();
@@ -761,6 +754,12 @@ export function createOrbitScene(T: Three, opts: OrbitSceneOptions): OrbitScene 
     },
     holdCapture() {
       lead0 = 0;
+    },
+    rewind() {
+      time = 0;
+      simT = T_ENTER;
+      q.setFromEuler(Q0);
+      w.copy(W0);
     },
     frameMs: () => avgMs,
     debug: {

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import TransitionLink from "@/components/TransitionLink";
 import { filmUrl } from "@/lib/filmUrl";
+import { EarthLines } from "./earthLines";
 import type { OrbitScene, SatFrame } from "./orbitScene";
 import styles from "./OrbitIntro.module.css";
 
@@ -25,7 +26,7 @@ type Props = {
   poster?: string;
   /** Filled with the scene's controls once it exists. */
   control?: { current: OrbitControl | null };
-  /** Called once, when the planet (or the poster standing in for it) is first on screen. */
+  /** Called once, when the planet (or the lines or poster standing in for it) is first on screen. */
   onShown?: (live: boolean) => void;
 };
 
@@ -34,6 +35,12 @@ type Mode = "loading" | "live" | "fallback";
 const HREF = "/projects/cubesat";
 /** After this long without a planet, the poster stands in and the planet joins it later. */
 const LATE_MS = 2600;
+/** Over the lines, the planet waits this long from their start, so they have time to turn. */
+const LINES_MIN_MS = 4500;
+/** The planet comes up over the lines from the bottom of the screen: a wipe this long... */
+const WIPE_MS = 2400;
+/** ...with a soft edge this tall, in percent of the height (the same in OrbitIntro.module.css). */
+const WIPE_FEATHER = 28;
 /** Gap between the ring and the leader line, the leader's length, and the gap to the label. */
 const GAP = 6;
 const LEADER = 30;
@@ -109,8 +116,110 @@ export default function OrbitIntro({ active = true, className, earth = true, pos
     const last = { cx: 0, cy: 0, radius: 0, settled: false };
     const cleanups: (() => void)[] = [];
 
+    // ---- The lines ------------------------------------------------------------------------
+    // Earth's curvature in lines (earthLines.ts), drawn at once while three.js and the
+    // planet's textures load. When it is ready, and not before the lines have had time to
+    // turn, the planet wipes up over them from the bottom of the screen.
+    let lines: EarthLines | null = null;
+    let linesCanvas: HTMLCanvasElement | null = null;
+    let linesRaf = 0;
+    let linesAt = 0;
+    let linesT = 0;
+    let linesPrev = 0;
+    let linesFrames = 0;
+    let linesSlow = 0;
+    let wipeAt = 0;
+    let planetSync: () => void = () => {};
+    let sceneHandover: ((h: number) => void) | null = null;
+    const stopLines = () => {
+      if (linesRaf) cancelAnimationFrame(linesRaf);
+      linesRaf = 0;
+      lines?.dispose();
+      lines = null;
+      linesCanvas?.remove();
+      linesCanvas = null;
+      delete wrap.dataset.lines;
+    };
+    const linesFrame = (now: number) => {
+      linesRaf = 0;
+      if (!lines) return;
+      const dt = linesPrev ? now - linesPrev : 16;
+      linesPrev = now;
+      linesT += Math.min(dt, 100) / 1000;
+      // A machine that can't keep up gets the poster instead.
+      linesSlow = linesSlow * 0.9 + (dt > 45 ? 0.1 : 0);
+      if (++linesFrames > 20 && linesSlow > 0.6 && !isLive) {
+        stopLines();
+        isLate = true;
+        setLate(true);
+        scene?.holdCapture();
+        return;
+      }
+      if (wipeAt) {
+        // The planet wipes up from the bottom and fades in as it goes; the lines glow just
+        // ahead of its edge, and are freed once it has passed the top.
+        // The whole wipe runs over the planet: it ends once the soft edge has cleared the
+        // atmosphere above the horizon (the sky is black in both pictures).
+        const k = Math.min(1, (now - wipeAt) / WIPE_MS);
+        const e = 0.5 - 0.5 * Math.cos(Math.PI * k);
+        const top = Math.min(100, (lines.horizonTop + 1) * 50 + 14) + WIPE_FEATHER;
+        const front = k >= 1 ? 100 + WIPE_FEATHER : e * top;
+        wrap.style.setProperty("--wipe", front.toFixed(2));
+        wrap.style.setProperty("--planet", Math.min(1, 0.15 + k * 1.5).toFixed(3));
+        lines.setWipe(-1 + front / 50, 1 - k);
+        if (k >= 1) {
+          stopLines();
+          return;
+        }
+      }
+      lines.draw(linesT);
+      if (activeRef.current && document.visibilityState === "visible") linesRaf = requestAnimationFrame(linesFrame);
+    };
+    const linesSync = () => {
+      if (lines && !linesRaf && activeRef.current && document.visibilityState === "visible") {
+        linesPrev = 0;
+        linesRaf = requestAnimationFrame(linesFrame);
+      }
+    };
+    // As the film starts its first flight, the lines go with the sun.
+    const handover = (h: number) => {
+      sceneHandover?.(h);
+      wrap.style.setProperty("--sun", (1 - h).toFixed(3));
+      if (linesCanvas) linesCanvas.style.opacity = (1 - h).toFixed(3);
+    };
+    if (earth) {
+      const c = document.createElement("canvas");
+      c.className = styles.lines;
+      c.setAttribute("aria-hidden", "true");
+      wrap.insertBefore(c, wrap.firstChild);
+      const phone = window.matchMedia("(pointer: coarse)").matches || wrap.clientWidth < 700;
+      const l = new EarthLines(c, { density: phone ? 0.7 : 1 });
+      if (l.ok) {
+        lines = l;
+        linesCanvas = c;
+        linesAt = performance.now();
+        wrap.dataset.lines = "on";
+        if (control) control.current = { setHandover: handover };
+        const lro = new ResizeObserver(() => lines?.resize());
+        lro.observe(wrap);
+        cleanups.push(() => lro.disconnect());
+        document.addEventListener("visibilitychange", linesSync);
+        cleanups.push(() => document.removeEventListener("visibilitychange", linesSync));
+        linesSync();
+        tell(false);
+      } else {
+        c.remove();
+      }
+    }
+    syncRef.current = () => {
+      linesSync();
+      planetSync();
+    };
+    cleanups.push(stopLines);
+
     const lateTimer = window.setTimeout(() => {
-      if (cancelled || isLive) return;
+      // The lines stand in for the planet for as long as it takes.
+      if (cancelled || isLive || lines) return;
       // The planet is slow: show the poster now, and start the planet on the poster's pose
       // when it comes, so it joins without a jump.
       isLate = true;
@@ -127,7 +236,9 @@ export default function OrbitIntro({ active = true, className, earth = true, pos
       if (label) label.style.transform = "";
       if (canvas) canvas.style.cursor = "";
       scene?.setActive(false);
-      if (control) control.current = null;
+      // The lines, if they run, stay on in front of the poster.
+      sceneHandover = null;
+      if (control) control.current = lines ? { setHandover: handover } : null;
       tell(false);
     };
 
@@ -195,7 +306,8 @@ export default function OrbitIntro({ active = true, className, earth = true, pos
       canvas = document.createElement("canvas");
       canvas.className = styles.canvas;
       canvas.setAttribute("aria-hidden", "true");
-      wrap.insertBefore(canvas, wrap.firstChild);
+      // Above the lines, so the planet fades up over them.
+      wrap.insertBefore(canvas, linesCanvas ? linesCanvas.nextSibling : wrap.firstChild);
 
       try {
         scene = mod.createOrbitScene(T, {
@@ -204,9 +316,23 @@ export default function OrbitIntro({ active = true, className, earth = true, pos
           lead: !isLate,
           onReady: () => {
             if (cancelled) return;
-            isLive = true;
-            setMode("live");
-            tell(true);
+            const wait = lines ? Math.max(0, linesAt + LINES_MIN_MS - performance.now()) : 0;
+            window.setTimeout(() => {
+              if (cancelled) return;
+              isLive = true;
+              if (lines) {
+                // The planet ran unseen under the lines: bring the satellite in from the start.
+                scene?.rewind();
+                wasSettled = false;
+                setSettled(false);
+                wrap.style.setProperty("--wipe", "0");
+                wrap.style.setProperty("--planet", "0");
+                wipeAt = performance.now();
+                linesSync();
+              }
+              setMode("live");
+              tell(true);
+            }, wait);
           },
           onFail: toFallback,
           onFrame: place,
@@ -220,19 +346,14 @@ export default function OrbitIntro({ active = true, className, earth = true, pos
       }
       const s = scene;
       const c = canvas;
-      if (control)
-        control.current = {
-          setHandover: (h) => {
-            s.setHandover(h);
-            // The sun goes as the planet rolls into the film's first frame, which has none.
-            wrap.style.setProperty("--sun", (1 - h).toFixed(3));
-          },
-        };
+      // The sun goes as the planet rolls into the film's first frame, which has none.
+      sceneHandover = (h) => s.setHandover(h);
+      if (control) control.current = { setHandover: handover };
 
       let onScreen = true;
       let shown = document.visibilityState === "visible";
       const sync = () => s.setActive(activeRef.current && onScreen && shown);
-      syncRef.current = sync;
+      planetSync = sync;
       io = new IntersectionObserver(([entry]) => {
         onScreen = entry.isIntersecting;
         sync();

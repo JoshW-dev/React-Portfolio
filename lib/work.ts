@@ -1,3 +1,5 @@
+import type { Motion } from "@/components/film/movingStill";
+
 export type WorkKind =
   | "Work"
   | "Product"
@@ -21,7 +23,15 @@ export type Work = {
    * The home page film's frame for this project. When set, the project page opens on it,
    * full-bleed, with the title over it where the film's caption sits.
    */
-  frame?: { src: string; alt: string };
+  frame?: {
+    src: string;
+    alt: string;
+    /**
+     * The moving still for a frame that isn't one of the film's own, whose map comes from
+     * scripts/hero-motion.py. A film frame takes the film's motion (motionForFrame in lib/film.ts).
+     */
+    motion?: Motion;
+  };
   /** The page takes the dark theme, for a project whose frame is dark (space, night). */
   dark?: boolean;
   /**
@@ -73,6 +83,8 @@ const entries: Work[] = [
     frame: {
       src: "/work/disco-hero.webp",
       alt: "Illustration of a sales pipeline as a glowing wireframe: contact cards pass through three rings, branch along an automation flow and land on a pipeline board",
+      // Light streams into the rings and the flow's nodes pulse.
+      motion: { map: "/work/motion/disco-hero.png", flow: 0.04, period: 2.4, jitter: 0.7, twinkle: 0.45 },
     },
     links: [{ label: "Open disco.co", href: "https://www.disco.co/" }],
     body: [
@@ -596,6 +608,8 @@ const entries: Work[] = [
     frame: {
       src: "/film/clips/orbit-rockies-first.webp",
       alt: "Earth from low orbit, with snow on the Rockies and city lights on the night side",
+      // City lights twinkle on the night side and the cloud bank on the horizon drifts east.
+      motion: { map: "/work/motion/cubesat-hero.png", flow: 0.03, period: 8, jitter: 0.5, twinkle: 0.9 },
     },
     links: [
       { label: "Open qset.ca", href: "https://qset.ca/satellite/" },

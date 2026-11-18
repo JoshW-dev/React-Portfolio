@@ -143,7 +143,7 @@ export default async function ProjectPage({ params }: Props) {
             <HeroFrame
               src={frame.src}
               alt={frame.alt}
-              motion={motionForFrame(frame.src)}
+              motion={frame.motion ?? motionForFrame(frame.src)}
               loop={loopForFrame(frame.src)}
               sketch={heroSketch(frame.src)}
             />

@@ -1,0 +1,264 @@
+{
+  "_about": "Motion maps for project heroes whose picture is not one of the film's frames. scripts/hero-motion.py turns each hero here into public/work/motion/<name>.png, in the same format as scripts/film-motion.json (red and green the flow, blue the shimmer), so components/film/movingStill.ts plays them. Coordinates are shares of 'image'. Regions work as in film-motion.json. 'rings' are glowing rings that things pass through: everything inside the outer ellipse holds still under any flow, and the band between the outer and inner ellipses (centre and radii as shares of the width and height) takes the ring's own shimmer. The work entry's frame.motion in lib/work.ts names the map and sets flow, period, jitter and twinkle. 'hold' finds things that must not slide (pixels in its polygon that pass its key), grows them by 'grow' (a share of the width) and holds them still.",
+  "heroes": {
+    "disco": {
+      "name": "disco-hero",
+      "image": "public/work/disco-hero.webp",
+      "feather": 0.008,
+      "regions": [
+        {
+          "_what": "light streaks streaming into the rings toward the first junction; the pale cards hold still",
+          "poly": [
+            [
+              0.0,
+              0.03
+            ],
+            [
+              0.2,
+              0.11
+            ],
+            [
+              0.47,
+              0.32
+            ],
+            [
+              0.47,
+              0.46
+            ],
+            [
+              0.2,
+              0.61
+            ],
+            [
+              0.0,
+              0.67
+            ]
+          ],
+          "radial": {
+            "center": [
+              0.48,
+              0.395
+            ],
+            "reach": 0.22,
+            "power": 0.6,
+            "sign": -1
+          },
+          "speed": 1.0,
+          "key": {
+            "lo": 0.12,
+            "hi": 1.01,
+            "sat": 1.01,
+            "minsat": 0.85
+          }
+        },
+        {
+          "_what": "the automation flow: its lines and nodes slide right toward the board and the nodes pulse",
+          "poly": [
+            [
+              0.47,
+              0.235
+            ],
+            [
+              0.675,
+              0.235
+            ],
+            [
+              0.675,
+              0.575
+            ],
+            [
+              0.47,
+              0.575
+            ]
+          ],
+          "flow": [
+            1,
+            0
+          ],
+          "speed": 0.45,
+          "shimmer": 0.9,
+          "key": {
+            "lo": 0.42,
+            "hi": 1.01,
+            "sat": 1.01
+          }
+        },
+        {
+          "_what": "haze on the floor drifting slowly to the right",
+          "poly": [
+            [
+              0.0,
+              0.64
+            ],
+            [
+              1.0,
+              0.7
+            ],
+            [
+              1.0,
+              1.0
+            ],
+            [
+              0.0,
+              1.0
+            ]
+          ],
+          "feather": 0.04,
+          "flow": [
+            1,
+            0
+          ],
+          "speed": 0.3
+        }
+      ],
+      "rings": [
+        {
+          "center": [
+            0.209,
+            0.374
+          ],
+          "outer": [
+            0.064,
+            0.192
+          ],
+          "inner": [
+            0.036,
+            0.15
+          ],
+          "shimmer": 0.55
+        },
+        {
+          "center": [
+            0.343,
+            0.387
+          ],
+          "outer": [
+            0.045,
+            0.13
+          ],
+          "inner": [
+            0.025,
+            0.1
+          ],
+          "shimmer": 0.55
+        },
+        {
+          "center": [
+            0.436,
+            0.394
+          ],
+          "outer": [
+            0.032,
+            0.092
+          ],
+          "inner": [
+            0.017,
+            0.07
+          ],
+          "shimmer": 0.55
+        }
+      ],
+      "hold": {
+        "_what": "the pale contact cards in the tunnel, grown past their glowing edges, hold still while the light streams past them",
+        "poly": [
+          [
+            0.0,
+            0.03
+          ],
+          [
+            0.2,
+            0.11
+          ],
+          [
+            0.47,
+            0.32
+          ],
+          [
+            0.47,
+            0.46
+          ],
+          [
+            0.2,
+            0.61
+          ],
+          [
+            0.0,
+            0.67
+          ]
+        ],
+        "key": {
+          "lo": 0.2,
+          "hi": 1.01,
+          "sat": 0.79
+        },
+        "grow": 0.022
+      }
+    },
+    "cubesat": {
+      "name": "cubesat-hero",
+      "image": "public/film/clips/orbit-rockies-first.webp",
+      "feather": 0.008,
+      "regions": [
+        {
+          "_what": "city lights on the night side",
+          "poly": [
+            [
+              0.76,
+              0.56
+            ],
+            [
+              1.0,
+              0.47
+            ],
+            [
+              1.0,
+              1.0
+            ],
+            [
+              0.77,
+              1.0
+            ]
+          ],
+          "shimmer": 1.0,
+          "key": {
+            "lo": 0.3,
+            "hi": 1.01,
+            "sat": 1.01
+          }
+        },
+        {
+          "_what": "the cloud bank along the horizon drifting east",
+          "poly": [
+            [
+              0.2,
+              0.43
+            ],
+            [
+              0.76,
+              0.43
+            ],
+            [
+              0.76,
+              0.56
+            ],
+            [
+              0.2,
+              0.56
+            ]
+          ],
+          "feather": 0.02,
+          "flow": [
+            1,
+            0.04
+          ],
+          "speed": 1.0,
+          "key": {
+            "lo": 0.45,
+            "hi": 1.01,
+            "sat": 0.6
+          }
+        }
+      ]
+    }
+  }
+}

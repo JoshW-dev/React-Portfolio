@@ -19,16 +19,23 @@
 
   A stop's motion makes one thing in its picture move while the film rests there. Its map
   comes from scripts/film-motion.py, which reads the regions in scripts/film-motion.json.
-  Only Doha's water and New York's traffic move. Warping a still reads as real on water and
-  on things that slide along a line, but smoke, clouds, fog and the belts wobble, so those
-  stops rest on the plain picture or play a loop.
+  Water ripples, traffic and the haze slide along, thin clouds drift sideways as one sheet
+  (jitter 0, no billow), and the production line runs its cartons toward the viewer
+  (Conveyor). A billowing warp wobbled on steam, fog and big clouds, so those play a loop.
 
   A stop's loop is a cinemagraph: a short generated clip of its picture with the camera
   locked, of which only the moving part shows, through a mask (scripts/film-loop.py and
   scripts/film-loops.json, played by components/film/FilmLoop.tsx).
 */
 
-import type { Motion } from "@/components/film/movingStill";
+import type { Conveyor, Motion } from "@/components/film/movingStill";
+
+/**
+ * The production line's cartons and belt, shared by the line and its model, which line up
+ * pixel for pixel. The vanishing point and spacings were measured from the line's still
+ * (scripts/film-motion.json, stops 3 and 4).
+ */
+const CONVEYOR: Conveyor = { vanish: [0.10348, 0.3855], spacing: [0.6, 0.75], period: 6, crossfade: 0.2, slats: 4 };
 
 export type Stop = {
   /** The stop's own frame, used by the still fallback and reduced motion. */
@@ -101,6 +108,8 @@ export const STOPS: Stop[] = [
       frame: "/film/clips/orbit-rockies-last.webp",
       aspect: 1920 / 1088,
     },
+    // The sun glitters on the lake (scripts/film-motion.json); the clouds are the loop.
+    motion: { map: "/film/motion/02-rockies.png", ripple: 0.003, twinkle: 0.3, horizon: 0.26 },
     link: { href: "/projects/ai-education-assistant", label: "Open the education assistant project" },
     spots: [
       { x: 0.6, y: 0.27, label: "AI tutor, 2019", href: "/projects/ai-education-assistant" },
@@ -128,6 +137,8 @@ export const STOPS: Stop[] = [
   },
   {
     still: "/film/04-line.webp",
+    // The cartons and the belt run toward the viewer, one carton per cycle.
+    motion: { map: "/film/motion/04-line.png", conveyor: CONVEYOR },
     link: { href: "/projects/production-lines", label: "Open the production lines project" },
     spots: [{ x: 0.46, y: 0.15, label: "Two production lines", href: "/projects/production-lines" }],
     place: "Production lines, Texas and California",
@@ -136,6 +147,8 @@ export const STOPS: Stop[] = [
   },
   {
     still: "/film/05-twin.webp",
+    // The same line as its model, frame for frame, with its lit cartons holding their colour.
+    motion: { map: "/film/motion/05-twin.png", conveyor: CONVEYOR },
     link: { href: "/projects/disco", label: "Open the Disco project" },
     spots: [{ x: 0.457, y: 0.14, label: "Disco", href: "/projects/disco" }],
     place: "The same line, as software",
@@ -158,8 +171,8 @@ export const STOPS: Stop[] = [
   },
   {
     still: "/film/07-towns.webp",
-    // Town and road lights twinkle; the moonlit river shimmers (scripts/film-motion.json).
-    motion: { map: "/film/motion/07-towns.png", ripple: 0.004, twinkle: 0.32, horizon: 0.335 },
+    // The moonlit river shimmers and the clouds drift. Nothing on the ground moves.
+    motion: { map: "/film/motion/07-towns.png", ripple: 0.0035, twinkle: 0.32, horizon: 0.335, flow: 0.012, period: 12, jitter: 0 },
     link: { href: "/projects/alltus", label: "Open the Alltus project" },
     spots: [
       { x: 0.868, y: 0.665, label: "Alltus", href: "/projects/alltus" },
@@ -171,6 +184,7 @@ export const STOPS: Stop[] = [
   },
   {
     still: "/film/08-nyc.webp",
+    // Traffic slides along the avenue; the haze around the Chrysler Building drifts slowly.
     motion: { map: "/film/motion/08-nyc.png", flow: 0.04, period: 1.6 },
     link: { href: "/projects", label: "See all my projects" },
     spots: [
@@ -184,7 +198,8 @@ export const STOPS: Stop[] = [
   },
   {
     still: "/film/09-doha.webp",
-    motion: { map: "/film/motion/09-doha.png", ripple: 0.01, twinkle: 0.15, horizon: 0.535 },
+    // The water ripples and the clouds drift slowly.
+    motion: { map: "/film/motion/09-doha.png", ripple: 0.01, twinkle: 0.15, horizon: 0.535, flow: 0.01, period: 12, jitter: 0 },
     link: { href: "/about", label: "More about me" },
     spots: [
       { x: 0.54, y: 0.37, label: "Game of Society", href: "/projects/game-of-society" },

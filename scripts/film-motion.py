@@ -75,14 +75,16 @@ def build(stop):
         if "ramp" in r:
             y0, v0, y1, v1 = r["ramp"]
             m *= v0 + (v1 - v0) * np.clip((py - y0) / (y1 - y0), 0, 1)
-        if "shimmer" in r:
-            shim = np.maximum(shim, m * r["shimmer"])
-        if "flow" not in r and "radial" not in r:
-            continue
+        # The key limits shimmer as well as flow (it used to limit only flow, so a keyed
+        # shimmer region shimmered all of its polygon).
         if "key" in r:
             k = key_mask(rgb, r["key"])
             k = arr(blur(Image.fromarray((k * 255).astype(np.uint8)), max(1.0, feather * 0.5)))
             m = m * k
+        if "shimmer" in r:
+            shim = np.maximum(shim, m * r["shimmer"])
+        if "flow" not in r and "radial" not in r:
+            continue
         speed = r.get("speed", 1.0)
         if "radial" in r:
             rad = r["radial"]
@@ -114,6 +116,62 @@ def build(stop):
     return Image.fromarray(out), src
 
 
+def build_conveyor(stop):
+    """
+    A conveyor's map (components/film/movingStill.ts, Conveyor): red is how much each pixel
+    moves, green is 1 on a belt or 0.5 times 'hold' where colour holds still, blue is the
+    spacing. Parts are bands of angle around the vanishing point (degrees, 0 = right, 90 =
+    down), each with its spacing (1 over the distance from the vanishing point, in picture
+    heights) by angle. 'near' lowers a part's spacing by near[0] for each unit closer than
+    near[1], which keeps the nearest cartons in proportion. Polygons are shares of 'ref'.
+    """
+    cv = stop["conveyor"]
+    src = Image.open(ROOT / stop["image"]).convert("RGB")
+    ref = Image.open(ROOT / cv["ref"])
+    w = WIDTH
+    h = round(WIDTH * src.height / src.width)
+    a, ra = src.width / src.height, ref.width / ref.height
+    ys, xs = np.mgrid[0:h, 0:w].astype(np.float32)
+    # Picture heights from the centre line (the film's frames and the stills line up at equal
+    # height), and share of the height.
+    px = ((xs + 0.5) / w - 0.5) * a
+    py = (ys + 0.5) / h
+    vx, vy = cv["vanish"]
+    dx, dy = px - vx, py - vy
+    u = 1.0 / np.maximum(np.sqrt(dx * dx + dy * dy), 1e-4)
+    th = np.degrees(np.arctan2(dy, dx)) % 360
+
+    def ref_poly(poly):
+        # A polygon in shares of 'ref', moved into this image's shares.
+        pts = [((x - 0.5) * ra / a + 0.5, y) for x, y in poly]
+        return arr(blur(poly_mask(pts, w, h), max(1.0, cv.get("feather", 0.004) * w)))
+
+    weight = np.zeros((h, w), np.float32)
+    green = np.zeros((h, w), np.float32)
+    spacing = np.zeros((h, w), np.float32)
+    for part in cv["parts"]:
+        t0, t1, t2, t3 = part["theta"]
+        m = smooth(t0, t1, th) * (1 - smooth(t2, t3, th))
+        ang, val = zip(*part["spacing"])
+        b = np.interp(th, ang, val) * part.get("scale", 1.0)
+        if "near" in part:
+            k, ur = part["near"]
+            b = b * (1 - k * np.clip(ur - u, 0, None))
+        g = 1.0 if part.get("belt") else 0.5 * part.get("hold", 0.0)
+        take = m > weight
+        weight = np.where(take, m, weight)
+        spacing = np.where(take, b, spacing)
+        green = np.where(take, g, green)
+    for poly in cv.get("exclude", []):
+        weight *= 1 - ref_poly(poly)
+    lo, span = cv["spacing"]
+    out = np.zeros((h, w, 3), np.uint8)
+    out[..., 0] = np.clip(np.round(255 * weight), 0, 255)
+    out[..., 1] = np.clip(np.round(255 * green), 0, 255)
+    out[..., 2] = np.clip(np.round(255 * (spacing - lo) / span), 0, 255)
+    return Image.fromarray(out), src
+
+
 def preview(stop, img, src, path):
     """The frame with the flow in green to red and the shimmer in blue, for checking masks."""
     base = src.resize(img.size, Image.LANCZOS).convert("RGB")
@@ -137,7 +195,8 @@ def main():
     OUT.mkdir(parents=True, exist_ok=True)
     for k in args or list(spec):
         stop = spec[k]
-        img, src = build(stop)
+        make = build_conveyor if "conveyor" in stop else build
+        img, src = make(stop)
         path = OUT / f"{stop['name']}.png"
         img.save(path, optimize=True)
         print(f"{path.relative_to(ROOT)}  {img.size[0]}x{img.size[1]}  {path.stat().st_size // 1024} KB")
@@ -148,7 +207,7 @@ def main():
         # within about 1%, so the same regions are keyed again on its pixels.
         still = f"public/film/{stop['name']}.webp"
         if stop["image"] != still and (ROOT / still).exists():
-            img, _ = build({**stop, "image": still})
+            img, _ = make({**stop, "image": still})
             path = OUT / f"{stop['name']}-still.png"
             img.save(path, optimize=True)
             print(f"{path.relative_to(ROOT)}  {img.size[0]}x{img.size[1]}  {path.stat().st_size // 1024} KB")

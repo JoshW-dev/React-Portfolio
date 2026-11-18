@@ -45,7 +45,52 @@ export type Motion = {
    * lie on the water's plane, small near the horizon and large near the viewer.
    */
   horizon?: number;
+  /** A production line: its cartons and belt run toward the viewer (see Conveyor). */
+  conveyor?: Conveyor;
 };
+
+/**
+ * A line of identical things running toward the viewer along rays from a vanishing point,
+ * one spacing per cycle, so each cycle ends on the picture it started from. Its map is not
+ * a flow map: red is how much each pixel moves, green is 1 on a belt (whose light stays put
+ * while its slats move) or up to 0.5 where colour stays put while brightness moves (a lit
+ * zone the cartons pass through), and blue is the spacing at that pixel, as 1 over the
+ * distance from the vanishing point, between spacing[0] and spacing[0] + spacing[1].
+ * scripts/film-motion.py writes it from the "conveyor" stops in scripts/film-motion.json.
+ */
+export type Conveyor = {
+  /** The vanishing point: picture heights right of the picture's centre, and share of its height down. */
+  vanish: [number, number];
+  /** The spacing range blue covers. */
+  spacing: [number, number];
+  /** Seconds per cycle. */
+  period: number;
+  /** Share of the cycle at its end that blends into the same picture one spacing nearer. */
+  crossfade: number;
+  /** Belt slats per cycle (a belt's light is averaged over one slat to hold it still). */
+  slats: number;
+};
+
+/**
+ * A conveyor's clock, per map (a project page's "-still" map shares the film's), counting only
+ * while its motion shows and at the speed it shows at, so the line starts from rest and a
+ * project page opened from the film carries on from the same moment.
+ */
+const conveyorClocks = new Map<string, { t: number; at: number }>();
+
+function conveyorPhase(map: string, time: number, amp: number, period: number) {
+  const key = map.replace(/-still\.png$/, ".png");
+  let c = conveyorClocks.get(key);
+  if (!c || amp <= 0) {
+    c = { t: 0, at: time };
+    conveyorClocks.set(key, c);
+  }
+  const dt = time - c.at;
+  c.t += dt > 0 && dt < 0.5 ? dt * amp : 0;
+  c.at = time;
+  const p = c.t / period;
+  return p - Math.floor(p);
+}
 
 type Tex = { tex: WebGLTexture; w: number; h: number };
 
@@ -225,10 +270,88 @@ uniform float uTwinkle;
 uniform float uBillow;
 uniform float uJitter;
 uniform float uHorizon;
+uniform vec4 uConv;
+uniform vec4 uConvB;
+
+const vec3 LUM = vec3(0.2126, 0.7152, 0.0722);
+
+// Conveyor: the texture coordinates of the point 1/u from the vanishing point V along e.
+vec2 convAt(vec2 V, vec2 e, float u) {
+  vec2 P = V + e / max(u, 0.05);
+  return vec2(P.x / uAspect + 0.5, P.y);
+}
+
+// The picture as the film shows it there: A, blended into B by uMix.
+vec3 convPic(vec2 t, vec2 ua, vec2 ub) {
+  vec3 c = texture2D(uA, t).rgb;
+  if (uMix > 0.0) c = mix(c, texture2D(uB, ub + (t - ua) * (uCoverB.xy / uCoverA.xy)).rgb, uMix);
+  return c;
+}
 
 void main() {
   vec2 ua = vUv * uCoverA.xy + uCoverA.zw;
   vec2 ub = vUv * uCoverB.xy + uCoverB.zw;
+
+  if (uConv.w > 0.5) {
+    // A conveyor (see Conveyor in movingStill.ts). Each point shows the picture one share of
+    // a spacing farther along its ray; near the cycle's end it blends into the picture one
+    // spacing nearer, which shows the same scene, so the cycle closes with no jump.
+    vec3 c0 = texture2D(uMap, ua).rgb;
+    float w = c0.r;
+    if (w < 0.004) {
+      gl_FragColor = vec4(0.0);
+      return;
+    }
+    vec2 V = uConv.xy;
+    vec2 d = vec2((ua.x - 0.5) * uAspect, ua.y) - V;
+    float r = max(length(d), 1e-4);
+    vec2 e = d / r;
+    float u = 1.0 / r;
+    float p = uConv.z;
+    float bw = (uConvB.x + c0.b * uConvB.y) * w;
+    float u1 = u + p * bw;
+    // The point one spacing nearer: g + spacing(g) = u1, solved by two steps from a guess.
+    float g = u - (1.0 - p) * bw;
+    for (int i = 0; i < 2; i++) {
+      vec3 cg = texture2D(uMap, convAt(V, e, g)).rgb;
+      g = u1 - (uConvB.x + cg.b * uConvB.y) * cg.r;
+    }
+    vec2 t1 = convAt(V, e, u1);
+    vec2 t2 = convAt(V, e, g);
+    vec3 a1 = convPic(t1, ua, ub);
+    vec3 a2 = convPic(t2, ua, ub);
+    vec3 here = convPic(ua, ua, ub);
+    if (c0.g > 0.75) {
+      // A belt: its slats move but its light stays, so each sample trades the light it brings
+      // (its average over one slat) for the light here.
+      float s = bw / uConvB.w;
+      vec3 lh = vec3(0.0);
+      vec3 l1 = vec3(0.0);
+      vec3 l2 = vec3(0.0);
+      for (int j = 0; j < 4; j++) {
+        float o = s * float(j) * 0.25;
+        lh += convPic(convAt(V, e, u + o), ua, ub);
+        l1 += convPic(convAt(V, e, u1 + o), ua, ub);
+        l2 += convPic(convAt(V, e, g + o), ua, ub);
+      }
+      a1 += (lh - l1) * 0.25;
+      a2 += (lh - l2) * 0.25;
+    }
+    vec2 edge = min(t2, 1.0 - t2);
+    float near = smoothstep(-0.06, 0.0, min(edge.x, edge.y)) * smoothstep(0.3, 0.5, g);
+    vec3 c = mix(a1, a2, smoothstep(1.0 - uConvB.z, 1.0, p) * near);
+    float hold = c0.g > 0.75 ? 0.0 : clamp(c0.g * 2.0, 0.0, 1.0);
+    if (hold > 0.0) {
+      // Colour stays where it is and only brightness moves, so a lit zone stays lit.
+      float lh = dot(here, LUM);
+      vec3 kept = here + (dot(c, LUM) - lh) * (here + 0.03) / (lh + 0.03);
+      c = mix(c, kept, hold);
+    }
+    float cv = clamp(w * 4.0, 0.0, 1.0);
+    gl_FragColor = vec4(clamp(c, 0.0, 1.0) * cv, cv);
+    return;
+  }
+
   vec3 m = texture2D(uMap, ua).rgb;
   vec2 dir0 = (m.rg * 255.0 - 128.0) / 127.0;
   float cover = clamp(max(length(dir0), m.b) * 6.0, 0.0, 1.0);
@@ -374,7 +497,7 @@ export class MovingStill {
     gl.enableVertexAttribArray(loc);
     gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
 
-    for (const name of ["uA", "uB", "uMap", "uNoise", "uCoverA", "uCoverB", "uAspect", "uMix", "uAmp", "uTime", "uFlow", "uPeriod", "uRipple", "uTwinkle", "uBillow", "uJitter", "uHorizon"]) {
+    for (const name of ["uA", "uB", "uMap", "uNoise", "uCoverA", "uCoverB", "uAspect", "uMix", "uAmp", "uTime", "uFlow", "uPeriod", "uRipple", "uTwinkle", "uBillow", "uJitter", "uHorizon", "uConv", "uConvB"]) {
       this.u[name] = gl.getUniformLocation(prog, name);
     }
     gl.uniform1i(this.u.uA, 0);
@@ -501,6 +624,12 @@ export class MovingStill {
     gl.uniform1f(this.u.uBillow, o.motion.billow ?? 0);
     gl.uniform1f(this.u.uJitter, o.motion.jitter ?? 1);
     gl.uniform1f(this.u.uHorizon, o.motion.horizon ?? -1);
+    const cv = o.motion.conveyor;
+    if (cv) {
+      const phase = conveyorPhase(o.map, o.time, o.amp, cv.period);
+      gl.uniform4f(this.u.uConv, cv.vanish[0], cv.vanish[1], phase, 1);
+      gl.uniform4f(this.u.uConvB, cv.spacing[0], cv.spacing[1], cv.crossfade, cv.slats);
+    } else gl.uniform4f(this.u.uConv, 0, 0, 0, 0);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, a.tex);
     gl.activeTexture(gl.TEXTURE1);

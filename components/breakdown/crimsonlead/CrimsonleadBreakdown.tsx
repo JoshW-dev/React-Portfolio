@@ -165,7 +165,6 @@ export default function CrimsonleadBreakdown({ className }: { className?: string
       label="How a public record becomes a lead"
       steps={STEPS}
       visual={(api) => <Visual api={api} />}
-      caption="A simplified map with made-up records. Drag it to turn it."
     />
   );
 }

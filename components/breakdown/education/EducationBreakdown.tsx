@@ -144,7 +144,6 @@ export default function EducationBreakdown({ className }: { className?: string }
       label="How course material becomes quiz questions and tutor replies"
       steps={STEPS}
       visual={(api) => <Visual api={api} />}
-      caption="A simplified model drawn for this page. Drag it to turn it."
     />
   );
 }

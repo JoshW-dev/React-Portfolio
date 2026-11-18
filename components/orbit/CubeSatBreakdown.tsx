@@ -408,7 +408,6 @@ export default function CubeSatBreakdown({ className }: { className?: string }) 
       label="How the satellite does its job"
       steps={STEPS}
       visual={(api) => <Visual api={api} />}
-      caption="A simplified model drawn for this page. Drag it to turn it."
     />
   );
 }

@@ -6,9 +6,6 @@
 */
 
 .root {
-  /* The page grid's left edge, for the caption and marker under the visual. */
-  --page-left: max(var(--gutter), calc((100vw - var(--wrap)) / 2 + var(--gutter)));
-
   position: relative;
   display: grid;
   grid-template-columns: minmax(0, 60fr) minmax(0, 34fr);
@@ -31,56 +28,6 @@
   position: relative;
   flex: 1;
   min-height: 0;
-}
-
-/* Under the visual: the caption on the left, the step marker on the right. */
-.foot {
-  flex: none;
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 24px;
-  padding-top: 12px;
-  padding-left: var(--page-left);
-}
-
-.caption {
-  min-width: 0;
-  max-width: 34em;
-}
-
-.marker {
-  flex: none;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-left: auto;
-  font-size: 0.8125rem;
-  line-height: 1;
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-.now {
-  color: var(--ink);
-  font-weight: 600;
-}
-
-.track {
-  position: relative;
-  width: 88px;
-  height: 1px;
-  overflow: hidden;
-  background: var(--line);
-}
-
-.fill {
-  position: absolute;
-  inset: 0;
-  background: var(--ink);
-  transform: scaleX(0);
-  transform-origin: left center;
 }
 
 /*
@@ -181,32 +128,28 @@
     padding-right: 0;
   }
 
+  /*
+    The visual takes the top 38% of the screen, so the words get the other 62%. There is no
+    rule under it: its ground runs on past its edge as a soft fade, so the words scrolling
+    up dissolve into the picture and the two read as one surface.
+  */
   .stage {
     z-index: 2;
-    height: 50vh;
-    height: 50svh;
+    height: 38vh;
+    height: 38svh;
     padding-block: 8px 0;
     background: var(--bg);
-    border-bottom: 1px solid var(--line);
   }
 
-  .foot {
-    gap: 16px;
-    padding: 6px var(--gutter) 8px;
-  }
-
-  .caption {
-    font-size: 0.75rem;
-    line-height: 1.35;
-  }
-
-  .marker {
-    gap: 8px;
-    font-size: 0.75rem;
-  }
-
-  .track {
-    width: 36px;
+  .stage::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    height: 64px;
+    background: linear-gradient(var(--bg), transparent);
+    pointer-events: none;
   }
 
   .steps {
@@ -214,8 +157,8 @@
   }
 
   .step {
-    min-height: 70vh;
-    min-height: 70svh;
+    min-height: 62vh;
+    min-height: 62svh;
     padding-block: 24px;
   }
 

@@ -228,7 +228,6 @@ export default function DiscoBreakdown({ className }: { className?: string }) {
       label="How the AI growth system at Disco works"
       steps={STEPS}
       visual={(api) => <Visual api={api} />}
-      caption="A simplified model of the sales line, drawn for this page. Drag it to turn it."
     />
   );
 }

@@ -10,11 +10,10 @@ import styles from "./ScrollBreakdown.module.css";
   reads from a ref every frame, and the active step, which is React state.
 
   It runs the full width of the screen: render it outside the page's wrap. The visual takes
-  about 60% of the width and runs to the left edge; the steps take about 34%. Under the
-  visual, the caption and a step marker ("2 / 6" and a hairline that fills as the steps go
-  by) sit on the page grid.
+  about 60% of the width and runs to the left edge; the steps take about 34%.
 
-  On phones the visual pins to the top of the screen and the steps scroll under it.
+  On phones the visual pins across the top 38% of the screen and the steps scroll under
+  it, fading out as they pass beneath it.
 */
 
 export type BreakdownStep = { id: string; title: ReactNode; body: ReactNode };
@@ -38,8 +37,6 @@ export type BreakdownApi = {
 type Props = {
   steps: BreakdownStep[];
   visual: (api: BreakdownApi) => ReactNode;
-  /** Short line under the visual. */
-  caption?: ReactNode;
   /** Accessible name for the section. */
   label: string;
   className?: string;
@@ -48,10 +45,9 @@ type Props = {
 const NARROW = NARROW_QUERY;
 const REDUCE = "(prefers-reduced-motion: reduce)";
 
-export default function ScrollBreakdown({ steps, visual, caption, label, className }: Props) {
+export default function ScrollBreakdown({ steps, visual, label, className }: Props) {
   const rootRef = useRef<HTMLElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
-  const fillRef = useRef<HTMLSpanElement>(null);
   const stepRefs = useRef<(HTMLLIElement | null)[]>([]);
   const progress = useRef(0);
   const position = useRef(0);
@@ -106,9 +102,6 @@ export default function ScrollBreakdown({ steps, visual, caption, label, classNa
       }
       const now = Math.round(pos);
       position.current = reduce.matches ? now : pos;
-      // The marker's hairline: a sixth filled at the first of six steps, all of it at the last.
-      const fill = fillRef.current;
-      if (fill && n > 0) fill.style.transform = `scaleX(${((position.current + 1) / n).toFixed(4)})`;
       if (now !== active) {
         active = now;
         setStep(now);
@@ -146,18 +139,6 @@ export default function ScrollBreakdown({ steps, visual, caption, label, classNa
     <section ref={rootRef} className={className ? `${styles.root} ${className}` : styles.root} aria-label={label}>
       <div ref={stageRef} className={styles.stage}>
         <div className={styles.visual}>{visual(api)}</div>
-        <div className={styles.foot}>
-          {caption ? <p className={`small muted ${styles.caption}`}>{caption}</p> : null}
-          {/* The list already marks the current step for screen readers. */}
-          <div className={styles.marker} aria-hidden="true">
-            <span className={styles.count}>
-              <span className={styles.now}>{step + 1}</span> / {count}
-            </span>
-            <span className={styles.track}>
-              <span ref={fillRef} className={styles.fill} />
-            </span>
-          </div>
-        </div>
       </div>
       <ol className={styles.steps}>
         {steps.map((s, i) => (

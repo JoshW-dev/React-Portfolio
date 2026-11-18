@@ -139,7 +139,6 @@ export default function LinesBreakdown({ className }: { className?: string }) {
       label="How the downtime came down"
       steps={STEPS}
       visual={(api) => <Visual api={api} />}
-      caption="A simplified drawing made for this page, with stand-in machines."
     />
   );
 }

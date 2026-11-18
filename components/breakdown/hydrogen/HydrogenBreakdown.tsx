@@ -172,7 +172,6 @@ export default function HydrogenBreakdown({ className }: { className?: string })
       label="How the hydrogen plant works and what the design sessions changed"
       steps={STEPS}
       visual={(api) => <Visual api={api} />}
-      caption="A simplified drawing made for this page. It isn't the real plant's layout, and the budget bar isn't to scale. Drag it to turn it."
     />
   );
 }

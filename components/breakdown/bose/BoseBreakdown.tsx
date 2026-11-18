@@ -201,7 +201,6 @@ export default function BoseBreakdown({ className }: { className?: string }) {
       label="How a turn of the head becomes a volume change"
       steps={STEPS}
       visual={(api) => <Visual api={api} />}
-      caption="A simplified model drawn for this page. Drag it to turn it."
     />
   );
 }

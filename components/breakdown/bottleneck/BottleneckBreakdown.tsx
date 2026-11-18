@@ -208,7 +208,6 @@ export default function BottleneckBreakdown({ className }: { className?: string 
       label="How Bottleneck Radar turns capex into a monthly call on the tightest input"
       steps={STEPS}
       visual={(api) => <Visual api={api} />}
-      caption="A simplified globe drawn for this page. The call in blue is an example, since the real one changes every month. Drag the globe to turn it."
     />
   );
 }

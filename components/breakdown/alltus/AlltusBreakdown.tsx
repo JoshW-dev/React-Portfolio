@@ -185,7 +185,6 @@ export default function AlltusBreakdown({ className }: { className?: string }) {
       label="How a call to the county is answered"
       steps={STEPS}
       visual={(api) => <Visual api={api} />}
-      caption="A simplified drawing of one county's phone line, with a made-up caller. Drag it to turn it."
     />
   );
 }

@@ -37,6 +37,7 @@ uniform vec3 uCam;        // camera position, Earth radii
 uniform vec4 uProj;       // camera space to screen: x scale, y scale, y offset, unused
 uniform vec3 uSun;
 uniform vec4 uRevealAt;  // draw-in: front centre y, aspect, front radius, edge glow
+uniform vec2 uWipe;      // the real planet's wipe: front y on screen, glow strength
 out vec3 vCol;
 flat out vec2 vDir;       // streak direction on screen
 flat out float vLen, vSz; // streak length and dot size, device px
@@ -101,6 +102,8 @@ void main() {
   bright *= 1.0 + 1.6 * exp(-pow((rd - uRevealAt.z + 0.05) / 0.05, 2.0)) * uRevealAt.w;
   // Dots fade as they reach the horizon, where they wrap round.
   bright *= smoothstep(0.0, 0.012, facing);
+  // As the real planet wipes up over the lines, the lines just ahead of its edge light up.
+  bright *= 1.0 + 2.4 * uWipe.y * exp(-pow((ndc.y - uWipe.x - 0.04) / 0.07, 2.0));
   // A few bright lines among many faint ones, in loose bands, so each line reads on its own.
   float band = 0.6 + 0.4 * sin(beta * 47.0 + 2.0) * sin(beta * 13.0 + 0.7);
   bright *= (0.18 + 2.6 * pow(hash(fl * 5.3 + 9.1), 3.0)) * band;
@@ -253,6 +256,7 @@ export class EarthLines {
   private inv = new Float32Array(4);
   private beta = new Float32Array(2);
   private revealAt = new Float32Array(4);
+  private wipe = new Float32Array([-2, 0]);
   private reach = 2;
   private readonly cam = new Float32Array([0, 1 + ALT, 0]);
   private readonly sun: Float32Array;
@@ -421,6 +425,7 @@ export class EarthLines {
     gl.uniform1f(D.u.uPx, this.dpr);
     gl.uniform1f(D.u.uOmega, OMEGA);
     gl.uniform1f(D.u.uStreak, STREAK);
+    gl.uniform2fv(D.u.uWipe, this.wipe);
     gl.uniform2f(D.u.uViewPx, T.scene.w, T.scene.h);
     gl.uniform1f(D.u.uGain, (0.95 * DOTS) / this.dots);
     gl.uniformMatrix3fv(D.u.uToCam, false, this.toCam);
@@ -466,6 +471,17 @@ export class EarthLines {
       gl.uniform3fv(u.uSun, this.sun);
       gl.uniform4fv(u.uInv, this.inv);
     });
+  }
+
+  /** Screen y (-1 bottom to 1 top) of the top of the horizon on this screen. */
+  get horizonTop() {
+    return this.revealAt[0];
+  }
+
+  /** Where the real planet's wipe has reached (screen y, -1 bottom to 1 top), and how strongly the lines glow there. */
+  setWipe(y: number, strength: number) {
+    this.wipe[0] = y;
+    this.wipe[1] = strength;
   }
 
   dispose() {

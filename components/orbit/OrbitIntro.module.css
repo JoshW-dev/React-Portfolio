@@ -40,8 +40,7 @@
   opacity: 1;
 }
 
-/* The lines (earthLines.ts): on at once, under the planet's canvas. Over them the planet takes
-   longer to fade up, so the lines turn into it. */
+/* The lines (earthLines.ts): on at once, under the planet's canvas. */
 .lines {
   position: absolute;
   inset: 0;
@@ -50,8 +49,14 @@
   height: 100%;
 }
 
+/* Over the lines, the planet comes up from the bottom of the screen: a wipe with a 28% soft
+   edge (WIPE_FEATHER in OrbitIntro.tsx) and a fade, driven frame by frame from OrbitIntro.
+   --wipe is how far up the planet reaches in percent of the height, --planet its opacity. */
 .wrap[data-lines] .canvas {
-  transition-duration: 1.6s;
+  transition: none;
+  opacity: var(--planet, 0);
+  -webkit-mask-image: linear-gradient(to top, #000 calc(var(--wipe, 0) * 1% - 28%), transparent calc(var(--wipe, 0) * 1%));
+  mask-image: linear-gradient(to top, #000 calc(var(--wipe, 0) * 1% - 28%), transparent calc(var(--wipe, 0) * 1%));
 }
 
 /* The sun: a white disc with a wide bloom and six faint diffraction spikes, as a camera sees

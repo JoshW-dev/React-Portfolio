@@ -37,8 +37,10 @@ const HREF = "/projects/cubesat";
 const LATE_MS = 2600;
 /** Over the lines, the planet waits this long from their start, so they have time to turn. */
 const LINES_MIN_MS = 4500;
-/** How long the planet takes to fade up over the lines (OrbitIntro.module.css). */
-const PLANET_OVER_LINES_MS = 1600;
+/** The planet comes up over the lines from the bottom of the screen: a wipe this long... */
+const WIPE_MS = 2400;
+/** ...with a soft edge this tall, in percent of the height (the same in OrbitIntro.module.css). */
+const WIPE_FEATHER = 28;
 /** Gap between the ring and the leader line, the leader's length, and the gap to the label. */
 const GAP = 6;
 const LEADER = 30;
@@ -116,8 +118,8 @@ export default function OrbitIntro({ active = true, className, earth = true, pos
 
     // ---- The lines ------------------------------------------------------------------------
     // Earth's curvature in lines (earthLines.ts), drawn at once while three.js and the
-    // planet's textures load. The planet fades up over them when it is ready, and not before
-    // they have drawn in, so every visit opens the same way.
+    // planet's textures load. When it is ready, and not before the lines have had time to
+    // turn, the planet wipes up over them from the bottom of the screen.
     let lines: EarthLines | null = null;
     let linesCanvas: HTMLCanvasElement | null = null;
     let linesRaf = 0;
@@ -126,6 +128,7 @@ export default function OrbitIntro({ active = true, className, earth = true, pos
     let linesPrev = 0;
     let linesFrames = 0;
     let linesSlow = 0;
+    let wipeAt = 0;
     let planetSync: () => void = () => {};
     let sceneHandover: ((h: number) => void) | null = null;
     const stopLines = () => {
@@ -151,6 +154,23 @@ export default function OrbitIntro({ active = true, className, earth = true, pos
         setLate(true);
         scene?.holdCapture();
         return;
+      }
+      if (wipeAt) {
+        // The planet wipes up from the bottom and fades in as it goes; the lines glow just
+        // ahead of its edge, and are freed once it has passed the top.
+        // The whole wipe runs over the planet: it ends once the soft edge has cleared the
+        // atmosphere above the horizon (the sky is black in both pictures).
+        const k = Math.min(1, (now - wipeAt) / WIPE_MS);
+        const e = 0.5 - 0.5 * Math.cos(Math.PI * k);
+        const top = Math.min(100, (lines.horizonTop + 1) * 50 + 14) + WIPE_FEATHER;
+        const front = k >= 1 ? 100 + WIPE_FEATHER : e * top;
+        wrap.style.setProperty("--wipe", front.toFixed(2));
+        wrap.style.setProperty("--planet", Math.min(1, 0.15 + k * 1.5).toFixed(3));
+        lines.setWipe(-1 + front / 50, 1 - k);
+        if (k >= 1) {
+          stopLines();
+          return;
+        }
       }
       lines.draw(linesT);
       if (activeRef.current && document.visibilityState === "visible") linesRaf = requestAnimationFrame(linesFrame);
@@ -305,7 +325,10 @@ export default function OrbitIntro({ active = true, className, earth = true, pos
                 scene?.rewind();
                 wasSettled = false;
                 setSettled(false);
-                window.setTimeout(stopLines, PLANET_OVER_LINES_MS + 200);
+                wrap.style.setProperty("--wipe", "0");
+                wrap.style.setProperty("--planet", "0");
+                wipeAt = performance.now();
+                linesSync();
               }
               setMode("live");
               tell(true);

@@ -1,0 +1,129 @@
+/*
+  The hero's vector sketch (HeroSketch.tsx) and the real picture's arrival over it. The hero's
+  box carries the state in data-sketch (sketchReveal.ts):
+    draw   a fresh visit: the lines draw in and the fill fades up under them
+    still  the sketch, already drawn (a page opened from another page of the site)
+    photo  the real picture fades in over the sketch
+    none   the real picture alone
+*/
+
+.art {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  container-type: size;
+}
+
+/* Each layer covers the box the way the picture does under object-fit: cover. */
+.fill,
+.lines {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  max-width: none;
+  height: 100%;
+}
+
+@supports (width: 1cqw) {
+  .fill,
+  .lines {
+    --w: max(100cqw, 100cqh * var(--a));
+    --h: max(100cqh, 100cqw / var(--a));
+    inset: auto;
+    left: calc((100cqw - var(--w)) * var(--px));
+    top: calc((100cqh - var(--h)) * var(--py));
+    width: var(--w);
+    height: var(--h);
+  }
+}
+
+.fill path {
+  stroke-width: 0.8;
+  stroke-linejoin: round;
+}
+
+.lines {
+  fill: none;
+  stroke: #fff;
+  stroke-opacity: 0.55;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+[data-sketch="none"] > .art {
+  display: none;
+}
+
+/* ---------- the draw-in ---------- */
+
+/* The strongest contours first, in eight waves (one path each). */
+.lines path:nth-child(2) { --d: 70ms; }
+.lines path:nth-child(3) { --d: 140ms; }
+.lines path:nth-child(4) { --d: 210ms; }
+.lines path:nth-child(5) { --d: 280ms; }
+.lines path:nth-child(6) { --d: 350ms; }
+.lines path:nth-child(7) { --d: 420ms; }
+.lines path:nth-child(8) { --d: 490ms; }
+
+[data-sketch="draw"] > .art .lines path {
+  /* The path is 1 long (pathLength), so this dash covers it and the offset hides it. */
+  stroke-dasharray: 1 1.1;
+  animation: draw 760ms cubic-bezier(0.3, 0, 0.2, 1) var(--d, 0ms) both;
+}
+
+[data-sketch="draw"] > .art .fill {
+  animation: fill-up 1000ms cubic-bezier(0.3, 0, 0.2, 1) 120ms both;
+  will-change: opacity;
+}
+
+@keyframes draw {
+  from {
+    stroke-dashoffset: 1.05;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes fill-up {
+  from {
+    opacity: 0;
+  }
+}
+
+/* Reduced motion: the sketch shows drawn, at once. */
+@media (prefers-reduced-motion: reduce) {
+  [data-sketch="draw"] > .art .lines path,
+  [data-sketch="draw"] > .art .fill {
+    animation: none !important;
+  }
+}
+
+/* ---------- the real picture over it ---------- */
+
+/* Put on the real picture (the img). It waits under the sketch until it has loaded. */
+[data-sketch="draw"] > .photo,
+[data-sketch="still"] > .photo {
+  opacity: 0;
+}
+
+/* If the page's script never runs, the picture still shows after a few seconds. */
+[data-sketch="draw"]:not([data-js]) > .photo {
+  animation: late-photo 600ms ease 4s both;
+}
+
+@keyframes late-photo {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+[data-sketch="photo"] > .photo {
+  transition: opacity 900ms cubic-bezier(0.4, 0, 0.2, 1);
+}

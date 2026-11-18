@@ -9,6 +9,7 @@ import TwinCompare from "@/components/TwinCompare";
 import TransitionLink from "@/components/TransitionLink";
 import HeroNudge from "@/components/HeroNudge";
 import HeroFrame from "@/components/film/HeroFrame";
+import { heroSketch } from "@/components/film/HeroSketch";
 import RingsBackdrop from "@/components/rings/RingsBackdrop";
 import { loopForFrame, motionForFrame } from "@/lib/film";
 import { breakdowns } from "@/components/breakdown/registry";
@@ -131,9 +132,21 @@ export default async function ProjectPage({ params }: Props) {
           {item.live === "rings" ? (
             // Framed a little left of centre, so narrow screens keep the funnel's edge in view.
             // A screen wider than 2:1 crops more from the top, so the outer red band stays in view.
-            <RingsBackdrop poster={frame.src} alt={frame.alt} position={[0.3, 0.7]} preload />
+            <RingsBackdrop
+              poster={frame.src}
+              alt={frame.alt}
+              position={[0.3, 0.7]}
+              preload
+              sketch={heroSketch(frame.src, [0.3, 0.7])}
+            />
           ) : (
-            <HeroFrame src={frame.src} alt={frame.alt} motion={motionForFrame(frame.src)} loop={loopForFrame(frame.src)} />
+            <HeroFrame
+              src={frame.src}
+              alt={frame.alt}
+              motion={motionForFrame(frame.src)}
+              loop={loopForFrame(frame.src)}
+              sketch={heroSketch(frame.src)}
+            />
           )}
           <div className={`wrap ${styles.heroText}`} data-hero-text>
             <TransitionLink href="/projects" className={`link small ${styles.back}`}>

@@ -1,19 +1,24 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef, type ReactNode } from "react";
 import { sameMotion, takeHandoff, whenShown, type Handoff } from "@/lib/handoff";
 import { filmUrl } from "@/lib/filmUrl";
 import type { Loop } from "@/lib/film";
 import FilmLoop, { keptLoop, loopFile, startLoop } from "./FilmLoop";
 import { MotionFade, MovingStill, motionAllowed, type Motion } from "./movingStill";
+import { firstState, useSketchReveal } from "./sketchReveal";
 import styles from "./HeroFrame.module.css";
+import sketchStyles from "./HeroSketch.module.css";
 
 /*
   A project page's hero frame: the film's picture for the project, framed the way the film
   frames it (the whole screen, under object-fit: cover). The hero shows the top of it.
 
-  It always shows as a plain picture first. Once the page has opened and settled, a moving
+  On a fresh visit it opens on a vector sketch of the picture (HeroSketch.tsx), whose lines
+  draw in while the picture loads, and the picture fades in over it (sketchReveal.ts).
+
+  Then it shows as a plain picture. Once the page has opened and settled, a moving
   still (movingStill.ts) tests the machine unseen, then fades in over the picture and lets one
   thing in it move, the same way the film does at that stop. A frame with a cinemagraph loop
   (FilmLoop.tsx) plays that loop the same way.
@@ -22,7 +27,7 @@ import styles from "./HeroFrame.module.css";
   that was showing there carries on at once, from the same moment and the same file.
 */
 
-type Props = { src: string; alt: string; motion?: Motion; loop?: Loop };
+type Props = { src: string; alt: string; motion?: Motion; loop?: Loop; sketch?: ReactNode };
 
 const SETTLE_MS = 700; // the page settles this long before the moving still may start
 /**
@@ -35,8 +40,9 @@ const DRAW_MS = 30;
 
 const later = (ms: number) => new Promise((r) => window.setTimeout(r, ms));
 
-export default function HeroFrame({ src, alt, motion, loop }: Props) {
+export default function HeroFrame({ src, alt, motion, loop, sketch }: Props) {
   const boxRef = useRef<HTMLDivElement>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const loopRef = useRef<HTMLVideoElement>(null);
   // Taken once per mount and kept, because React may run the effects below twice.
@@ -56,6 +62,9 @@ export default function HeroFrame({ src, alt, motion, loop }: Props) {
       box.style.transform = "";
     };
   }, []);
+
+  // The swap from the sketch to the picture. Opened from the film, the picture shows at once.
+  const { fromHtml, settled } = useSketchReveal(boxRef, imgRef, { settleMs: SETTLE_MS, now: () => !!hand() });
 
   // The moving still, once the page has settled, if the machine can keep up.
   useEffect(() => {
@@ -117,7 +126,7 @@ export default function HeroFrame({ src, alt, motion, loop }: Props) {
     (async () => {
       if (!carried) {
         await whenShown();
-        await later(SETTLE_MS);
+        await later(await settled());
       }
       if (disposed) return;
       still = new MovingStill(canvas);
@@ -213,7 +222,7 @@ export default function HeroFrame({ src, alt, motion, loop }: Props) {
     (async () => {
       if (!carried) {
         await whenShown();
-        await later(SETTLE_MS);
+        await later(await settled());
       }
       if (disposed) return;
       started = true;
@@ -231,9 +240,25 @@ export default function HeroFrame({ src, alt, motion, loop }: Props) {
   }, [loop]);
 
   return (
-    <div ref={boxRef} className={styles.box}>
+    <div
+      ref={boxRef}
+      className={styles.box}
+      data-sketch={sketch ? firstState(fromHtml) : undefined}
+      // The sketch's script may set data-sketch and data-js before the page hydrates.
+      suppressHydrationWarning
+    >
+      {sketch}
       {/* The film's own files, already sized, so a page opened from the film has them cached. */}
-      <Image src={filmUrl(src)} alt={alt} fill preload unoptimized sizes="100vw" className={styles.image} />
+      <Image
+        ref={imgRef}
+        src={filmUrl(src)}
+        alt={alt}
+        fill
+        preload
+        unoptimized
+        sizes="100vw"
+        className={`${styles.image} ${sketchStyles.photo}`}
+      />
       {motion && <canvas ref={canvasRef} className={styles.canvas} aria-hidden="true" />}
       {loop && <FilmLoop loop={loop} videoRef={loopRef} />}
     </div>

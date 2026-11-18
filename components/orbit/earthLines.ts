@@ -15,7 +15,7 @@ import { ALT, CAPTURE, HORIZON_Y, SUN_AZ, SUN_EL, captureView } from "./orbitFra
 
   Motion. Dots run along their circles right to left, the way the ground drifts. Each line has
   its own pace (bands, a per-line offset and a slow surge), as the rings on the Eigenvirtue
-  page do. On arrival the lines draw in from the middle of the screen, the horizon first.
+  page do. They are on and moving from the first frame.
 
   Light. The sun is the planet's own (low, to the left): blue and white on the day side, a warm
   band along the line between day and night, and the lights of towns on the night side. A thin
@@ -36,7 +36,6 @@ uniform mat3 uToCam;      // world to camera
 uniform vec3 uCam;        // camera position, Earth radii
 uniform vec4 uProj;       // camera space to screen: x scale, y scale, y offset, unused
 uniform vec3 uSun;
-uniform vec4 uRevealAt;  // draw-in: front centre y, aspect, front radius, edge glow
 uniform vec2 uWipe;      // the real planet's wipe: front y on screen, glow strength
 out vec3 vCol;
 flat out vec2 vDir;       // streak direction on screen
@@ -95,13 +94,8 @@ void main() {
   float dl = length(dpx);
   float len = min(dl, 30.0 * uPx);
 
-  // Drawn in on arrival: a front spreads out from the top of the horizon across the screen,
-  // so each line grows outward from the middle, with a brighter edge where it is drawing.
-  float rd = length(vec2(ndc.x * uRevealAt.y, ndc.y - uRevealAt.x));
-  float bright = 1.0 - smoothstep(uRevealAt.z - 0.16, uRevealAt.z, rd);
-  bright *= 1.0 + 1.6 * exp(-pow((rd - uRevealAt.z + 0.05) / 0.05, 2.0)) * uRevealAt.w;
   // Dots fade as they reach the horizon, where they wrap round.
-  bright *= smoothstep(0.0, 0.012, facing);
+  float bright = smoothstep(0.0, 0.012, facing);
   // As the real planet wipes up over the lines, the lines just ahead of its edge light up.
   bright *= 1.0 + 2.4 * uWipe.y * exp(-pow((ndc.y - uWipe.x - 0.04) / 0.07, 2.0));
   // A few bright lines among many faint ones, in loose bands, so each line reads on its own.
@@ -188,7 +182,6 @@ void main() {
 const COMP_FS = `#version 300 es
 precision highp float;
 uniform sampler2D uScene, uBloom;
-uniform vec4 uRevealAt;
 uniform mat3 uToWorld;    // camera to world
 uniform vec3 uCam, uSun;
 uniform vec4 uInv;        // screen to camera: x scale, y scale, y offset, unused
@@ -209,9 +202,6 @@ void main() {
     float glow = miss > 0.0
       ? exp(-miss / 0.004) * 1.1 + exp(-miss / 0.03) * 0.22
       : exp(miss / 0.003) * 0.7;
-    // The atmosphere draws in with the same front, ahead of the lines.
-    float rd = length(vec2(s.x * uRevealAt.y, s.y - uRevealAt.x));
-    glow *= 1.0 - smoothstep(uRevealAt.z * 1.6 - 0.1, uRevealAt.z * 1.6, rd);
     c += tint * glow;
   }
 
@@ -234,8 +224,6 @@ const LINES = 240;
 const DOTS = 900;
 /** Base pace along the circles, radians a second (the live planet drifts at 0.007). */
 const OMEGA = 0.045;
-/** Seconds the draw-in takes to reach the farthest corner. */
-const REVEAL = 0.85;
 /** Streak length, as seconds of each dot's own motion. */
 const STREAK = 0.03;
 
@@ -255,9 +243,8 @@ export class EarthLines {
   private proj = new Float32Array(4);
   private inv = new Float32Array(4);
   private beta = new Float32Array(2);
-  private revealAt = new Float32Array(4);
+  private top = 0;
   private wipe = new Float32Array([-2, 0]);
-  private reach = 2;
   private readonly cam = new Float32Array([0, 1 + ALT, 0]);
   private readonly sun: Float32Array;
 
@@ -371,11 +358,7 @@ export class EarthLines {
     const b = cy * ry;
     const hit = -b - Math.sqrt(Math.max(b * b - (cy * cy - 1), 0));
     this.beta.set([-Math.acos(1 / cy), Math.asin(Math.max(-1, Math.min(1, hit * rz)))]);
-    // The draw-in starts where the horizon peaks on screen and must reach the far corners.
-    const top = HORIZON_Y * sy + oy;
-    this.revealAt[0] = top;
-    this.revealAt[1] = aspect;
-    this.reach = Math.hypot(aspect, 1 + Math.abs(top)) + 0.1;
+    this.top = HORIZON_Y * sy + oy;
 
     const v = this.canvas;
     this.dpr = Math.min(window.devicePixelRatio || 1, 2, Math.sqrt(4.5e6 / (W * H)));
@@ -397,7 +380,7 @@ export class EarthLines {
     gl.drawArrays(gl.TRIANGLES, 0, 3);
   }
 
-  /** Draw the frame at t seconds from the start. The lines draw in over the first two. */
+  /** Draw the frame at t seconds from the start. */
   draw(t: number) {
     if (!this.ok || this.disposed || !this.T) return;
     const gl = this.gl;
@@ -416,12 +399,6 @@ export class EarthLines {
     gl.uniform1i(D.u.uLines, LINES);
     gl.uniform2fv(D.u.uBeta, this.beta);
     gl.uniform1f(D.u.uTime, t);
-    // The draw-in front: from the top of the horizon to the farthest corner in REVEAL seconds.
-    const k = Math.min(1, Math.max(0, t / REVEAL));
-    const e = 1 - Math.pow(1 - k, 2.4);
-    this.revealAt[2] = 0.12 + e * this.reach;
-    this.revealAt[3] = 1 - k;
-    gl.uniform4fv(D.u.uRevealAt, this.revealAt);
     gl.uniform1f(D.u.uPx, this.dpr);
     gl.uniform1f(D.u.uOmega, OMEGA);
     gl.uniform1f(D.u.uStreak, STREAK);
@@ -465,7 +442,6 @@ export class EarthLines {
       tex(1, T.q4);
       gl.uniform1i(u.uScene, 0);
       gl.uniform1i(u.uBloom, 1);
-      gl.uniform4fv(u.uRevealAt, this.revealAt);
       gl.uniformMatrix3fv(u.uToWorld, false, this.toWorld);
       gl.uniform3fv(u.uCam, this.cam);
       gl.uniform3fv(u.uSun, this.sun);
@@ -475,7 +451,7 @@ export class EarthLines {
 
   /** Screen y (-1 bottom to 1 top) of the top of the horizon on this screen. */
   get horizonTop() {
-    return this.revealAt[0];
+    return this.top;
   }
 
   /** Where the real planet's wipe has reached (screen y, -1 bottom to 1 top), and how strongly the lines glow there. */

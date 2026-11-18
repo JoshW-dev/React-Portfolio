@@ -37,8 +37,22 @@ export function measuredRate(): number {
   return busy > 0 ? (bytes * 8) / (busy / 1000) : 0;
 }
 
-/** True when the page has measured its link as slow. Unknown counts as not slow. */
+/**
+ * What the browser says about the link, where it says anything (Chrome and Android): Data
+ * Saver is on, or recent requests have run below about 700 kbit/s ("3g" or worse).
+ */
+function hintedSlow(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const c = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
+  return !!c && (c.saveData === true || ["slow-2g", "2g", "3g"].includes(c.effectiveType ?? ""));
+}
+
+/**
+ * True when the browser says the link is slow, or the page has measured it as slow. Unknown
+ * counts as not slow.
+ */
 export function slowLink(): boolean {
+  if (hintedSlow()) return true;
   const r = measuredRate();
   return r > 0 && r < SLOW_BITS;
 }

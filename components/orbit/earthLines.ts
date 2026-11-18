@@ -23,6 +23,10 @@ import { ALT, CAPTURE, HORIZON_Y, SUN_AZ, SUN_EL, captureView } from "./orbitFra
 
   Cost. No vertex buffers and no textures: every dot's place comes from its index
   (gl_VertexID). The first frame costs a shader compile.
+
+  Thread. The class takes a canvas or an OffscreenCanvas and reads nothing from the page, so
+  earthLines.worker.ts can run it off the main thread (see linesHost.ts). Then the planet's
+  loading (three.js, its textures, its shaders) can't stall the lines while they show.
 */
 
 const DOT_VS = `#version 300 es
@@ -220,6 +224,12 @@ export type EarthLinesOptions = {
   keepFrames?: boolean;
 };
 
+/** Screen y (-1 bottom to 1 top) of the top of the horizon on a screen of this size. */
+export function horizonTopFor(cssW: number, cssH: number) {
+  const { viewH } = captureView(Math.max(1, cssW) / Math.max(1, cssH));
+  return HORIZON_Y * (CAPTURE.height / viewH) - (CAPTURE.height - CAPTURE.clipRows) / viewH;
+}
+
 const LINES = 240;
 const DOTS = 900;
 /** Base pace along the circles, radians a second (the live planet drifts at 0.007). */
@@ -248,16 +258,17 @@ export class EarthLines {
   private readonly cam = new Float32Array([0, 1 + ALT, 0]);
   private readonly sun: Float32Array;
 
-  constructor(private canvas: HTMLCanvasElement, options: EarthLinesOptions = {}) {
+  constructor(private canvas: HTMLCanvasElement | OffscreenCanvas, options: EarthLinesOptions = {}) {
     this.dots = Math.max(200, Math.round(DOTS * (options.density ?? 1)));
     const az = (SUN_AZ * Math.PI) / 180;
     const el = (SUN_EL * Math.PI) / 180;
     // World frame at the start point: up +Y, north -Z, east +X (as orbitScene.ts).
     this.sun = new Float32Array([Math.sin(az) * Math.cos(el), Math.sin(el), -Math.cos(az) * Math.cos(el)]);
-    const gl = canvas.getContext("webgl2", {
+    // Both kinds of canvas take the same call; the cast only picks one of TypeScript's overloads.
+    const gl = (canvas as OffscreenCanvas).getContext("webgl2", {
       antialias: false, alpha: false, depth: false, premultipliedAlpha: false,
       preserveDrawingBuffer: !!options.keepFrames, powerPreference: "high-performance",
-    });
+    }) as WebGL2RenderingContext | null;
     if (!gl) {
       this.ok = false;
       return;
@@ -278,7 +289,6 @@ export class EarthLines {
     // WebGL 2 draws with no attributes at all; an empty vertex array keeps drivers happy.
     this.vao = gl.createVertexArray();
     this.ok = true;
-    this.resize();
   }
 
   private program(vs: string, fs: string): Program {
@@ -331,10 +341,13 @@ export class EarthLines {
     this.T = null;
   }
 
-  /** Match the canvas to its box, and frame the planet as the live scene frames it. */
-  resize() {
+  /**
+   * Match the canvas to its box (CSS pixels, and the screen's pixel ratio), and frame the
+   * planet as the live scene frames it. Call it before the first draw.
+   */
+  resize(cssW: number, cssH: number, pixelRatio: number) {
     if (!this.ok) return;
-    const W = Math.max(1, this.canvas.clientWidth), H = Math.max(1, this.canvas.clientHeight);
+    const W = Math.max(1, cssW), H = Math.max(1, cssH);
     const aspect = W / H;
     const { viewW, viewH, pitch } = captureView(aspect);
     const ty = Math.tan((CAPTURE.fov * Math.PI) / 360);
@@ -358,10 +371,10 @@ export class EarthLines {
     const b = cy * ry;
     const hit = -b - Math.sqrt(Math.max(b * b - (cy * cy - 1), 0));
     this.beta.set([-Math.acos(1 / cy), Math.asin(Math.max(-1, Math.min(1, hit * rz)))]);
-    this.top = HORIZON_Y * sy + oy;
+    this.top = horizonTopFor(W, H);
 
     const v = this.canvas;
-    this.dpr = Math.min(window.devicePixelRatio || 1, 2, Math.sqrt(4.5e6 / (W * H)));
+    this.dpr = Math.min(pixelRatio || 1, 2, Math.sqrt(4.5e6 / (W * H)));
     const cw = Math.round(W * this.dpr), ch = Math.round(H * this.dpr);
     if (v.width === cw && v.height === ch && this.T) return;
     v.width = cw;

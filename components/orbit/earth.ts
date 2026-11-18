@@ -45,30 +45,70 @@ export async function loadImage(url: string, signal: AbortSignal): Promise<Image
   return img;
 }
 
-export function makeTexture(
+/** Main-thread time an upload may take in one frame. */
+const UPLOAD_MS = 4;
+
+/**
+ * A texture for one of the maps, sent to the GPU a band of rows per frame, so no frame
+ * stalls. The 8k maps in one go held the main thread for about 250 ms on a laptop; in bands,
+ * each frame spends about UPLOAD_MS on them. The band grows or shrinks to fit that budget on
+ * this machine. The mipmaps are made once, after the last band. Resolves with the texture
+ * once all of it is up.
+ */
+export async function uploadInSteps(
   T: Three,
+  renderer: THREE.WebGLRenderer,
   image: ImageBitmap | HTMLImageElement,
   kind: "color" | "data",
   anisotropy: number,
-): THREE.Texture {
-  const tex = new T.Texture(image as HTMLImageElement);
+  signal: AbortSignal,
+): Promise<THREE.Texture> {
+  const w = image.width;
+  const h = image.height;
+  // The texture with its storage (every mip level) and no pixels yet.
+  const dst = new T.DataTexture(null, w, h, kind === "color" ? T.RGBAFormat : T.RedFormat, T.UnsignedByteType);
+  dst.flipY = false;
+  dst.wrapS = T.RepeatWrapping;
+  dst.wrapT = T.ClampToEdgeWrapping;
+  dst.minFilter = T.LinearMipmapLinearFilter;
+  dst.magFilter = T.LinearFilter;
+  dst.anisotropy = anisotropy;
+  dst.colorSpace = kind === "color" ? T.SRGBColorSpace : T.NoColorSpace;
+  dst.generateMipmaps = true;
+  dst.source.dataReady = false;
+  dst.needsUpdate = true;
+  renderer.initTexture(dst);
+  dst.generateMipmaps = false;
+  // The picture as a source only: three never sends it to the GPU itself.
+  const src = new T.Texture(image as HTMLImageElement);
   // Uploaded unflipped; the shader reads row 0 as the north pole.
-  tex.flipY = false;
-  tex.wrapS = T.RepeatWrapping;
-  tex.wrapT = T.ClampToEdgeWrapping;
-  tex.minFilter = T.LinearMipmapLinearFilter;
-  tex.magFilter = T.LinearFilter;
-  tex.generateMipmaps = true;
-  tex.anisotropy = anisotropy;
-  if (kind === "color") {
-    tex.colorSpace = T.SRGBColorSpace;
-  } else {
-    // Single channel: a quarter of the GPU memory of RGBA.
-    tex.colorSpace = T.NoColorSpace;
-    tex.format = T.RedFormat;
+  src.flipY = false;
+  const region = new T.Box2();
+  const at = new T.Vector2();
+  const bytes = kind === "color" ? 4 : 1;
+  // Start at about 1 MB a band, then fit the band to the budget.
+  let rows = Math.max(8, Math.round(1_000_000 / (w * bytes)));
+  let y = 0;
+  while (y < h) {
+    await new Promise<void>((r) => requestAnimationFrame(() => r()));
+    if (signal.aborted) {
+      dst.dispose();
+      throw new DOMException("aborted", "AbortError");
+    }
+    const n = Math.min(rows, h - y);
+    region.min.set(0, y);
+    region.max.set(w, y + n);
+    at.set(0, y);
+    dst.generateMipmaps = y + n >= h;
+    const t0 = performance.now();
+    renderer.copyTextureToTexture(src, dst, region, at);
+    const ms = performance.now() - t0;
+    y += n;
+    rows = Math.max(8, Math.min(h, Math.round((n * UPLOAD_MS) / Math.max(ms, 0.25))));
   }
-  tex.needsUpdate = true;
-  return tex;
+  dst.generateMipmaps = true;
+  if (typeof ImageBitmap !== "undefined" && image instanceof ImageBitmap) image.close();
+  return dst;
 }
 
 /** Earth-fixed unit vector for a latitude and longitude in degrees (three's sphere UVs). */

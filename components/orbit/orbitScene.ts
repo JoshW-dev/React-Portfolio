@@ -1,6 +1,6 @@
 import type * as THREE from "three";
 import { buildCubeSat } from "./cubesat";
-import { TEXTURES, earthFragment, earthVertex, latLon, loadImage, makeTexture, type Tier } from "./earth";
+import { TEXTURES, earthFragment, earthVertex, latLon, loadImage, uploadInSteps, type Tier } from "./earth";
 import { slowLink } from "@/lib/netRate";
 import { ALT, CAPTURE, HORIZON_Y, SUN_AZ, SUN_EL } from "./orbitFrame";
 
@@ -548,15 +548,15 @@ export function createOrbitScene(T: Three, opts: OrbitSceneOptions): OrbitScene 
     if (withWater) jobs.push(loadImage(urls.water!, abort.signal));
     const [day, lights, water] = await Promise.all(jobs);
     if (disposed) return;
-    // Read the size before the bitmap is closed below (a closed bitmap reports 0).
+    // Read the size before the upload closes the bitmap (a closed bitmap reports 0).
     const daySize = (day as { width: number }).width;
-    const set = [makeTexture(T, day, "color", anisotropy), makeTexture(T, lights, "data", anisotropy)];
-    if (water) set.push(makeTexture(T, water, "data", 4));
-    set.forEach((t) => {
-      renderer.initTexture(t);
-      const img = t.image as unknown;
-      if (typeof ImageBitmap !== "undefined" && img instanceof ImageBitmap) img.close();
-    });
+    // A band of rows per frame (uploadInSteps), one map after another, so no frame stalls.
+    const set: THREE.Texture[] = [];
+    for (const [img, kind, aniso] of [[day, "color", anisotropy], [lights, "data", anisotropy], [water, "data", 4]] as const) {
+      if (!img) continue;
+      set.push(await uploadInSteps(T, renderer, img, kind, aniso, abort.signal));
+      if (disposed) return;
+    }
     const old = [earthMat.uniforms.uDay.value, earthMat.uniforms.uLights.value] as (THREE.Texture | null)[];
     earthMat.uniforms.uDay.value = set[0];
     earthMat.uniforms.uLights.value = set[1];
@@ -706,7 +706,13 @@ export function createOrbitScene(T: Three, opts: OrbitSceneOptions): OrbitScene 
 
   (async () => {
     try {
+      // The shaders compile on the driver's own threads while the first maps download and go
+      // up, so neither the first frame nor the satellite's entrance stops to compile them.
+      const compiled = Promise.all([renderer.compileAsync(earthScene, earthCam), renderer.compileAsync(satScene, satCam)]).catch(
+        () => undefined,
+      );
       if (earth) await loadSet(firstTier);
+      await compiled;
       if (disposed || failed) return;
       draw(0);
       ready = true;

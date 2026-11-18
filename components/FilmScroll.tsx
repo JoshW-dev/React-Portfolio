@@ -148,6 +148,8 @@ const PASS_FADE = 0.08;
 /** vh at each end of a hold's hops over which its hotspots fade. */
 const SPOT_FADE = 4;
 
+/** After this long on the page, the moving still's canvas is set up in an idle moment. */
+const MOVING_WARM_MS = 6000;
 /** The moving still draws at most this often, about 30 times a second. */
 const MOVE_DRAW_MS = 30;
 const LOOP_SETTLE = 0.6; // s the film rests on a stop before its loop may fade in
@@ -1406,6 +1408,20 @@ export default function FilmScroll({ frames = NO_FRAMES }: { frames?: Record<str
     };
     const keyOf = (s: Source | null) => (s === null ? "" : typeof s === "string" ? s : s.key);
 
+    // The canvas's context and shader are made in a quiet moment ahead of the first stop that
+    // moves, so landing there doesn't stop to compile them (10 to 40 ms on a phone).
+    let warmIdle = 0;
+    const warmMoving = () => {
+      warmIdle = 0;
+      if (moving || movingOff || reduced || !canvas) return;
+      moving = new MovingStill(canvas);
+      if (!moving.ok) movingOff = true;
+    };
+    const warmTimer = window.setTimeout(() => {
+      if (typeof window.requestIdleCallback === "function") warmIdle = window.requestIdleCallback(warmMoving, { timeout: 4000 });
+      else warmMoving();
+    }, MOVING_WARM_MS);
+
     /** Draws the moving still for this frame. True while it needs more frames. */
     const drawMoving = (now: number, dt: number) => {
       if (!canvas) return false;
@@ -1719,6 +1735,8 @@ export default function FilmScroll({ frames = NO_FRAMES }: { frames?: Record<str
       window.removeEventListener("touchend", onTouchEnd);
       window.removeEventListener("touchcancel", onTouchEnd);
       if (idleTimer) clearTimeout(idleTimer);
+      clearTimeout(warmTimer);
+      if (warmIdle) window.cancelIdleCallback(warmIdle);
       (moving as MovingStill | null)?.dispose();
       // A download still running finishes into the store for the film's next showing, and
       // every file fetched stays there (keptClips, and FilmLoop.tsx for the loops).

@@ -34,3 +34,6 @@ next-env.d.ts
 *.tsbuildinfo
 .vercel
 scripts/film-interp
+
+# written by scripts/build-lines-worker.mjs before every build
+/public/film/lines-worker.js

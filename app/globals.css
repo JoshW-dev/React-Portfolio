@@ -358,6 +358,18 @@ body:has([data-film]) > header {
   text-shadow: 0 1px 10px rgb(0 0 0 / 0.6);
 }
 
+/* In the film's reel (components/FilmScroll.module.css) a swipe that starts on the bar's empty
+   space moves the film, like a swipe anywhere else on it. Its links still take taps. */
+@media (hover: none) and (pointer: coarse) {
+  body:has([data-film]) > header {
+    pointer-events: none;
+  }
+
+  body:has([data-film]) > header a {
+    pointer-events: auto;
+  }
+}
+
 /* ---------- page transitions ---------- */
 
 /*

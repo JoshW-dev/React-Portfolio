@@ -10,53 +10,16 @@
   height: 100%;
 }
 
-/* The reel's snap points, one per place (below). */
-.snaps {
-  position: absolute;
-  inset: 0;
-  display: none;
-  flex-direction: column;
-  pointer-events: none;
-}
-
-.snaps i {
-  flex: 1;
-  scroll-snap-align: start;
-  scroll-snap-stop: always;
-}
-
 /*
-  The reel, on a screen held in the hand (REEL in FilmScroll.tsx). The film is its own
-  scroller, one screen tall, over a track of one screen per place, and each swipe snaps to the
-  next place the way a feed of short videos does: the browser's own scrolling, momentum and
-  all. The screen stays pinned inside it. At the last place a swipe up scrolls the page on to
-  the projects. Once the page has left the top of the film (data-page), a swipe on what shows
-  of the film scrolls the page, until the film fills the screen again.
+  The reel, on a screen held in the hand (REEL in FilmScroll.tsx). The film is one screen tall
+  and follows the finger itself, a place per swipe. At the last place a swipe up scrolls the
+  page on to the projects.
 */
 @media (hover: none) and (pointer: coarse) {
   .film {
     height: 100vh;
     height: 100svh;
-    overflow-x: hidden;
-    overflow-y: scroll;
-    scroll-snap-type: y mandatory;
-    scrollbar-width: none;
-  }
-
-  .film::-webkit-scrollbar {
-    display: none;
-  }
-
-  .film[data-page] {
-    overflow-y: hidden;
-  }
-
-  .track {
-    height: calc(var(--reel-n) * 100%);
-  }
-
-  .snaps {
-    display: flex;
+    overflow: hidden;
   }
 }
 

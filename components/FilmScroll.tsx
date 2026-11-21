@@ -57,15 +57,18 @@ import styles from "./FilmScroll.module.css";
   momentum carry the page. When the gesture ends, the page is moved to that stop. A mouse wheel
   or trackpad still scrolls through each hold as before.
 
-  On a phone or tablet the film is a reel instead, like a feed of short videos. The film is its
-  own scroller, one screen tall, with a snap point for each place, so the browser moves exactly
-  one place per swipe with its own momentum, and nothing is held or moved back by script. A
-  finger on the reel moves the film with it; once it lifts, the film flies to the place the
-  browser is snapping to. Each swipe in a row adds a place, and the flight speeds up to reach
-  it. Flights play their clip at speed (Flights, below), which a phone shows smoothly where it
-  can't seek frame by frame. The intro never holds a swipe. At the last place a swipe up
-  scrolls the page on to the projects, and the browser's back button reopens the reel on the
-  place it showed.
+  On a phone or tablet the film is a reel instead, like a feed of short videos. The film is one
+  screen tall and follows the finger itself (Reel, below): a drag moves the flight with the
+  finger from the first pixel, and the words slide with it. When the finger lifts, a flick or a
+  drag past a short way flies on to the next place in that direction, and anything less goes
+  back. A swipe during a flight catches it where it is, and a flick then adds a place. Flights
+  play their clip at speed (Flights, below), which a phone shows smoothly where it can't seek
+  frame by frame. The intro never holds a swipe. At the last place a swipe up scrolls the page
+  on to the projects, and the browser's back button reopens the reel on the place it showed.
+
+  iOS loads only a video's metadata until it has played, and in low power mode plays it only
+  from a touch. Each clip is played for a moment as it attaches, and the first touch that ends
+  plays and pauses every clip's video, which lifts both for good (Unlocking, below).
 
   Once the film rests on a stop, one thing in its picture starts to move (film/movingStill.ts):
   a canvas over the layers fades in drawing the same frames, then lets its motion grow. It
@@ -226,14 +229,33 @@ const SEEK_EPS = 0.005;
 const END_GUARD = 0.25 / 60;
 const PHONE = "(max-width: 800px)";
 
-// The reel, on a screen held in the hand: the film is its own scroller, one screen tall, with
-// one snap point per place (FilmScroll.module.css). The browser's own snapping moves one place
-// per swipe, momentum and all, the way a feed of short videos does, and the playhead flies
-// there. A flight plays its clip at speed instead of seeking it frame by frame.
+// The reel, on a screen held in the hand: the film follows the finger, the way a feed of short
+// videos does, and flies on or back when it lifts. A flight plays its clip at speed instead of
+// seeking it frame by frame.
 const REEL = "(hover: none) and (pointer: coarse)";
-/** Share of a swipe between two places that crosses the rest of the first place's hold. */
-const REEL_DEPART = 0.06;
+/** Share of the way between two places that crosses the rest of the first place's hold. */
+const REEL_DEPART = 0.01;
 const REEL_HOLD_SPEED = 650; // vh/s across a hold
+/** A drag this share of the screen's height long moves the film one place. */
+const REEL_DRAG = 0.7;
+/** px a finger moves before its touch counts as a drag rather than a tap. */
+const REEL_SLOP = 6;
+/** px/ms: a finger lifting this fast flies on in its direction, however short the drag. */
+const REEL_FLICK = 0.25;
+/** A swipe shorter than this many ms that covers REEL_SWIPE_MIN px flies on in its direction. */
+const REEL_SWIPE_MS = 300;
+const REEL_SWIPE_MIN = 24;
+/** Share of the way to the next place that a slow drag must cover to fly on rather than go back. */
+const REEL_COMMIT = 0.18;
+/** How far, in places, a drag can pull past the first or last place, against rising resistance. */
+const REEL_EDGE = 0.1;
+/** ms of the finger's last moves that set its speed as it lifts. */
+const REEL_TRAIL_MS = 100;
+/** Per second: how fast a pull past the first or last place springs back. */
+const REEL_SPRING = 14;
+/** px of wheel in one gesture that move the reel a place, and ms without one that end it. */
+const REEL_WHEEL_STEP = 30;
+const REEL_WHEEL_IDLE = 220;
 /** A reel flight lasts about this long: its clip plays at up to REEL_RATE_TOP times its speed. */
 const REEL_FLIGHT_SECS = 2.8;
 const REEL_RATE_TOP = 4.5;
@@ -324,8 +346,8 @@ const mapProgress = (pos: number) => {
 /** Where the film rests on each place in the reel: just inside its hold, where flights land. */
 const REEL_AT = RESTS.map((k) => landAt(k));
 /**
- * The film position for a reel scroll position, counted in places. The first REEL_DEPART of
- * the way crosses the rest of the place's hold, so a flight starts as soon as the finger moves.
+ * The film position for a reel position, counted in places. The first REEL_DEPART of the way
+ * crosses the rest of the place's hold, so a flight starts as soon as the finger moves.
  */
 const reelFilm = (s: number) => {
   const n = REEL_AT.length - 1;
@@ -339,6 +361,23 @@ const reelFilm = (s: number) => {
   const out = hold.start + hold.len;
   return t <= REEL_DEPART ? a + (out - a) * (t / REEL_DEPART) : out + (b - out) * ((t - REEL_DEPART) / (1 - REEL_DEPART));
 };
+/** The reel position, in places, of a film position: reelFilm the other way round. */
+const reelPlace = (pos: number) => {
+  const n = REEL_AT.length - 1;
+  if (n <= 0 || pos <= REEL_AT[0]) return 0;
+  if (pos >= REEL_AT[n]) return n;
+  let i = 0;
+  while (i < n - 1 && pos >= REEL_AT[i + 1]) i++;
+  const a = REEL_AT[i];
+  const b = REEL_AT[i + 1];
+  const hold = HOLD_SEG[RESTS[i]];
+  const out = hold.start + hold.len;
+  return pos <= out
+    ? i + REEL_DEPART * clamp01((pos - a) / Math.max(1e-6, out - a))
+    : i + REEL_DEPART + (1 - REEL_DEPART) * clamp01((pos - out) / Math.max(1e-6, b - out));
+};
+/** A pull of o places past the first or last place, against resistance: at most REEL_EDGE. */
+const edgePull = (o: number) => REEL_EDGE * (1 - 1 / (1 + o / REEL_EDGE));
 /** The reel's place when the film last showed, so the browser's back button returns to it. */
 let reelKept = 0;
 let poppedAt = -Infinity;
@@ -626,16 +665,13 @@ export default function FilmScroll({ frames = NO_FRAMES }: { frames?: Record<str
 
     const reduceQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
     let reduced = reduceQuery.matches;
-    // The reel: the film scrolls itself, one place per swipe (REEL above). The stylesheet
+    // The reel: the film follows the finger, one place per swipe (REEL above). The stylesheet
     // switches on the same query, so the two always agree.
     const reelQuery = window.matchMedia(REEL);
     let reel = reelQuery.matches;
-    /** The height of one place in the reel: the scroller's own height. */
-    const placeH = () => Math.max(1, wrap.clientHeight);
-    // Back to the film in the reel: it opens on the place it showed when the visitor left.
-    if (reel && reelKept > 0 && performance.now() - poppedAt < BACK_MS) {
-      wrap.scrollTo({ top: reelKept * placeH(), behavior: "instant" });
-    }
+    // The place the reel rests on or flies to, as an index into RESTS. Back to the film, it
+    // opens on the place it showed when the visitor left.
+    let reelTo = reel && performance.now() - poppedAt < BACK_MS ? reelKept : 0;
     const conn = (navigator as Navigator & { connection?: NetInfo }).connection;
     const saveData = conn?.saveData === true;
     // Reduced motion and data saver fetch no clips and cross-fade stills.
@@ -699,10 +735,31 @@ export default function FilmScroll({ frames = NO_FRAMES }: { frames?: Record<str
     const unplayable = new Set<number>();
     /** The document has scrolled past the top of the reel, so a swipe on it moves the page. */
     let pageOn = false;
-    // The reel's scroll last frame, in places, and the place it is snapping to once the finger
-    // is up (null while a finger moves it, or before it has moved).
-    let reelS = 0;
-    let reelTo: number | null = null;
+    /**
+     * A finger on the reel (Reel, below). down: where and when it went down. y0: where the
+     * film was caught once it moved. s0: the film's place then. heading: where a flight it
+     * caught was going. s: the place it has dragged the film to, past the first or last place
+     * against resistance. mode: "film" once it drags the film, "page" when the page scrolls
+     * under it, null until it has moved far enough to tell. trail: its last moves, for its speed.
+     */
+    type ReelDrag = {
+      id: number;
+      down: { y: number; t: number };
+      x0: number;
+      y0: number;
+      s0: number;
+      heading: number | null;
+      s: number;
+      mode: "film" | "page" | null;
+      trail: { y: number; t: number }[];
+    };
+    let drag: ReelDrag | null = null;
+    /** Places a drag pulled past the first or last place, springing back once it lets go. */
+    let reelOver = 0;
+    /** A finger is dragging the film. */
+    const dragging = () => drag?.mode === "film";
+    /** The last time a finger let go of the film: its speed, where it left it, where it went. */
+    let reelLetGo: { v: number; s: number; to: number } | null = null;
 
     const targetOf = (c: Clip) => Math.min(Math.max(0, c.dur - END_GUARD), clipProgress(c.hop, p) * c.dur);
 
@@ -711,7 +768,7 @@ export default function FilmScroll({ frames = NO_FRAMES }: { frames?: Record<str
     const intro: Intro = { phase: "off", holding: false, mount: performance.now(), shown: 0, released: 0, cue: false };
     // Only on a visit that starts at the top, with motion allowed and the page in view. In the
     // reel a swipe is never held: it flies at once, and the intro plays on under it.
-    if (!reduced && window.scrollY < 8 && (!reel || wrap.scrollTop < 8) && !document.hidden) {
+    if (!reduced && window.scrollY < 8 && (!reel || reelTo === 0) && !document.hidden) {
       intro.phase = "waiting";
       intro.holding = !reel;
     }
@@ -896,19 +953,136 @@ export default function FilmScroll({ frames = NO_FRAMES }: { frames?: Record<str
 
     // ---- Reel ----------------------------------------------------------------------------
 
-    const onReelScroll = () => {
+    // The film follows a finger on it, from wherever the finger catches it, mid-flight or at
+    // rest: a drag of REEL_DRAG of the screen's height moves it one place. When the finger
+    // lifts, a flick flies on to the next place its way (one past a flight it caught going
+    // that way, so each flick in a row adds a place). A slow drag flies on once it has covered
+    // REEL_COMMIT of the way, and goes back otherwise. A caught flight flies on to where it
+    // was going, unless the drag pulled it back that far. The flight starts inside the touch's
+    // end, which iOS counts as a gesture, so it plays even in low power mode.
+
+    /** Sends the reel to a place: the film flies there from wherever it is. */
+    const reelGo = (j: number) => {
+      reelTo = Math.min(RESTS.length - 1, Math.max(0, j));
+      reelKept = reelTo;
       lastScrollAt = performance.now();
       kick();
     };
+    const touchOf = (list: TouchList, id: number) => {
+      for (let i = 0; i < list.length; i++) if (list[i].identifier === id) return list[i];
+      return null;
+    };
+    const onReelTouchStart = (e: TouchEvent) => {
+      if (!reel) return;
+      if (e.touches.length !== 1) {
+        // A second finger (a pinch) lets go of the film where it is.
+        if (drag?.mode === "film") letGo(drag, 0, 0);
+        drag = null;
+        return;
+      }
+      const t = e.touches[0];
+      const down = { y: t.clientY, t: e.timeStamp };
+      drag = { id: t.identifier, down, x0: t.clientX, y0: t.clientY, s0: 0, heading: null, s: 0, mode: null, trail: [down] };
+    };
+    const onReelTouchMove = (e: TouchEvent) => {
+      const d = drag;
+      if (!d || !reel || d.mode === "page") return;
+      const t = touchOf(e.touches, d.id);
+      if (!t) return;
+      if (d.mode === null) {
+        // The page scrolls under a finger once it has left the top of the film, and from the
+        // last place a swipe up goes on to the projects. Anything else drags the film, so the
+        // page must not start to scroll while the finger is still too close to tell.
+        const atEnd = reelTo === RESTS.length - 1;
+        if (pageOn) {
+          d.mode = "page";
+          return;
+        }
+        const dy = d.y0 - t.clientY;
+        if (Math.abs(dy) < REEL_SLOP && Math.abs(t.clientX - d.x0) < REEL_SLOP) {
+          if (!atEnd && e.cancelable) e.preventDefault();
+          return;
+        }
+        if (atEnd && dy > 0) {
+          d.mode = "page";
+          return;
+        }
+        // Caught where it is, the film drags from here. A browser that holds back the first
+        // moves (Chrome does, for its own slop) has the rest of them count.
+        d.mode = "film";
+        d.heading = Math.abs(goal - p) > SNAP ? reelTo : null;
+        endFlight();
+        d.s0 = d.s = reelPlace(p);
+        d.y0 -= Math.sign(dy) * Math.min(Math.abs(dy), REEL_SLOP);
+      }
+      if (e.cancelable) e.preventDefault();
+      const last = RESTS.length - 1;
+      const raw = d.s0 + (d.y0 - t.clientY) / (REEL_DRAG * Math.max(1, window.innerHeight));
+      d.s = raw < 0 ? -edgePull(-raw) : raw > last ? last + edgePull(raw - last) : raw;
+      reelOver = d.s - Math.min(last, Math.max(0, d.s));
+      d.trail.push({ y: t.clientY, t: e.timeStamp });
+      while (d.trail.length > 2 && e.timeStamp - d.trail[0].t > REEL_TRAIL_MS) d.trail.shift();
+      lastScrollAt = performance.now();
+      kick();
+    };
+    const onReelTouchEnd = (e: TouchEvent) => {
+      const d = drag;
+      if (!d || touchOf(e.touches, d.id)) return;
+      drag = null;
+      if (d.mode !== "film") return;
+      if (e.type !== "touchend") {
+        letGo(d, 0, 0);
+        return;
+      }
+      // The finger's speed over its last REEL_TRAIL_MS before it lifted, in px/ms, up the
+      // screen positive. A finger that stopped before lifting has none left.
+      let v = 0;
+      const end = touchOf(e.changedTouches, d.id);
+      const y = end ? end.clientY : d.trail[d.trail.length - 1].y;
+      d.trail.push({ y, t: e.timeStamp });
+      const recent = d.trail.filter((m) => e.timeStamp - m.t <= REEL_TRAIL_MS);
+      if (recent.length >= 2) {
+        const a = recent[0];
+        const b = recent[recent.length - 1];
+        v = (a.y - b.y) / Math.max(8, b.t - a.t);
+      }
+      // A quick swipe flies on its way, even one that slowed as it lifted.
+      const moved = d.down.y - y;
+      const quick = e.timeStamp - d.down.t < REEL_SWIPE_MS && Math.abs(moved) >= REEL_SWIPE_MIN && moved * v >= 0;
+      const way = v >= REEL_FLICK || (quick && moved > 0) ? 1 : v <= -REEL_FLICK || (quick && moved < 0) ? -1 : 0;
+      letGo(d, v, way);
+    };
+    /**
+     * A finger lets go of the film at v px/ms, up positive. way: 1 or -1 for a flick or a quick
+     * swipe that way, 0 for neither. The film flies on, or back.
+     */
+    function letGo(d: ReelDrag, v: number, way: number) {
+      const last = RESTS.length - 1;
+      const s = Math.min(last, Math.max(0, d.s));
+      const net = s - d.s0;
+      const base = Math.floor(s + 1e-6);
+      const f = s - base;
+      // The nearest place, leaning the way the drag went.
+      let to = net >= 0 ? (f > REEL_COMMIT ? base + 1 : base) : f > 1 - REEL_COMMIT ? base + 1 : base;
+      const hd = d.heading === null ? 0 : Math.sign(d.heading - d.s0);
+      const heading = d.heading ?? 0;
+      if (way > 0) to = Math.max(base + 1, hd > 0 ? heading + 1 : 0);
+      else if (way < 0) to = Math.min(Math.ceil(s - 1e-6) - 1, hd < 0 ? heading - 1 : last);
+      else if (hd !== 0 && net * hd > -REEL_COMMIT) to = hd > 0 ? Math.max(heading, to) : Math.min(heading, to);
+      reelLetGo = { v, s, to };
+      unlock();
+      reelGo(to);
+      goal = reelFilm(reelTo);
+      if (!flight) {
+        const h = flyable();
+        if (h >= 0) startFlight(h);
+      }
+    }
     // Once the page has scrolled past the top of the reel (out of the last place, into the
     // projects), a swipe on what shows of the film scrolls the page back, rather than flying
     // the film. The reel takes swipes again once it fills the screen.
     const onPageScroll = () => {
-      const on = reel && wrap.getBoundingClientRect().top < -2;
-      if (on === pageOn) return;
-      pageOn = on;
-      if (on) wrap.dataset.page = "";
-      else delete wrap.dataset.page;
+      pageOn = reel && wrap.getBoundingClientRect().top < -2;
     };
     // Keys move the reel one place, as a swipe does. Past its first and last places the page
     // scrolls as usual.
@@ -920,18 +1094,58 @@ export default function FilmScroll({ frames = NO_FRAMES }: { frames?: Record<str
       // Space on a focused link or button presses it.
       if (space && t && /^(A|BUTTON)$/.test(t.tagName)) return;
       const d = e.key === "ArrowDown" || e.key === "PageDown" || (space && !e.shiftKey) ? 1 : e.key === "ArrowUp" || e.key === "PageUp" || (space && e.shiftKey) ? -1 : 0;
-      const j = Math.round(wrap.scrollTop / placeH()) + d;
+      const j = reelTo + d;
       if (!d || j < 0 || j > RESTS.length - 1) return;
       e.preventDefault();
-      wrap.scrollTo({ top: j * placeH(), behavior: "instant" });
+      reelGo(j);
     };
+    // A wheel or trackpad on the reel (a mouse plugged into a tablet, say) moves it a place per
+    // gesture, as a swipe does. A gesture ends after REEL_WHEEL_IDLE ms without a wheel event,
+    // so a trackpad's momentum stays inside the one that started it. From the last place a
+    // new gesture down scrolls the page on to the projects.
+    let wheelSum = 0;
+    let wheelAt = -Infinity;
+    let wheelMoved = false;
+    const onReelWheel = (e: WheelEvent) => {
+      if (!reel || pageOn || e.ctrlKey) return;
+      const now = performance.now();
+      if (now - wheelAt > REEL_WHEEL_IDLE) {
+        wheelSum = 0;
+        wheelMoved = false;
+      }
+      wheelAt = now;
+      if (!wheelMoved && e.deltaY > 0 && reelTo === RESTS.length - 1) return;
+      if (e.cancelable) e.preventDefault();
+      if (wheelMoved) return;
+      wheelSum += e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
+      if (Math.abs(wheelSum) < REEL_WHEEL_STEP) return;
+      wheelMoved = true;
+      reelGo(reelTo + Math.sign(wheelSum));
+    };
+    // The reel's own touch and wheel listeners hold the page's scrolling until they have run,
+    // so they are only there while the reel is.
+    const listenReel = (on: boolean) => {
+      const set = on ? wrap.addEventListener.bind(wrap) : wrap.removeEventListener.bind(wrap);
+      set("touchstart", onReelTouchStart as EventListener, { passive: true });
+      set("touchmove", onReelTouchMove as EventListener, { passive: false });
+      set("touchend", onReelTouchEnd as EventListener, { passive: true });
+      set("touchcancel", onReelTouchEnd as EventListener, { passive: true });
+      set("wheel", onReelWheel as EventListener, { passive: false });
+    };
+    // A mouse plugged into a tablet, say: the film keeps its place across the switch.
     const onReelChange = () => {
+      const place = Math.min(RESTS.length - 1, Math.max(0, Math.round(reelPlace(p))));
       reel = reelQuery.matches;
+      listenReel(reel);
+      drag = null;
+      reelOver = 0;
+      if (reel) reelTo = place;
+      else requestAnimationFrame(() => window.scrollTo({ top: yOf(landAt(RESTS[place])), behavior: "instant" }));
       onPageScroll();
       snapNext = true;
       kick();
     };
-    wrap.addEventListener("scroll", onReelScroll, { passive: true });
+    listenReel(reel);
     window.addEventListener("scroll", onPageScroll, { passive: true });
     window.addEventListener("keydown", onKeyReel);
     reelQuery.addEventListener("change", onReelChange);
@@ -949,9 +1163,9 @@ export default function FilmScroll({ frames = NO_FRAMES }: { frames?: Record<str
       const j = RESTS.indexOf(k);
       if (j < 0) return;
       const target = landAt(k);
-      // Moves the scroll to the place: the reel to its snap point, the page to its hold.
+      // Sends the film to the place: the reel's place, or the page's scroll to its hold.
       const go = () => {
-        if (reel) wrap.scrollTo({ top: j * placeH(), behavior: "instant" });
+        if (reel) reelGo(j);
         else window.scrollTo({ top: yOf(target), behavior: "instant" });
       };
       if (reduced || Math.abs(j - i) <= 1) {
@@ -1072,34 +1286,40 @@ export default function FilmScroll({ frames = NO_FRAMES }: { frames?: Record<str
       waitHop = gate && p === gate.edge ? gate.hop : null;
     };
 
+    // ---- Unlocking -------------------------------------------------------------------------
+
+    // iOS loads only a video's metadata until it has played, and in low power mode plays a
+    // video only from a gesture: a touch that ends, not one that starts. The first gesture
+    // plays every clip's video and pauses it at once, which lifts both for good without moving
+    // its picture. A video that could not warm up waits for this (warmUp, below).
+    const unlocked = new WeakSet<HTMLVideoElement>();
+    const unlockWaits = new Map<HTMLVideoElement, () => void>();
+    function unlock() {
+      for (const c of clips) {
+        const el = videoOf(c);
+        // A flight's clip is already playing.
+        if (!el || unlocked.has(el) || flight?.el === el) continue;
+        unlocked.add(el);
+        el.play().catch(() => {});
+        el.pause();
+        const wake = unlockWaits.get(el);
+        unlockWaits.delete(el);
+        wake?.();
+      }
+      // A refused flight tries again now the videos can play.
+      if (flightBlocked) {
+        flightBlocked = false;
+        kick();
+      }
+    }
+    const onGesture = () => unlock();
+    window.addEventListener("touchend", onGesture, { passive: true });
+    window.addEventListener("click", onGesture);
+    window.addEventListener("keydown", onGesture);
+
     // ---- Attaching ------------------------------------------------------------------------
 
-    // iOS only shows seeks on a video that has played once from a user gesture, and in low
-    // power mode it plays a video only after that. A flight's clip is left playing.
-    let primed = false;
-    const prime = (el: HTMLVideoElement) => {
-      if (flight?.el === el) return;
-      el.play()
-        .then(() => {
-          if (flight?.el !== el) el.pause();
-        })
-        .catch(() => {});
-    };
-    const onGesture = () => {
-      // A refused flight tries again after the next touch, which lets the videos play.
-      if (primed && !flightBlocked) return;
-      primed = true;
-      flightBlocked = false;
-      clips.forEach((c) => {
-        const el = videoOf(c);
-        if (el && c.state === "ready") prime(el);
-      });
-    };
-    window.addEventListener("touchstart", onGesture, { passive: true });
-    window.addEventListener("touchend", onGesture, { passive: true });
-    window.addEventListener("pointerdown", onGesture);
-
-    const waitFor = (el: HTMLVideoElement, type: "loadeddata" | "seeked", signal: AbortSignal, ms: number) =>
+    const waitFor = (el: HTMLVideoElement, type: "loadedmetadata" | "loadeddata" | "seeked", signal: AbortSignal, ms: number) =>
       new Promise<void>((resolve, reject) => {
         const done = () => {
           clearTimeout(timer);
@@ -1125,6 +1345,38 @@ export default function FilmScroll({ frames = NO_FRAMES }: { frames?: Record<str
         signal.addEventListener("abort", stop);
       });
 
+    /**
+     * Gets a muted video's first frames by playing it until they come, then pausing it: iOS
+     * loads only the metadata until a video has played. Refused (low power mode), it waits for
+     * the visitor's next gesture to unlock the video (Unlocking, above), then tries again. A
+     * play cut short (by that unlock, say) tries again too.
+     */
+    const warmUp = async (el: HTMLVideoElement, signal: AbortSignal) => {
+      for (let tries = 0; el.readyState < 2; tries++) {
+        if (signal.aborted) throw new DOMException("released", "AbortError");
+        if (tries >= 3) throw new Error("no frames");
+        const frames = waitFor(el, "loadeddata", signal, 5000);
+        frames.catch(() => {});
+        try {
+          await el.play();
+          if (el.readyState < 2) await frames;
+        } catch (err) {
+          if (signal.aborted) throw err;
+          if ((err as { name?: string } | null)?.name !== "NotAllowedError" || unlocked.has(el)) continue;
+          tries--;
+          await new Promise<void>((resolve, reject) => {
+            const stop = () => reject(new DOMException("released", "AbortError"));
+            signal.addEventListener("abort", stop, { once: true });
+            unlockWaits.set(el, () => {
+              signal.removeEventListener("abort", stop);
+              resolve();
+            });
+          });
+        }
+      }
+      if (flight?.el !== el && !el.paused) el.pause();
+    };
+
     const attach = async (c: Clip) => {
       const el = videoOf(c);
       if (!el || !c.url) return;
@@ -1132,19 +1384,21 @@ export default function FilmScroll({ frames = NO_FRAMES }: { frames?: Record<str
       c.attachAbort = ac;
       c.state = "attaching";
       try {
-        const loaded = waitFor(el, "loadeddata", ac.signal, 15000);
+        const loaded = waitFor(el, "loadedmetadata", ac.signal, 15000);
         el.muted = true;
         el.setAttribute("muted", "");
         el.src = c.url;
         await loaded;
         c.dur = Number.isFinite(el.duration) ? el.duration : 0;
         if (!c.dur) throw new Error("no duration");
+        // Most browsers load the first frames by themselves; iOS needs the video played.
+        if (el.readyState < 2) await waitFor(el, "loadeddata", ac.signal, 150).catch(() => {});
+        await warmUp(el, ac.signal);
         const seeked = waitFor(el, "seeked", ac.signal, 1500);
         el.currentTime = targetOf(c);
         await seeked;
         c.attachAbort = null;
         c.state = "ready";
-        if (primed) prime(el);
         kick();
       } catch (err) {
         if (ac.signal.aborted) return;
@@ -1636,9 +1890,15 @@ export default function FilmScroll({ frames = NO_FRAMES }: { frames?: Record<str
       put(scanRef.current, "opacity", scanOn ? "1" : "0");
       if (scanOn) put(scanRef.current, "left", `${((s.wipe ?? 0) * 100).toFixed(2)}%`);
 
-      const c = s.caption * introCaption(now);
+      const introIn = introCaption(now);
+      const c = s.caption * introIn;
       put(captionRef.current, "opacity", c.toFixed(3));
-      put(captionRef.current, "transform", `translateY(${((1 - c) * 12).toFixed(1)}px)`);
+      // In the reel the words ride the film: a place's words sit as far from their spot as the
+      // film is from their place, a drag's length per place, so they leave with the finger and
+      // the next place's come up from below as the film lands.
+      const k = reel ? RESTS.indexOf(s.stop) : -1;
+      const lift = k >= 0 ? (k - reelPlace(p) - reelOver) * REEL_DRAG * window.innerHeight + (1 - introIn) * 12 : (1 - c) * 12;
+      put(captionRef.current, "transform", `translateY(${lift.toFixed(1)}px)`);
       put(captionRef.current, "visibility", c > 0.01 ? "visible" : "hidden");
       if (s.stop !== lastStop) {
         lastStop = s.stop;
@@ -1650,7 +1910,7 @@ export default function FilmScroll({ frames = NO_FRAMES }: { frames?: Record<str
       // place has more too: a swipe there goes on to the projects.
       if (intro.cue && x > 0.5) intro.cue = false;
       const more = restIn(p) >= 0 && (reel ? !pageOn : restIn(p) !== LAST);
-      const resting = !intro.holding && p === goal && waitHop === null && more;
+      const resting = !intro.holding && p === goal && waitHop === null && more && !dragging();
       const cue = intro.cue || (resting && now - lastScrollAt > CUE_IDLE_MS);
       put(cueRef.current, "opacity", cue ? "1" : "0");
 
@@ -1760,7 +2020,7 @@ export default function FilmScroll({ frames = NO_FRAMES }: { frames?: Record<str
 
       const was = fade.opacity;
       if (mShown) fade.quick = motionShown.has(mShown.motion.map);
-      fade.step(dt, want, p === goal && waitHop === null && !leaving);
+      fade.step(dt, want, p === goal && waitHop === null && !leaving && !dragging());
       if (mShown && fade.opacity >= 1 && fade.amp >= 1) motionShown.add(mShown.motion.map);
       if (fade.drawNow && moving && mShown && (was === 0 || now - mLastDraw >= MOVE_DRAW_MS)) {
         const drawn = moving.draw({
@@ -1816,7 +2076,7 @@ export default function FilmScroll({ frames = NO_FRAMES }: { frames?: Record<str
       // Still coming down the line: wait for it rather than fetch it twice.
       const waiting = file?.state === "loading";
       if (wanted && file?.state === "idle") file.state = "direct";
-      const steady = p === goal && waitHop === null && !leaving;
+      const steady = p === goal && waitHop === null && !leaving && !dragging();
       const again = motionShown.has(loop.src);
       loopFade.quick = again;
       lRest = wanted && steady ? lRest + dt : wanted && loopFade.opacity > 0 ? lRest : 0;
@@ -1871,25 +2131,21 @@ export default function FilmScroll({ frames = NO_FRAMES }: { frames?: Record<str
       const dt = Math.min(0.1, Math.max(0, now - prev) / 1000);
       prev = now;
       if (reel) {
-        // The reel's own scroll, counted in places.
-        const s = wrap.scrollTop / placeH();
-        const v = s - reelS;
-        reelS = s;
-        x = reelFilm(s);
-        reelKept = Math.round(s);
-        // A finger on the reel moves the film with it. Once it lifts, the browser snaps to the
-        // next place the way the scroll is moving, and the flight heads there at once rather
-        // than following the snap's slow last stretch.
-        const n = RESTS.length - 1;
-        if (touching) reelTo = null;
-        else if (Math.abs(v) > 1e-4) reelTo = Math.min(n, Math.max(0, v > 0 ? Math.ceil(s - 1e-3) : Math.floor(s + 1e-3)));
-        else if (Math.abs(s - Math.round(s)) < 1e-3) reelTo = Math.min(n, Math.max(0, Math.round(s)));
+        // Under a finger, the place the drag has taken the film to; otherwise the place it
+        // rests on or flies to.
+        x = reelFilm(dragging() ? (drag as ReelDrag).s : reelTo);
+        reelKept = reelTo;
+        // A pull past the first or last place springs back once the finger lets go.
+        if (reelOver && !dragging()) {
+          reelOver *= Math.exp(-REEL_SPRING * dt);
+          if (Math.abs(reelOver) < 1e-4) reelOver = 0;
+        }
       } else {
         const rect = wrap.getBoundingClientRect();
         const span = Math.max(1, rect.height - window.innerHeight);
         x = clamp01(-rect.top / span) * TOTAL;
       }
-      goal = gateOn() ? (aim ?? destination(x, way)) : reel && reelTo !== null ? reelFilm(reelTo) : x;
+      goal = gateOn() ? (aim ?? destination(x, way)) : x;
 
       const waited = waitHop;
       // Nobody sees the playhead catch up on the first frame, with reduced motion, or off screen.
@@ -1902,6 +2158,10 @@ export default function FilmScroll({ frames = NO_FRAMES }: { frames?: Record<str
         // Wherever the playhead was put, the gate starts from there.
         if (!jumping) home = restBefore(p);
         settling = -1;
+      } else if (dragging()) {
+        // Under a finger the film is wherever the finger has taken it, at once.
+        p = goal;
+        waitHop = null;
       } else if (!(flight && stepFlight(dt))) advance(dt);
       // A flight across a clip plays it from the frame the playhead reaches it (Flights, above).
       if (!flight) {
@@ -1925,7 +2185,7 @@ export default function FilmScroll({ frames = NO_FRAMES }: { frames?: Record<str
       manage();
       pump();
 
-      let busy = p !== goal || waitHop !== null;
+      let busy = p !== goal || waitHop !== null || reelOver !== 0;
 
       // The gate moves on once the playhead has rested on a new stop for a moment.
       const at = restIn(p);
@@ -2032,7 +2292,7 @@ export default function FilmScroll({ frames = NO_FRAMES }: { frames?: Record<str
           return aim;
         },
         get reel() {
-          return { on: reel, to: reelTo, s: reelS, touching, pageOn };
+          return { on: reel, to: reelTo, at: reelPlace(p), over: reelOver, drag: drag && { mode: drag.mode, s: drag.s, s0: drag.s0, heading: drag.heading, trail: drag.trail.length }, letGo: reelLetGo, pageOn };
         },
         get flight() {
           return flight ? { hop: flight.c.hop, rate: flight.el.playbackRate, t: flight.el.currentTime } : null;
@@ -2078,10 +2338,10 @@ export default function FilmScroll({ frames = NO_FRAMES }: { frames?: Record<str
       window.removeEventListener("resize", onKick);
       timersJump.forEach((t) => clearTimeout(t));
       jumpRef.current = null;
-      window.removeEventListener("touchstart", onGesture);
       window.removeEventListener("touchend", onGesture);
-      window.removeEventListener("pointerdown", onGesture);
-      wrap.removeEventListener("scroll", onReelScroll);
+      window.removeEventListener("click", onGesture);
+      window.removeEventListener("keydown", onGesture);
+      listenReel(false);
       window.removeEventListener("scroll", onPageScroll);
       window.removeEventListener("keydown", onKeyReel);
       reelQuery.removeEventListener("change", onReelChange);
@@ -2198,9 +2458,9 @@ export default function FilmScroll({ frames = NO_FRAMES }: { frames?: Record<str
   const here = STOPS[stop];
   const spots = STOPS[spotStop].spots ?? [];
 
-  // --film-h: the film's scroll length on a desktop. --reel-n: its places, one screen each in
-  // the reel, where the film scrolls itself (FilmScroll.module.css).
-  const size = { "--film-h": `${TOTAL + 100}vh`, "--reel-n": RESTS.length } as CSSProperties;
+  // --film-h: the film's scroll length on a desktop. The reel is one screen tall
+  // (FilmScroll.module.css).
+  const size = { "--film-h": `${TOTAL + 100}vh` } as CSSProperties;
 
   return (
     <div className={styles.film} data-film ref={wrapRef} style={size}>
@@ -2327,13 +2587,6 @@ export default function FilmScroll({ frames = NO_FRAMES }: { frames?: Record<str
         <div ref={loadRef} className={styles.load} aria-hidden="true">
           <span ref={loadFillRef} />
         </div>
-      </div>
-
-      {/* The reel's snap points, one per place. Only a screen held in the hand uses them. */}
-      <div className={styles.snaps} aria-hidden="true">
-        {RESTS.map((k) => (
-          <i key={k} />
-        ))}
       </div>
       </div>
     </div>
